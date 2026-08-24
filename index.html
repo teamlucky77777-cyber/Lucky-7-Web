@@ -26706,11 +26706,167 @@ function _srExpPreview(screen){
   el.className='sr-exp-prev sr-good';
   el.textContent='\u2192 Lv '+r.lv+' @ '+r.exp.toFixed(2)+'%  \u00b7  '+(r.gain>=0?'+':'')+r.gain.toFixed(2)+'% gain'+tag;
 }
+async function analyzeScreenshot(file, screen) {
+  if (!file) return;
+  var toggle = document.getElementById('sr-ocr-toggle-' + screen);
+  if (toggle && !toggle.checked) return;
+  _srToast('🔍 Membaca gambar dengan Auto OCR...');
+  var prev = document.getElementById('sr-prevshot-' + screen);
+  var parent = prev ? prev.parentElement : null;
+  var loaderSpan = null;
+  if (parent) {
+    var existingSpans = parent.querySelectorAll('span');
+    for (var i = 0; i < existingSpans.length; i++) {
+      if (!existingSpans[i].classList.contains('ocr-loading')) existingSpans[i].style.display = 'none';
+    }
+    loaderSpan = document.createElement('span');
+    loaderSpan.className = 'ocr-loading';
+    loaderSpan.style.display = 'block';
+    loaderSpan.style.marginTop = '8px';
+    loaderSpan.style.color = '#ffb84d';
+    loaderSpan.textContent = '⏳ Analyzing image for EXP and Adena...';
+    parent.appendChild(loaderSpan);
+  }
+
+  try {
+    var formData = new FormData();
+    formData.append('file', file);
+    formData.append('language', 'kor');
+    formData.append('isOverlayRequired', 'false');
+    formData.append('OCREngine', '3');
+    formData.append('scale', 'true');
+
+    var response = await fetch('https://api.ocr.space/parse/image', {
+      method: 'POST',
+      headers: { 'apikey': 'helloworld' },
+      body: formData
+    });
+    
+    var result = await response.json();
+    if (!result.ParsedResults || result.ParsedResults.length === 0) {
+      throw new Error(result.ErrorMessage && result.ErrorMessage[0] ? result.ErrorMessage[0] : 'No results');
+    }
+    
+    var text = result.ParsedResults[0].ParsedText || '';
+    console.log('====================================');
+    console.log('[OCR] FULL RAW TEXT (ENGINE 3):');
+    console.log('====================================');
+    console.log(text);
+    console.log('====================================');
+
+    var updatedLv = null;
+    var updatedExp = null;
+    var updatedAdena = null;
+
+    var lvMatch = text.match(/(?:LE[A-Z]*|LV|LN)[\s.,:]*(\d{1,2})/i);
+    if (lvMatch) { updatedLv = lvMatch[1]; console.log('[OCR] Detected Level:', updatedLv); }
+
+    var expMatch = text.match(/(\d{1,2}[.,]\d{2,4})\s*[%:]/);
+    if (expMatch) {
+      var val = parseFloat(expMatch[1].replace(',', '.'));
+      if (!isNaN(val) && val > 0 && val < 100) { updatedExp = (Math.floor(val * 100) / 100).toFixed(2); console.log('[OCR] Detected EXP:', updatedExp); }
+    } else {
+      var allDecimals = Array.from(text.matchAll(/(?<!\d\.)(\d{1,2}[.,]\d{2,4})(?!\.\d)/g));
+      for (var j = 0; j < allDecimals.length; j++) {
+        var val2 = parseFloat(allDecimals[j][1].replace(',', '.'));
+        if (!isNaN(val2) && val2 > 0 && val2 < 100 && val2 !== 26.08) {
+          updatedExp = (Math.floor(val2 * 100) / 100).toFixed(2);
+          console.log('[OCR] Detected EXP (fallback):', updatedExp);
+          break;
+        }
+      }
+    }
+
+    var bracketMatches = Array.from(text.matchAll(/\(([\d,.\s]+)\)/g));
+    var foundAdenaInBrackets = false;
+    if (bracketMatches.length > 0) {
+      var bracketNums = bracketMatches.map(function(m){ return parseInt(m[1].replace(/[,.\s]/g, '')); }).filter(function(n){ return !isNaN(n) && n > 100; });
+      if (bracketNums.length > 0) {
+        updatedAdena = Math.max.apply(null, bracketNums).toString();
+        console.log('[OCR] Detected Adena (in parentheses):', updatedAdena);
+        foundAdenaInBrackets = true;
+      }
+    }
+    
+    if (!foundAdenaInBrackets) {
+      var maxAdena = 0;
+      var lines = text.split('\n');
+      for (var k = 0; k < lines.length; k++) {
+        var line = lines[k];
+        if (line.match(/[\[\]<>\:]/) || line.match(/외친|혈맹|파티|전체|HP|MP|Lawful/i) || line.match(/\d{2}\.\d{2}\.\d{2}\.\d{4}/)) continue;
+        var sanitized = line.replace(/(\d)[lI|](\d)/g, '$11$2').replace(/(\d)[Oo](\d)/g, '$10$2').replace(/(^|\s)([lI|])(\d+)/g, '$11$3').replace(/(\d+)([lI|])($|\s)/g, '$11$3');
+        if (updatedExp) sanitized = sanitized.replace(updatedExp, ' ');
+        var adenaPatterns = Array.from(sanitized.matchAll(/(\d{1,3}(?:[,.\s]\d{3})+|\d{4,12})/g));
+        for (var n = 0; n < adenaPatterns.length; n++) {
+          var aval = parseInt(adenaPatterns[n][1].replace(/[,.\s]/g, ''));
+          if (!isNaN(aval) && aval > 100 && aval !== 32767 && aval !== parseInt(updatedExp)) {
+            if (aval > maxAdena) maxAdena = aval;
+          }
+        }
+      }
+      if (maxAdena > 0) {
+        updatedAdena = maxAdena.toString();
+        console.log('[OCR] Detected Adena (fallback, isolated):', updatedAdena);
+      }
+    }
+
+    var root = document.getElementById('sr-s-' + screen);
+    if (root) {
+      var exps = root.querySelectorAll('.sr-exp .sr-inp');
+      var live = root.querySelector('.sr-exp-live');
+      var adenaEl = root.querySelector('[data-sr-adena]');
+      if (updatedLv) {
+        if (exps[0]) exps[0].value = updatedLv;
+      }
+      if (updatedExp) {
+        if (screen === 'update' || screen === 'checkout') {
+          if (live) { live.value = updatedExp; _srExpPreview(screen); }
+        } else {
+          if (exps[1]) exps[1].value = updatedExp;
+        }
+      }
+      if (updatedAdena && adenaEl) {
+        adenaEl.value = updatedAdena;
+      }
+    }
+
+    var parts = [];
+    if (updatedLv) parts.push('Lv ' + updatedLv);
+    if (updatedExp) parts.push(updatedExp + '%');
+    if (updatedAdena) parts.push('Adena ' + updatedAdena);
+    if (parts.length > 0) _srToast('✓ ' + parts.join(' · '));
+    else _srToast('⚠ Check console for OCR output');
+  } catch (err) {
+    console.error('OCR Error:', err);
+    _srToast('⚠ Error: ' + (err.message || 'OCR failed'));
+  } finally {
+    if (loaderSpan) loaderSpan.remove();
+    if (parent) {
+      var existingSpans = parent.querySelectorAll('span');
+      for (var m = 0; m < existingSpans.length; m++) {
+        if (!existingSpans[m].classList.contains('ocr-loading')) existingSpans[m].style.display = '';
+      }
+    }
+  }
+}
 function _srSetShot(screen,file){
   _srShots[screen]=file||null;
   var d=document.getElementById('sr-drop-'+screen); var prev=document.getElementById('sr-prevshot-'+screen);
-  if(file){ if(d)d.classList.add('has'); if(prev){ var url=URL.createObjectURL(file); prev.innerHTML='<img src="'+url+'" alt="proof">'; } }
-  else { if(d)d.classList.remove('has'); if(prev) prev.innerHTML=''; }
+  if(file){ 
+    if(d)d.classList.add('has'); 
+    if(prev){ var url=URL.createObjectURL(file); prev.innerHTML='<img src="'+url+'" alt="proof">'; } 
+    analyzeScreenshot(file, screen);
+  } else { 
+    if(d)d.classList.remove('has'); 
+    if(prev) prev.innerHTML=''; 
+    var p = prev ? prev.parentElement : null;
+    if(p){
+      var sps = p.querySelectorAll('span');
+      for (var i = 0; i < sps.length; i++) {
+        if (!sps[i].classList.contains('ocr-loading')) sps[i].style.display = '';
+      }
+    }
+  }
 }
 function _srFile(ev,screen){ var f=ev.target.files&&ev.target.files[0]; if(f) _srSetShot(screen,f); }
 function _srCurScreen(){ var s=['checkin','update','checkout']; for(var i=0;i<s.length;i++){ var el=document.getElementById('sr-s-'+s[i]); if(el&&el.style.display!=='none') return s[i]; } return null; }
@@ -28027,6 +28183,7 @@ function _srBuildHTML(){
   +  _srExpRow('Start')
   +  '<div class="sr-row"><label class="sr-lab">Start Adena</label><input class="sr-inp" data-sr-adena value="" inputmode="numeric" placeholder="0"></div>'
   +  '<div class="sr-row"><label class="sr-lab">Note <span style="color:var(--tx3,#6c6b66);font-weight:400;">· optional</span></label><input class="sr-inp" data-sr-note value="" placeholder="—"></div>'
+  +  '<div class="sr-row" style="margin-bottom:12px;background:rgba(255,184,77,0.1);padding:10px;border-radius:6px;border:1px solid rgba(255,184,77,0.3);"><label class="sr-lab" style="display:flex;align-items:center;cursor:pointer;margin-bottom:0;"><input type="checkbox" id="sr-ocr-toggle-checkin" checked style="width:16px;height:16px;margin-right:8px;cursor:pointer;"> Enable Auto OCR</label><div style="font-size:12px;color:#ffb84d;margin-top:6px;line-height:1.4;">⚠ <b>CAUTION:</b> OCR Adena detection has a high probability of errors. Please ALWAYS double check the Adena amount manually!</div></div>'
   +  '<div class="sr-row"><label class="sr-lab">Screenshot</label><div class="sr-drop" id="sr-drop-checkin" onclick="document.getElementById(\'sr-file-checkin\').click()"><input type="file" id="sr-file-checkin" accept="image/*" style="display:none" onchange="_srFile(event,\'checkin\')"><span class="idle">🖼 Tap to upload — or paste (Ctrl+V)</span><span class="done">✓ screenshot attached</span><div class="sr-shot-prev" id="sr-prevshot-checkin"></div></div></div>'
   +  '<button class="sr-btn sr-btn-primary" onclick="_srCheckIn()">▶ Check in — start shift</button>'
   +  '<p class="sr-foot">PC, map &amp; name stay set for the shift · screenshots come with each update</p>'
@@ -28042,6 +28199,7 @@ function _srBuildHTML(){
   +  _srExpRow('','live','update')
   +  '<div class="sr-row"><label class="sr-lab">Adena</label><input class="sr-inp" data-sr-adena value="" inputmode="numeric" placeholder="0"></div>'
   +  '<div class="sr-row"><label class="sr-lab">Note <span style="color:var(--tx3,#6c6b66);font-weight:400;">· optional</span></label><input class="sr-inp" data-sr-note value="" placeholder="—"></div>'
+  +  '<div class="sr-row" style="margin-bottom:12px;background:rgba(255,184,77,0.1);padding:10px;border-radius:6px;border:1px solid rgba(255,184,77,0.3);"><label class="sr-lab" style="display:flex;align-items:center;cursor:pointer;margin-bottom:0;"><input type="checkbox" id="sr-ocr-toggle-update" checked style="width:16px;height:16px;margin-right:8px;cursor:pointer;"> Enable Auto OCR</label><div style="font-size:12px;color:#ffb84d;margin-top:6px;line-height:1.4;">⚠ <b>CAUTION:</b> OCR Adena detection has a high probability of errors. Please ALWAYS double check the Adena amount manually!</div></div>'
   +  '<div class="sr-row"><label class="sr-lab">Screenshot <span class="sr-req">· required</span></label><div class="sr-drop" id="sr-drop-update" onclick="document.getElementById(\'sr-file-update\').click()"><input type="file" id="sr-file-update" accept="image/*" style="display:none" onchange="_srFile(event,\'update\')"><span class="idle">🖼 Tap to upload — or paste (Ctrl+V)</span><span class="done">✓ screenshot attached</span><div class="sr-shot-prev" id="sr-prevshot-update"></div></div></div>'
   +  '<div class="sr-endbar" id="sr-endbar" style="display:none;">🚩 Shift ends at <b id="sr-endh">19:00</b> — submitting checks you out</div>'
   +  '<button class="sr-btn sr-btn-primary" onclick="_srSubmitUpdate()"><span id="sr-up-btn-t">Submit hour</span></button>'
@@ -28057,6 +28215,7 @@ function _srBuildHTML(){
   +  _srExpRow('','live','checkout')
   +  '<div class="sr-row"><label class="sr-lab">Adena</label><input class="sr-inp" data-sr-adena value="" inputmode="numeric" placeholder="0"></div>'
   +  '<div class="sr-row"><label class="sr-lab">Note <span style="color:var(--tx3,#6c6b66);font-weight:400;">· optional</span></label><input class="sr-inp" data-sr-note value="" placeholder="—"></div>'
+  +  '<div class="sr-row" style="margin-bottom:12px;background:rgba(255,184,77,0.1);padding:10px;border-radius:6px;border:1px solid rgba(255,184,77,0.3);"><label class="sr-lab" style="display:flex;align-items:center;cursor:pointer;margin-bottom:0;"><input type="checkbox" id="sr-ocr-toggle-checkout" checked style="width:16px;height:16px;margin-right:8px;cursor:pointer;"> Enable Auto OCR</label><div style="font-size:12px;color:#ffb84d;margin-top:6px;line-height:1.4;">⚠ <b>CAUTION:</b> OCR Adena detection has a high probability of errors. Please ALWAYS double check the Adena amount manually!</div></div>'
   +  '<div class="sr-row"><label class="sr-lab">Screenshot <span class="sr-req">· required</span></label><div class="sr-drop" id="sr-drop-checkout" onclick="document.getElementById(\'sr-file-checkout\').click()"><input type="file" id="sr-file-checkout" accept="image/*" style="display:none" onchange="_srFile(event,\'checkout\')"><span class="idle">🖼 Tap to upload — or paste (Ctrl+V)</span><span class="done">✓ screenshot attached</span><div class="sr-shot-prev" id="sr-prevshot-checkout"></div></div></div>'
   +  '<button class="sr-btn sr-btn-primary" onclick="_srReviewCheckout()">🏁 Check out — end shift</button>'
   +  '<p class="sr-foot">Ends the shift and posts the final record</p>'
