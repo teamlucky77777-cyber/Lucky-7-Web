@@ -24640,6 +24640,7 @@ function mtCanvasInit(){
       // 연결 모드/연결 대기 중이면 박스도 연결 대상 — 아니면 이동
       if(window._mtcLinkMode || window._mtcLinkFrom){ _mtcLinkTap('zone:'+zoneEl.dataset.zone); return; }
       if(!e.shiftKey && e.target.closest('.mtc-zone-lb')){   // 제목 줄을 잡았을 때만 이동
+        if(_mtcIsLocked(zoneEl)) return;   /* [v1055] 잠긴 박스는 제목 줄을 잡아도 안 끌린다 */
         _mtcBoxMoveStart(e, zoneEl, zoneEl.dataset.zone, vp); return;
       }
       // 몸통 안: Shift = 범위 선택, 그냥 = 화면 이동 (빈 보드와 같은 규칙)
@@ -25181,6 +25182,7 @@ function _mtcItemsInZone(z){
     if(!it || !it.pos || (it.pg||0) !== MTC_PAGE) return;
     const w = (it.size && it.size.w) || MTC_CARD_W, hh = (it.size && it.size.h) || 28;
     const cx = it.pos.x + w/2, cy = it.pos.y + hh/2;
+    if(it.locked) return;   /* [v1055] 잠근 카드는 자동 배치가 건드리지 않는다 — 안 그러면 잠금이 거짓말이 된다 */
     if(cx >= z.x && cx <= z.x + z.w && cy >= z.y && cy <= z.y + z.h) out.push({ it, w, h:hh });
   }));
   return out;
@@ -25249,6 +25251,7 @@ function mtcTidyZone(key){
     const nx = parseFloat(n.style.left)||0, ny = parseFloat(n.style.top)||0;
     const cx = nx + n.offsetWidth/2, cy = ny + n.offsetHeight/2;
     if(cx>=z.x && cx<=z.x+z.w && cy>=z.y && cy<=z.y+z.h){
+      if(_mtcIsLocked(n)) return;   /* [v1055] 잠근 카드는 정렬에서도 제자리 */
       inZone.push({ kind:n.dataset.kind, id:Number(n.dataset.id), uid:n.dataset.uid, w:n.offsetWidth, h:n.offsetHeight, y:ny, x:nx });
     }
   });
@@ -25843,6 +25846,7 @@ function _mtcResizeStart(e, el, key, isMember, dir){
             const cx0 = it.pos.x + cw/2, cy0 = it.pos.y + chh/2;
             return cx0 >= ex && cx0 <= ex + ow && cy0 >= ey && cy0 <= ey + oh && _ownedBySelf(cx0, cy0); };
           [MT_INBOX, MT_PASSIVE, MT_ACTIVE].forEach(arr => (arr||[]).forEach(it => {
+            if(it.locked) return;   /* [v1055] 따라늘기도 잠근 카드는 그대로 둔다 */
             if(!_inside(it)) return;
             it.pos = { x: Math.max(0, Math.round(nx + (it.pos.x - ex) * _kx)),
                        y: Math.max(0, Math.round(ny + (it.pos.y - ey) * _ky)) };
