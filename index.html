@@ -4,7 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
 <title>ARASAKA Corp</title>
-<!-- BUILD: v1312 | 되먹임 고리 수정 — render→save→신호→render 로 두 화면이 서로를 무한히 다시 그리던 것 -->
+<!-- BUILD: v1313 | 신호가 와도 내용이 그대로면 다시 안 그린다 · 실시간 끄기 스위치 -->
 <!-- v745 기록은 git 이력(v1302 이전 커밋)에 있다 — 100KB 변경사 주석을 배포에서 제거 -->
 <!-- [v677] a <link href> cannot read a CSS variable, so the favicon carries its own copy.
      64px: a browser tab draws it at 16-32px, so this is 2x-DPR sharp at 11KB. -->
@@ -52857,6 +52857,7 @@ let _pcRT = null, _pcRTBusy = false, _pcRTWait = false;
 function _pcRTMe(){ try{ return String((currentUser && currentUser.id) || ''); }catch(_){ return ''; } }
 function _pcRTJoin(){
   try{
+    if(_pcRTOff()) return;   /* [v1313] 끄기 스위치 */
     if(!sb || _pcRT) return;
     _pcRT = sb.channel('pcs:board', { config:{ broadcast:{ self:false } } });
     _pcRT.on('broadcast', { event:'sync' }, function(m){
@@ -52897,7 +52898,7 @@ function _pcRTJoin(){
 }
 function _pcRTPing(){
   try{
-    if(!_pcRT) return;
+    if(_pcRTOff() || !_pcRT) return;
     _pcRT.send({ type:'broadcast', event:'sync', payload:{
       id: _pcRTMe(),
       by: (currentUser && currentUser.name) || '',
@@ -52917,14 +52918,37 @@ function _pcRTSafe(){
   }catch(_){ }
   return true;
 }
+/* ═══ [v1313] 달라진 게 없으면 아무것도 하지 않는다 ══════════════════════════
+   boss "아니 계속 깜빡 거려 이거"
+
+   v1312 로 내 쪽 고리는 끊었는데도 깜빡였다. 이유는 **상대 브라우저가 옛 버전**
+   이면 그쪽은 예전처럼 계속 신호를 쏘기 때문이다. 신호가 올 때마다 나는 성실하게
+   다시 읽고 다시 그렸고, 그릴 때마다 CSS 애니메이션이 처음부터 다시 돌았다.
+
+   근본 대책은 하나다 — **신호를 믿지 말고 내용을 믿는다.** 서버에서 읽어 온 것이
+   지금 화면과 똑같으면 다시 그리지 않는다. 상대가 몇 번을 쏘든, 실제로 달라진
+   것이 없으면 화면은 미동도 하지 않는다.
+
+   끄는 길도 열어 둔다. 콘솔에서
+     localStorage.lucky7_rt_off = '1'
+   을 넣고 새로고침하면 이 화면의 실시간이 통째로 꺼진다. 원래대로는
+     localStorage.removeItem('lucky7_rt_off')
+   무엇이 잘못되든 사장님이 스스로 화면을 되찾을 수 있어야 한다. */
+function _pcRTOff(){ try{ return localStorage.getItem('lucky7_rt_off') === '1'; }catch(_){ return false; } }
 async function _pcRTPull(p){
+  if(_pcRTOff()) return;
   if(_pcRTBusy) return;
   if(!_pcRTSafe()){ _pcRTWait = true; setTimeout(function(){ if(_pcRTWait){ _pcRTWait=false; _pcRTPull(p); } }, 1200); return; }
   _pcRTBusy = true;
   try{
-    var before = {};
+    var before = {}, sigBefore = '';
+    try{ sigBefore = JSON.stringify(PCS); }catch(_){ }
     try{ (PCS||[]).forEach(function(x){ if(x && x.id!=null) before[x.id] = JSON.stringify(x); }); }catch(_){ }
     await loadPCState();
+    /* ★ 내용이 그대로면 여기서 끝. 다시 그리지 않으니 깜빡일 일이 없다. */
+    var sigAfter = '';
+    try{ sigAfter = JSON.stringify(PCS); }catch(_){ }
+    if(sigAfter && sigAfter === sigBefore){ _pcSaveSig = sigAfter; _pcRTBusy = false; return; }
     /* [v1312] 받아 그리는 동안에는 저장이 나가지 않게 잠근다 */
     _pcApplyingRemote = true;
     try{ render(); }catch(_){ try{ renderPCs(); }catch(_){} }
