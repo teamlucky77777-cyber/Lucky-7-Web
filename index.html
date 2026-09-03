@@ -4,7 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
 <title>ARASAKA Corp</title>
-<!-- BUILD: v1306 | 부팅 로고 부드럽게(filter 애니메이션 제거·GPU 합성) · 캔버스 상세 패널의 날짜 칸도 제거 -->
+<!-- BUILD: v1307 | PC 현황·기준 EXP 명령줄 애플식 정리 · 경고 느낌표를 프로필 사진 위로 -->
 <!-- v745 기록은 git 이력(v1302 이전 커밋)에 있다 — 100KB 변경사 주석을 배포에서 제거 -->
 <!-- [v677] a <link href> cannot read a CSS variable, so the favicon carries its own copy.
      64px: a browser tab draws it at 16-32px, so this is 2x-DPR sharp at 11KB. -->
@@ -8468,6 +8468,98 @@ body.pcboxes-on .pbox.col:hover .pbox-t::after{
 #ch-pc-status .pcs-met-sub{font-size:9px;margin:0}
 /* 범례는 카드에 이미 색으로 다 나와 있다 — 한 줄을 통째로 쓸 값어치가 없다 */
 #pc-board-panel>.legend{display:none}
+/* ═══════════════════════════════════════════════════════════════════════════
+   [v1307] 명령 줄을 애플처럼 — PC 현황 · 기준 EXP
+   boss "이거 좀 그냥 새롭게 바꿔버리면 안되냐 / PC 현황 저건 폰트랑 그런것들
+   맘에드니까 남겨놓고 애플스럽게좀 바꾸자" · "이것도 마찬가지고"
+
+   제목(.ph)은 손대지 않는다 — 마음에 든다고 하셨다.
+   바꾸는 것은 조작 요소들이고, 원칙은 셋이다.
+   ① 테두리를 걷는다. 알약마다 1px 선이 둘러 있으니 줄 하나에 선이 열두 개였다.
+     애플은 선 대신 아주 옅은 면으로 버튼을 만든다 — 눈이 글자만 읽는다.
+   ② 강조는 하나만. 지금은 Discord(파랑)·Add PC(금색)·요일(금색)이 동시에 소리쳤다.
+     실제 주된 행동은 + Add PC 하나뿐이다. 나머지는 전부 무채색으로 내린다.
+   ③ 요일은 진짜 세그먼트로. 일곱 개가 각자 떠 있던 것을 하나의 홈에 넣고,
+     고른 칸만 떠오르게 한다(iOS 세그먼트 컨트롤).
+   ═══════════════════════════════════════════════════════════════════════════ */
+
+/* ── 공통 — 무채색 면 버튼 ─────────────────────────────────────────── */
+#ch-pc-status .pcs-head-actions>button,
+#ch-pc-status #pc-cmdbar .pill,
+#ch-pc-status #pc-cmdbar .dp-override{
+  border:0!important;
+  background:rgba(255,255,255,.055);
+  color:var(--tx2,#b9b8b4);
+  border-radius:8px;
+  font-weight:600;
+  letter-spacing:-.01em;
+  transition:background .16s ease,color .16s ease,transform .12s ease;
+  -webkit-font-smoothing:antialiased}
+#ch-pc-status .pcs-head-actions>button:hover,
+#ch-pc-status #pc-cmdbar .pill:hover,
+#ch-pc-status #pc-cmdbar .dp-override:hover{background:rgba(255,255,255,.10);color:var(--tx,#e6e5e2)}
+#ch-pc-status .pcs-head-actions>button:active,
+#ch-pc-status #pc-cmdbar .pill:active{transform:scale(.97)}
+
+/* 켜져 있는 상태 — 색이 아니라 밝기로 말한다 */
+#ch-pc-status #pc-cmdbar .pill.on,
+#ch-pc-status #pc-cmdbar .dp-override.on{background:rgba(255,255,255,.16);color:var(--tx,#f2f1ee)}
+
+/* ── 하나뿐인 주된 행동 ────────────────────────────────────────────── */
+#ch-pc-status .pcs-head-actions>.btn-add{
+  background:var(--ac,#c2a04a)!important;color:#1a1408!important;font-weight:700}
+#ch-pc-status .pcs-head-actions>.btn-add:hover{background:#d4b25c!important;color:#1a1408!important}
+
+/* Discord — 눈에 띄되 소리치지는 않게(발렌 요청으로 남긴 버튼이다) */
+#ch-pc-status .pcs-head-actions>.btn-dc{
+  background:rgba(88,101,242,.16)!important;color:#9aa4f5!important}
+#ch-pc-status .pcs-head-actions>.btn-dc:hover{background:rgba(88,101,242,.26)!important;color:#c3c9fb!important}
+
+/* ── 요일 — iOS 세그먼트 컨트롤 ───────────────────────────────────── */
+#ch-pc-status #pc-cmdbar .day-picker{
+  background:rgba(255,255,255,.05);border:0;border-radius:9px;padding:2px;gap:0}
+#ch-pc-status #pc-cmdbar .dp-day{
+  border:0!important;background:transparent;color:var(--tx3,#8a8a86);
+  font-weight:600;border-radius:7px;height:22px;min-height:22px;
+  transition:background .16s ease,color .16s ease}
+#ch-pc-status #pc-cmdbar .dp-day:hover{color:var(--tx2,#b9b8b4)}
+#ch-pc-status #pc-cmdbar .dp-day.on{
+  background:rgba(255,255,255,.14);color:var(--tx,#f2f1ee);
+  box-shadow:0 1px 2px rgba(0,0,0,.28)}
+/* 오늘은 아래 점 하나로 — 색을 하나 더 쓰지 않는다 */
+#ch-pc-status #pc-cmdbar .dp-day.today{position:relative}
+#ch-pc-status #pc-cmdbar .dp-day.today::after{content:"";position:absolute;left:50%;bottom:2px;
+  width:3px;height:3px;margin-left:-1.5px;border-radius:50%;background:var(--ac,#c2a04a);opacity:.9}
+#ch-pc-status #pc-cmdbar .dp-day.weekend{color:#a88a8a}
+
+/* ── 숫자는 상자에서 꺼낸다 ───────────────────────────────────────── */
+#ch-pc-status .pcs-met{background:none!important;border:0!important;padding:0 2px!important}
+#ch-pc-status .pcs-met-label{display:none}
+#ch-pc-status .pcs-met-val{font-size:17px;font-weight:700;letter-spacing:-.02em}
+#ch-pc-status .pcs-met-sub{color:var(--tx3,#6c6b66);font-weight:500}
+
+/* ═══ 기준 EXP 도 같은 손으로 ═════════════════════════════════════ */
+.cs-wrap .cs-train-bar>button,.cs-wrap .cs-train-bar>div{border:0!important}
+.cs-wrap .cs-train-bar+div button,.cs-wrap .cs-train-bar~div>button{
+  border:0!important;border-radius:8px!important;font-weight:600!important;
+  letter-spacing:-.01em;background:rgba(255,255,255,.055)!important;
+  color:var(--tx2,#b9b8b4)!important;
+  transition:background .16s ease,color .16s ease,transform .12s ease}
+.cs-wrap .cs-train-bar~div>button:hover{background:rgba(255,255,255,.10)!important;color:var(--tx,#e6e5e2)!important}
+.cs-wrap .cs-train-bar~div>button:active{transform:scale(.97)}
+/* 시트 내려받기 하나만 강조 — 기준 EXP 화면에서 실제로 누르는 것은 이것이다 */
+.cs-wrap .cs-train-bar~div>button[onclick*="_csSeedStandards"]{
+  background:var(--ac,#c2a04a)!important;color:#1a1408!important;font-weight:700!important}
+.cs-wrap .cs-train-bar~div>button[onclick*="_csSeedStandards"]:hover{background:#d4b25c!important}
+
+/* 밝은 테마에서도 같은 규칙 — 면만 뒤집는다 */
+html[data-theme=light] #ch-pc-status .pcs-head-actions>button,
+html[data-theme=light] #ch-pc-status #pc-cmdbar .pill,
+html[data-theme=light] #ch-pc-status #pc-cmdbar .dp-override,
+html[data-theme=light] #ch-pc-status #pc-cmdbar .day-picker,
+html[data-theme=light] .cs-wrap .cs-train-bar~div>button{background:rgba(0,0,0,.05);color:#3d3b36}
+html[data-theme=light] #ch-pc-status #pc-cmdbar .dp-day.on{background:#fff;color:#1d1d1f;box-shadow:0 1px 2px rgba(0,0,0,.14)}
+
 /* [v1068] 한 줄에 담기 — 요일칸 553px·검색 240px가 줄바꿈을 만들었다 */
 #pc-cmdbar .dp-info{max-width:250px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;flex:0 1 auto}
 #pc-cmdbar #q{width:148px!important;flex:0 1 148px;min-width:96px}
@@ -35607,6 +35699,17 @@ function _srInjectCSS(){
 "#sr-app .sr-trow{position:relative;display:flex;align-items:center;gap:9px;width:100%;padding:7px 12px 7px 11px;background:var(--bg-c,#161616);border:1px solid var(--br,#232322);border-left:3px solid var(--gc,#8a8a86);border-radius:9px;cursor:pointer;font-family:inherit;text-align:left;transition:background .13s,border-color .14s;}",
 "#sr-app .sr-trow:hover{background:var(--bg-h,#1c1c1c);border-color:var(--gc);}",
 "#sr-app .sr-trow-av{position:relative;flex:none;width:27px;height:27px;border-radius:50%;display:flex;align-items:center;justify-content:center;font:800 10.5px ui-monospace,monospace;color:#fff;box-shadow:0 0 0 2px var(--gc,#444);}",
+"/* [v1307] 아바타 위 경고 — 얼굴 오른쪽 위 모서리에 딱 */",
+"#sr-app .sr-trow-av{position:relative;overflow:visible}",
+"#sr-app .sr-avflag{position:absolute;right:-3px;top:-3px;width:15px;height:15px;border-radius:50%;",
+"  background:#e2564d;color:#fff;font-style:normal;font-weight:900;font-size:10px;line-height:15px;",
+"  text-align:center;letter-spacing:0;box-shadow:0 0 0 2px var(--bg-c,#161616);",
+"  animation:srFlagIn .34s cubic-bezier(.34,1.56,.64,1) both,srFlagPulse 2.4s ease-in-out .5s infinite}",
+"@keyframes srFlagIn{from{opacity:0;transform:scale(.2)}to{opacity:1;transform:scale(1)}}",
+"/* 숨쉬듯 한 번씩 — 계속 뛰면 옆의 숫자를 못 읽는다 */",
+"@keyframes srFlagPulse{0%,72%,100%{box-shadow:0 0 0 2px var(--bg-c,#161616),0 0 0 0 rgba(226,86,77,.55)}",
+"  84%{box-shadow:0 0 0 2px var(--bg-c,#161616),0 0 0 6px rgba(226,86,77,0)}}",
+"#sr-app .sr-trow-av.has-flag{box-shadow:0 0 0 1.5px rgba(226,86,77,.45)}",
 "#sr-app .sr-trow-crown{position:absolute;top:-7px;right:-4px;font-size:11px;font-style:normal;}",
 "#sr-app .sr-trow-nm{flex:0 0 88px;font-size:12px;font-weight:800;color:var(--tx,#ece8de);overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}",
 "#sr-app .sr-trow-shift{flex:0 0 68px;font-size:12px;font-weight:700;letter-spacing:.01em;color:var(--tx2,#989792);cursor:pointer;border-radius:5px;padding:3px 4px;margin:-3px 0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;transition:background .13s,color .13s;}",   /* [v930] boss "마찬가지로 크기좀 키우고" — 9.5→12px, 폭도 같이 늘림 */
@@ -37780,12 +37883,20 @@ function _srRecCardHTML(data){
       var scc=({bad:'#e88a8a',mid:'#e8c065',ok:'#5fd3b8',no:'#6b6a66'})[sv];
       var barP = p!=null ? Math.max(2,Math.min(100,p)) : 0;
       return '<button class="sr-trow" style="--gc:'+scc+'" data-staff="'+esc(r.k)+'" onclick="_srRecFilterBy(this.getAttribute(\'data-staff\'))">'
-        +'<span class="sr-trow-av" style="'+av+'">'+esc(avInit(u.name))+(LEADERS[r.k]?'<i class="sr-trow-crown">👑</i>':'')+'</span>'
+        /* [v1307] boss "저거 이름카드 오른쪽에 해두지 말고 프로필 사진 쪽에
+           빨간색 느낌표 애니메이션좋게 딱!"
+           경고가 줄 맨 오른쪽 % 뒤에 붙어 있어서, 눈이 왼쪽에서 이름을 읽고
+           오른쪽 끝까지 가야 문제를 알았다. 사람을 먼저 보는 화면이니 표시도
+           사람 위에 있어야 한다 — 얼굴 오른쪽 위 모서리. */
+        +'<span class="sr-trow-av'+(u.flags>0?' has-flag':'')+'" style="'+av+'">'+esc(avInit(u.name))
+          +(LEADERS[r.k]?'<i class="sr-trow-crown">👑</i>':'')
+          +(u.flags>0?'<i class="sr-avflag" title="EXP 점프 '+u.flags+'건 — 확인이 필요합니다">!</i>':'')
+        +'</span>'
         +'<span class="sr-trow-nm">'+esc(dispNm(u.name))+'</span>'
         +'<span class="sr-trow-shift" data-g="'+r.u.grp+'" title="'+r.meta.tt+' — '+(kl?'클릭하면 이 시프트만 보기':'click to filter this shift')+'" onclick="event.stopPropagation();_srRecGroupBy(this.getAttribute(\'data-g\'))"><i class="sr-trow-ic '+(r.meta.ic==='☼'?'sun':'moon')+'">'+r.meta.ic+'</i> '+(SHIFT_SHORT[r.u.grp]||r.meta.tt)+'</span>'
         +'<span class="sr-trow-bar"><i style="width:'+barP+'%"></i></span>'
         +'<span class="sr-trow-p pf-'+pfCls(p)+'">'+(p!=null?(Math.round(p)+'<i>%</i>'):('<i class="sr-tri-no">'+(u.hasRec?(kl?'기준없음':'no std'):(kl?'기록없음':'no record'))+'</i>'))+'</span>'
-        +(u.flags>0?'<i class="sr-trow-flag" title="EXP 점프 '+u.flags+'">⚠</i>':'')
+        /* [v1307] 오른쪽 끝에 있던 ⚠ 느끼표는 아바타 위로 옮겼다 */
       +'</button>'; })(); }).join('') || ('<div class="sr-empty">'+(kl?'해당 없음':'none')+'</div>');
     var sb2=function(cls,label,n){ return '<span class="'+cls+(sev===cls.slice(3)?' on':'')+'" onclick="_srTriSevBy(\''+cls.slice(3)+'\')">'+label+' <b>'+n+'</b></span>'; };
     var sum='<div class="sr-tri-sum">'
