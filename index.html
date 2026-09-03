@@ -4,7 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
 <title>ARASAKA Corp</title>
-<!-- BUILD: v1305 | 캔버스 팝업 — 메모 상자·빈 날짜칸 제거(할 일 하나로) · 카드 카운트다운 시:분:초로 매초 -->
+<!-- BUILD: v1306 | 부팅 로고 부드럽게(filter 애니메이션 제거·GPU 합성) · 캔버스 상세 패널의 날짜 칸도 제거 -->
 <!-- v745 기록은 git 이력(v1302 이전 커밋)에 있다 — 100KB 변경사 주석을 배포에서 제거 -->
 <!-- [v677] a <link href> cannot read a CSS variable, so the favicon carries its own copy.
      64px: a browser tab draws it at 16-32px, so this is 2x-DPR sharp at 11KB. -->
@@ -14142,7 +14142,15 @@ body:has(#kb-race) #sb-right{display:none!important}
 <body>
 <div id="boot-splash" style="position:fixed;inset:0;z-index:99999;background:#15140f;display:flex;align-items:center;justify-content:center">
   <style>
-  @keyframes bsBreathe{0%,100%{transform:scale(1);filter:drop-shadow(0 0 6px rgba(194,160,74,.20))}50%{transform:scale(1.045);filter:drop-shadow(0 0 18px rgba(194,160,74,.52))}}
+  /* ═══ [v1306] 로고가 끊기던 이유 ═══════════════════════════════════════════
+     boss "새로고침 했을때 나오는 우리 로고 애니메이션 되게 끊기는데 부드럽게"
+     원인은 filter 를 애니메이션한 것이다. transform 과 opacity 는 합성 단계에서
+     GPU 가 처리하지만, filter(drop-shadow) 가 매 프레임 바뀌면 브라우저가 그 요소와
+     자식 전부를 다시 그린다. 여기서는 숨쉬기(2.8s)와 혜성(1.9s)이 동시에 도는 데다,
+     혜성에는 drop-shadow 가 둘이나 겹쳐 있어 매 프레임 흐림을 두 번 계산했다.
+     빛은 따로 떼어 별도 겹으로 두고 opacity 만 흔든다 — 눈에는 같고 값은 훨씬 싸다. */
+  @keyframes bsBreathe{0%,100%{transform:scale(1)}50%{transform:scale(1.045)}}
+  @keyframes bsGlow{0%,100%{opacity:.20}50%{opacity:.60}}
   /* [v970] boss "불러오는중에 저거 돌아가는거 뭔가 쭉 삐져나온거 있는데 / 크기좀 키우자"
      ─ 반지름 33의 원 둘레는 2πr = 207.35인데 dasharray를 208로 잡아 두었다. 0.65 남는 그 길이가
        선 끝에서 겹쳐 보이며 '삐져나온' 자국이 됐다. 둘레를 정확히 계산해 쓴다.
@@ -14151,20 +14159,31 @@ body:has(#kb-race) #sb-right{display:none!important}
   @keyframes bsDraw{from{stroke-dashoffset:207.345}to{stroke-dashoffset:0}}
   @keyframes bsComet{from{stroke-dashoffset:0}to{stroke-dashoffset:-207.345}}
   @keyframes bsMark{from{opacity:0;transform:scale(.86)}to{opacity:1;transform:scale(1)}}
-  #boot-splash .bs-breath{animation:bsBreathe 2.8s ease-in-out infinite}
+  #boot-splash .bs-breath{animation:bsBreathe 2.8s ease-in-out infinite;will-change:transform;transform:translateZ(0);backface-visibility:hidden}
+  /* 빛은 제 겹에서 opacity 만 오간다 — 합성만으로 끝나 다시 그리지 않는다 */
+  #boot-splash .bs-glow{position:absolute;inset:-20px;border-radius:50%;pointer-events:none;
+    background:radial-gradient(circle,rgba(194,160,74,.55) 0%,rgba(194,160,74,.18) 45%,rgba(194,160,74,0) 70%);
+    animation:bsGlow 2.8s ease-in-out infinite;will-change:opacity;transform:translateZ(0)}
   #boot-splash .bs-track{fill:none;stroke:rgba(194,160,74,.14);stroke-width:2}
   #boot-splash .bs-draw{fill:none;stroke:#c2a04a;stroke-width:2;stroke-linecap:round;stroke-dasharray:207.345;stroke-dashoffset:207.345;animation:bsDraw 1.7s ease-out forwards}
-  #boot-splash .bs-comet{fill:none;stroke:#ffe9a8;stroke-width:2.4;stroke-linecap:round;stroke-dasharray:9 198.345;animation:bsComet 1.9s linear 1.5s infinite;filter:drop-shadow(0 0 4px #ffe6a0) drop-shadow(0 0 9px rgba(194,160,74,.85))}
+  #boot-splash .bs-comet{fill:none;stroke:#ffe9a8;stroke-width:2.4;stroke-linecap:round;stroke-dasharray:9 198.345;animation:bsComet 1.9s linear 1.5s infinite;filter:drop-shadow(0 0 5px rgba(255,230,160,.9));will-change:stroke-dashoffset}
   /* [v677] an SVG <image href> cannot read a CSS variable either, so the mark left the SVG and
      became a plain layer on top of it — same position, same animation, but now sharing the one
      --ar-logo definition instead of carrying a second copy of the blob. */
   #boot-splash .bs-wrap{position:relative;width:72px;height:72px}
   #boot-splash .bs-mark{position:absolute;left:15px;top:15px;width:42px;height:42px;
     background:var(--ar-logo) center/contain no-repeat;transform-origin:center;
-    animation:bsMark .55s ease-out both;filter:drop-shadow(0 0 4px rgba(194,160,74,.45))}
+    animation:bsMark .55s ease-out both;filter:drop-shadow(0 0 4px rgba(194,160,74,.45));
+    will-change:transform,opacity;transform:translateZ(0);backface-visibility:hidden}
+  /* 움직임을 줄여 달라는 설정을 켠 사람에게는 흔들지 않는다 — 원은 그대로 그려진다 */
+  @media (prefers-reduced-motion: reduce){
+    #boot-splash .bs-breath,#boot-splash .bs-glow,#boot-splash .bs-comet{animation:none}
+    #boot-splash .bs-glow{opacity:.34}
+  }
   </style>
   <div class="bs-breath">
     <div class="bs-wrap">
+      <span class="bs-glow" aria-hidden="true"></span>
       <svg width="72" height="72" viewBox="0 0 72 72" aria-hidden="true">
         <circle class="bs-track" cx="36" cy="36" r="33"></circle>
         <circle class="bs-draw" cx="36" cy="36" r="33"></circle>
@@ -30366,7 +30385,11 @@ function mtcOpenDetail(kind, id){
     extra = `
       <div class="mtcp-row"><span class="mtcp-lbl">상태</span><span class="mtcp-seg">${stSeg}</span></div>
       <div class="mtcp-row"><span class="mtcp-lbl">우선순위</span><span class="mtcp-seg">${priSeg}</span></div>
-      <div class="mtcp-row"><span class="mtcp-lbl">마감</span><input type="date" class="mtcp-in" value="${item.due||''}" onchange="mtcSetField('active',${id},'due',this.value||null)"></div>
+      ${/* [v1306] boss "캔버스에 연도 월일 저거 빼라니까"
+           v1305 에서 카드 팝업의 날짜 칸을 뺐는데, 같은 칸이 여기에도 있었다 —
+           우클릭 메뉴의 '☰ 상세 열기' 로 열리는 다른 패널이다. 화면이 둘이라
+           한쪽만 고치면 다른 쪽에서 그대로 나온다. 여기서도 뺀다.
+           item.due 필드는 그대로 둔다 — 지우면 다른 코드가 넘어진다. */''}
       <div class="mtcp-row" style="align-items:flex-start"><span class="mtcp-lbl">하위 항목</span>
         <div style="flex:1">
           ${steps.map((s,i)=>`<div style="display:flex;gap:6px;align-items:center;margin-bottom:4px">
