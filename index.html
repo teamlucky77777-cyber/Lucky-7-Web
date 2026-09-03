@@ -4,7 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
 <title>ARASAKA Corp</title>
-<!-- BUILD: v1309 | 기준 EXP 머리줄 재작성 — 네 줄을 한 줄로 · 설명문·교육모드 제거 -->
+<!-- BUILD: v1310 | 누가 무엇을 잡고 있는지 실시간 표시 — 그 요소에 테두리+이름표 -->
 <!-- v745 기록은 git 이력(v1302 이전 커밋)에 있다 — 100KB 변경사 주석을 배포에서 제거 -->
 <!-- [v677] a <link href> cannot read a CSS variable, so the favicon carries its own copy.
      64px: a browser tab draws it at 16-32px, so this is 2x-DPR sharp at 11KB. -->
@@ -9305,6 +9305,27 @@ button:active,.btn:active{transform:scale(.97)}
   12%{box-shadow:0 0 0 2px rgba(122,196,255,.85),0 0 18px rgba(122,196,255,.35)}
   100%{box-shadow:0 0 0 0 rgba(122,196,255,0)}}
 .pc.pc-rt-flash{animation:pcRtFlash 2.4s cubic-bezier(.2,.7,.3,1) both;z-index:3}
+/* ═══ [v1310] 누가 잡고 있는 것 — 테두리 + 이름표 ═══════════════════════
+   사람마다 색이 다르다(id 로 만든 색상환 값). 이름을 안 읽어도 누구인지 익는다. */
+.pc-held{position:relative;outline:2px solid hsl(var(--heldh,210) 78% 62% / .9);outline-offset:1px;
+  border-radius:inherit;animation:pcHeldIn .26s cubic-bezier(.34,1.4,.64,1) both;z-index:6}
+@keyframes pcHeldIn{from{outline-color:hsl(var(--heldh,210) 78% 62% / 0);outline-offset:5px}
+  to{outline-color:hsl(var(--heldh,210) 78% 62% / .9);outline-offset:1px}}
+.pc-held-tag{position:absolute;left:0;top:-9px;z-index:7;pointer-events:none;
+  background:hsl(var(--heldh,210) 78% 56%);color:#fff;
+  font-size:9.5px;font-weight:800;letter-spacing:-.01em;line-height:1;
+  padding:3px 6px;border-radius:5px;white-space:nowrap;
+  box-shadow:0 1px 4px rgba(0,0,0,.35);
+  animation:pcHeldTagIn .26s cubic-bezier(.34,1.4,.64,1) both}
+@keyframes pcHeldTagIn{from{opacity:0;transform:translateY(3px) scale(.9)}to{opacity:1;transform:none}}
+/* 잡힌 것은 살짝 숨을 쉰다 — 지금 누가 손대고 있다는 뜻 */
+.pc-held::after{content:"";position:absolute;inset:-2px;border-radius:inherit;pointer-events:none;
+  box-shadow:0 0 0 0 hsl(var(--heldh,210) 78% 62% / .45);
+  animation:pcHeldBeat 1.6s ease-out infinite}
+@keyframes pcHeldBeat{0%{box-shadow:0 0 0 0 hsl(var(--heldh,210) 78% 62% / .45)}
+  70%,100%{box-shadow:0 0 0 7px hsl(var(--heldh,210) 78% 62% / 0)}}
+@media (prefers-reduced-motion: reduce){
+  .pc-held,.pc-held-tag{animation:none}.pc-held::after{display:none}}
 @media (prefers-reduced-motion: reduce){.pc.pc-rt-flash{animation:none;box-shadow:0 0 0 2px rgba(122,196,255,.7)}}
 .pc.pc-paused{opacity:.82;transition:all .3s cubic-bezier(.4,0,.2,1)}
 .pc.pc-paused::after{content:'';position:absolute;left:0;right:0;top:0;height:2px;
@@ -52599,7 +52620,31 @@ function _pcRTJoin(){
       if(!p || String(p.id||'') === _pcRTMe()) return;   /* 내 방송은 무시 */
       _pcRTPull(p);
     });
+    /* ═══ [v1310] 누가 무엇을 잡고 있는지 ═══════════════════════════════════
+       boss "누가 격자잡거나 뭔가 직원풀 클라이언트풀에서 만지고 있으면
+             테두리 뜨고 이름뜨면서 딱 애니메이션 나오게?"
+       마우스를 그리는 것보다 이쪽이 맞다. 격자는 칸이 정해진 판이라 커서가
+       떠다녀도 알려주는 게 없지만, "이 막대를 발렌이 지금 잡고 있다" 는
+       바로 쓸 수 있는 정보다 — 손대기 전에 비킬 수 있다. */
+    _pcRT.on('broadcast', { event:'grab' }, function(m){
+      var p = m && m.payload;
+      if(!p || String(p.id||'') === _pcRTMe()) return;
+      _pcHeld.set(String(p.id), { what:String(p.what||''), by:String(p.by||''), at:Date.now() });
+      _pcHeldPaint();
+    });
+    _pcRT.on('broadcast', { event:'free' }, function(m){
+      var p = m && m.payload;
+      if(!p) return;
+      _pcHeld.delete(String(p.id||''));
+      _pcHeldPaint();
+    });
     _pcRT.subscribe();
+    /* 브라우저가 죽거나 탭이 닫히면 free 가 안 온다 — 8초 지난 것은 스스로 지운다 */
+    if(!_pcHeldTimer) _pcHeldTimer = setInterval(function(){
+      var n0 = _pcHeld.size, t = Date.now();
+      _pcHeld.forEach(function(v,k){ if(t - v.at > 8000) _pcHeld.delete(k); });
+      if(_pcHeld.size !== n0) _pcHeldPaint();
+    }, 2000);
   }catch(e){ console.warn('pcs rt join:', e && e.message); }
 }
 function _pcRTPing(){
@@ -52646,6 +52691,61 @@ async function _pcRTPull(p){
     _pcRTFlash(hit, p && p.by);
   }catch(e){ console.warn('pcs rt pull:', e && e.message); }
   _pcRTBusy = false;
+}
+/* ═══ [v1310] 잡고 있는 것 — 방송 · 표시 ══════════════════════════════════ */
+let _pcHeld = new Map(), _pcHeldTimer = null, _pcHeldMine = '';
+function _pcRTGrab(what){
+  try{
+    if(!what || _pcHeldMine === what) return;
+    _pcHeldMine = what;
+    if(!_pcRT) return;
+    _pcRT.send({ type:'broadcast', event:'grab', payload:{
+      id:_pcRTMe(), by:(currentUser && currentUser.name) || '?', what:what }});
+  }catch(_){ }
+}
+function _pcRTFree(){
+  try{
+    if(!_pcHeldMine) return;
+    _pcHeldMine = '';
+    if(_pcRT) _pcRT.send({ type:'broadcast', event:'free', payload:{ id:_pcRTMe() }});
+  }catch(_){ }
+}
+/* 사람마다 같은 색을 준다 — 이름을 안 읽어도 누구인지 익는다 */
+function _pcHeldHue(id){
+  var h = 0, t = String(id||'');
+  for(var i=0;i<t.length;i++) h = (h*31 + t.charCodeAt(i)) % 360;
+  return h;
+}
+/* what 하나가 화면의 어느 요소인가 */
+function _pcHeldEl(what){
+  try{
+    var m;
+    if((m = /^pc:(.+)$/.exec(what)))     return document.querySelector('.pc[data-id="'+m[1]+'"]');
+    /* 선택자는 실제 화면에 붙어 있는 속성 그대로다 — 짐작으로 쓰면 조용히 아무것도 안 뜬다.
+       격자 막대 .ag-bar[data-pc][data-idx] · 직원 칩 [data-staff-chip] · 클라 칩 [data-cid] */
+    if((m = /^asg:(.+?):(\d+)$/.exec(what))) return document.querySelector('.ag-bar[data-pc="'+m[1]+'"][data-idx="'+m[2]+'"]')
+                                                 || document.querySelector('.pc[data-id="'+m[1]+'"]');
+    if((m = /^staff:(.+)$/.exec(what)))  return document.querySelector('[data-staff-chip="'+m[1]+'"]');
+    if((m = /^client:(.+)$/.exec(what))) return document.querySelector('[data-cid="'+m[1]+'"]');
+  }catch(_){ }
+  return null;
+}
+function _pcHeldPaint(){
+  try{
+    document.querySelectorAll('.pc-held').forEach(function(el){
+      el.classList.remove('pc-held'); el.style.removeProperty('--heldh');
+      var t = el.querySelector(':scope > .pc-held-tag'); if(t) t.remove();
+    });
+    _pcHeld.forEach(function(v, uid){
+      var el = _pcHeldEl(v.what); if(!el) return;
+      el.classList.add('pc-held');
+      el.style.setProperty('--heldh', _pcHeldHue(uid));
+      var tag = document.createElement('span');
+      tag.className = 'pc-held-tag';
+      tag.textContent = v.by || '?';
+      el.appendChild(tag);
+    });
+  }catch(_){ }
 }
 function _pcRTFlash(ids, who){
   try{
@@ -57508,6 +57608,7 @@ function _pcApplyCols(){
 function _pcSetCols(v){ try{ localStorage.setItem('pc_cols', String(v)); }catch(_){} _pcApplyCols(); }
 function renderPCs(){
   try{ _pcRTJoin(); }catch(_){}   /* [v1308] 실시간 채널 — 이미 붙어 있으면 그냥 돌아온다 */
+  try{ setTimeout(_pcHeldPaint, 0); }catch(_){}   /* [v1310] 다시 그리면 표시가 날아간다 — 그린 뒤 다시 칠한다 */
   try{ normalizePCs(); }catch(_){}
   try{ _pcApplyCols(); }catch(_){}
   try{ _applyProfileShiftLens(); }catch(_){}   // [v631] profiles (staff_state) can land AFTER loadStaffPool — refresh real 8/10/12 contract hours on every render
@@ -57863,6 +57964,7 @@ function poolGroupDragStart(e, staffId){
     dragType = 'staff'; dragMode = 'hours'; dragId = staffId; dragHours = remain;
     window._dragPlanned = false;
     document.body.classList.add('dragging-staff');
+    try{ _pcRTGrab('staff:'+staffId); }catch(_){}   /* [v1310] */
   }catch(_){}
 }
 function poolGroupDragEnd(e){
@@ -59577,12 +59679,14 @@ function dragStartClient(e, clientId){
   e.dataTransfer.effectAllowed = 'move';
   e.target.classList.add('dragging');
   document.body.classList.add('dragging-client');
+  try{ _pcRTGrab('client:'+clientId); }catch(_){}   /* [v1310] */
 }
 // PC 슬롯 안 직원/클라이언트 자체를 드래그 — 슬롯끼리 스왑 or 빈 칸으로 이동
 function dragStartPcStaff(e, pcId, idx){
   e.stopPropagation();
   dragType = 'staff'; dragMode = 'pc-staff'; dragHours = 0;
   dragFrom = { pcId, idx };
+  try{ _pcRTGrab('asg:'+pcId+':'+idx); }catch(_){}   /* [v1310] */
   const p = PCS.find(x=>x.id===pcId);
   dragId = p && p.assignments[idx] ? p.assignments[idx].staff : null;
   e.dataTransfer.effectAllowed = 'move';
@@ -59612,6 +59716,7 @@ function dragEnd(e){
   document.querySelectorAll('.seg.dragging,.slot.dragging').forEach(el=>el.classList.remove('dragging'));
   document.querySelectorAll('.pc.drop-staff,.pc.drop-client,.pc.drop-leader').forEach(el=>el.classList.remove('drop-staff','drop-client','drop-leader'));
   dragType = null; dragId = null; dragHours = 0; dragMode = null; dragFrom = null;
+  try{ _pcRTFree(); }catch(_){}   /* [v1310] 잡고 있던 표시를 거둔다 */
 }
 /* ═══ [v1279] 드래그 뒷정리 파수꾼 ═══════════════════════════════════════════════════
    드롭이 render() 를 부르면 끌던 원본 요소가 갈려 나가고, 그러면 그 요소에 걸린
@@ -59627,6 +59732,7 @@ try{
       try{ _poolDragId = null; }catch(_){}
       try{ dragType = null; dragMode = null; dragId = null; dragHours = 0; dragFrom = null; }catch(_){}
       try{ window._dragPlanned = false; }catch(_){}
+      try{ _pcRTFree(); }catch(_){}   /* [v1310] 요소가 갈려나가 ondragend 를 못 받은 경우의 안전망 */
       try{
         document.body.classList.remove('dragging-staff','dragging-client','dragging-leader','pool-grouping','pcb-dragging-any');
         document.querySelectorAll('.seg.dragging,.slot.dragging').forEach(function(el){ el.classList.remove('dragging'); });
