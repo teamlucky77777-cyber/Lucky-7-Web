@@ -4,7 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
 <title>ARASAKA Corp</title>
-<!-- BUILD: v1308 | PC 현황 실시간 — 남이 바꾸면 바로 반영되고 바뀐 카드가 잠깐 빛난다 -->
+<!-- BUILD: v1309 | 기준 EXP 머리줄 재작성 — 네 줄을 한 줄로 · 설명문·교육모드 제거 -->
 <!-- v745 기록은 git 이력(v1302 이전 커밋)에 있다 — 100KB 변경사 주석을 배포에서 제거 -->
 <!-- [v677] a <link href> cannot read a CSS variable, so the favicon carries its own copy.
      64px: a browser tab draws it at 16-32px, so this is 2x-DPR sharp at 11KB. -->
@@ -8468,6 +8468,28 @@ body.pcboxes-on .pbox.col:hover .pbox-t::after{
 #ch-pc-status .pcs-met-sub{font-size:9px;margin:0}
 /* 범례는 카드에 이미 색으로 다 나와 있다 — 한 줄을 통째로 쓸 값어치가 없다 */
 #pc-board-panel>.legend{display:none}
+/* ═══ [v1309] 기준 EXP 머리줄 — 이름은 왼쪽, 조작은 오른쪽 ═══════════════ */
+.cs-wrap .cs-hd{display:flex;align-items:flex-end;justify-content:space-between;
+  gap:16px;flex-wrap:wrap;margin:0 0 16px}
+.cs-wrap .cs-hd-l{min-width:0}
+.cs-wrap .cs-hd-l .ph{margin:0}
+.cs-wrap .cs-hd-r{display:flex;align-items:center;gap:7px;flex:none;padding-bottom:2px}
+.cs-wrap .cs-ro{font-size:11px;font-weight:600;color:var(--tx3,#6c6b66);
+  background:rgba(255,255,255,.05);border-radius:7px;padding:5px 9px;letter-spacing:-.01em}
+/* 버튼 — 테두리 없이 옅은 면. 강조는 하나만 */
+.cs-wrap .cs-act{border:0;border-radius:9px;height:32px;padding:0 14px;cursor:pointer;
+  font-size:12.5px;font-weight:600;letter-spacing:-.01em;line-height:1;
+  display:inline-flex;align-items:center;
+  background:rgba(255,255,255,.06);color:var(--tx2,#b9b8b4);
+  transition:background .16s ease,color .16s ease,transform .12s ease;
+  -webkit-font-smoothing:antialiased}
+.cs-wrap .cs-act:hover{background:rgba(255,255,255,.11);color:var(--tx,#e6e5e2)}
+.cs-wrap .cs-act:active{transform:scale(.97)}
+.cs-wrap .cs-act-go{background:var(--ac,#c2a04a);color:#1a1408;font-weight:700}
+.cs-wrap .cs-act-go:hover{background:#d4b25c;color:#1a1408}
+html[data-theme=light] .cs-wrap .cs-act{background:rgba(0,0,0,.05);color:#3d3b36}
+html[data-theme=light] .cs-wrap .cs-act:hover{background:rgba(0,0,0,.09);color:#1d1d1f}
+html[data-theme=light] .cs-wrap .cs-ro{background:rgba(0,0,0,.05);color:#6e6e73}
 /* ═══════════════════════════════════════════════════════════════════════════
    [v1307] 명령 줄을 애플처럼 — PC 현황 · 기준 EXP
    boss "이거 좀 그냥 새롭게 바꿔버리면 안되냐 / PC 현황 저건 폰트랑 그런것들
@@ -8538,19 +8560,7 @@ body.pcboxes-on .pbox.col:hover .pbox-t::after{
 #ch-pc-status .pcs-met-val{font-size:17px;font-weight:700;letter-spacing:-.02em}
 #ch-pc-status .pcs-met-sub{color:var(--tx3,#6c6b66);font-weight:500}
 
-/* ═══ 기준 EXP 도 같은 손으로 ═════════════════════════════════════ */
-.cs-wrap .cs-train-bar>button,.cs-wrap .cs-train-bar>div{border:0!important}
-.cs-wrap .cs-train-bar+div button,.cs-wrap .cs-train-bar~div>button{
-  border:0!important;border-radius:8px!important;font-weight:600!important;
-  letter-spacing:-.01em;background:rgba(255,255,255,.055)!important;
-  color:var(--tx2,#b9b8b4)!important;
-  transition:background .16s ease,color .16s ease,transform .12s ease}
-.cs-wrap .cs-train-bar~div>button:hover{background:rgba(255,255,255,.10)!important;color:var(--tx,#e6e5e2)!important}
-.cs-wrap .cs-train-bar~div>button:active{transform:scale(.97)}
-/* 시트 내려받기 하나만 강조 — 기준 EXP 화면에서 실제로 누르는 것은 이것이다 */
-.cs-wrap .cs-train-bar~div>button[onclick*="_csSeedStandards"]{
-  background:var(--ac,#c2a04a)!important;color:#1a1408!important;font-weight:700!important}
-.cs-wrap .cs-train-bar~div>button[onclick*="_csSeedStandards"]:hover{background:#d4b25c!important}
+/* [v1309] 기준 EXP 버튼 스타일은 .cs-act 로 다시 만들었다 — v1307 의 cs-train-bar 규칙은 붙을 곳이 없어져 걷었다 */
 
 /* 밝은 테마에서도 같은 규칙 — 면만 뒤집는다 */
 html[data-theme=light] #ch-pc-status .pcs-head-actions>button,
@@ -43148,18 +43158,41 @@ function _csT(ko,en){ try{ return (_uiLang()==='ko')?ko:en; }catch(_){ return en
 function _csJobKO(code){ var k=String(code||'').toLowerCase().trim(); var M={knight:'기사',mage:'법사',wizard:'법사',magician:'법사',lord:'군주',prince:'군주',royal:'군주',fairy:'요정',elf:'요정',darkelf:'다크엘프','dark elf':'다크엘프',warrior:'전사',illusionist:'환술사',dragonknight:'용기사','dragon knight':'용기사'}; return M[k]||code; }
 function _csRenderShell(otherView){
   if(!otherView) return;
-  var togCls=_csTraining?'cs-train-tog on':'cs-train-tog';
-  var togSub=_csTraining?_csT('ON · 기준 미적용 (전원 기본급)','ON · standards off (all base pay)'):_csT('OFF · 기준 적용','OFF · standards applied');
-  var note=_csTraining?'<div class="cs-train-note">'+_csT('교육 모드 — 기준 미적용. 전원 기본급, 패널티 없음. (기준은 보존됩니다.)','Training mode — standards not applied. Everyone is paid base, no penalties. (Standards are kept.)')+'</div>':'';
-  var isAdmin=(typeof currentUserRole!=='undefined' && currentUserRole==='admin');
-  var sortRow=(typeof expCanEdit==='function'&&expCanEdit())?'<button onclick="_csResetCardOrder()" style="display:inline-flex;align-items:center;gap:6px;background:var(--bg-i,#1c1c1b);color:var(--tx2,#989792);border:1px solid var(--br,#2c2c2b);border-radius:10px;padding:9px 13px;font-weight:700;font-size:.82rem;cursor:pointer" title="'+_csT('드래그로 바꾼 순서를 초기화','Clears the dragged order')+'">↺ '+_csT('PC 순서로 정렬','Sort by PC')+'</button>':'';
-  var seedRow=isAdmin?'<div style="margin:-2px 0 14px;display:flex;align-items:center;gap:11px;flex-wrap:wrap"><button onclick="_csSeedStandards()" title="6개 PC 맵 목표를 리포트 서버에 기록 · 기존과 병합 · 재실행해도 안전" style="display:inline-flex;align-items:center;gap:7px;background:var(--ac,#c9963a);color:#1a1205;border:none;border-radius:10px;padding:9px 15px;font-weight:700;font-size:.85rem;cursor:pointer">⬇ '+_csT('기준 EXP 시드','Seed Standard EXP')+'</button><span style="color:var(--tx3,#8a8a86);font-size:.8rem">'+_csT('6개 PC 맵 목표를 리포트 서버에 기록 · 기존과 병합 · 재실행해도 안전','Writes the 6-PC map targets to the report server · merges with existing · safe to re-run')+'</span>'+sortRow+'</div>':(sortRow?'<div style="margin:-2px 0 14px">'+sortRow+'</div>':'');
-  otherView.innerHTML='<div class="cs-wrap"><div class="att-eyebrow">'+_csT('게임 · 기준','Game · Standard')+'</div><div class="ph">'+_csT('기준 EXP','EXP Standards')+'</div>'
-    +'<div class="psub">'+(expCanEdit()?_csT('맵 기준은 드래그 앤 드롭으로 클라이언트 간 이동 · ⣿ 손잡이로 카드 순서 변경 · 자동 저장','Drag &amp; drop map standards between clients · drag the ⣿ grip to reorder cards · auto-saved'):_csT('보기 전용 — 클라이언트별 맵 기준 EXP. 수정은 대표/매니저만 가능합니다.','View only — per-client map EXP standards. Editing is limited to CEO/Manager.'))+'</div>'
-    +'<div class="cs-train-bar">'+(expCanEdit()?('<button class="'+togCls+'" onclick="_csToggleTraining()"><span class="cs-train-knob"></span><span class="cs-train-txt"><b>'+_csT('교육 모드','Training mode')+'</b><small>'+togSub+'</small></span></button>'):('<div class="'+togCls+'" style="cursor:default;opacity:.75" title="'+_csT('대표/매니저만 변경','CEO/Manager only')+'"><span class="cs-train-knob"></span><span class="cs-train-txt"><b>'+_csT('교육 모드','Training mode')+'</b><small>'+togSub+'</small></span></div>'))+note+'</div>'
-    +seedRow
-    +'<div class="cs-grid" id="cs-grid"><div class="cs-loading">'+_csT('불러오는 중…','Loading…')+'</div></div>'
-    +'<div class="cs-ed-bg" id="cs-ed-bg" onclick="if(event.target===this)_csEditClose()"><div class="cs-ed-modal" id="cs-ed-modal"></div></div></div>';
+  /* ═══ [v1309] 기준 EXP 머리줄을 다시 만들었다 ═══════════════════════════════
+     boss "이부분 인터페이스 갈아엎고 그냥 다시 만들어 애플처럼" · "교육모드는 그냥 빼버리고"
+
+     전에는 제목 · 설명 두 줄 · 교육모드 토글 줄 · 버튼 줄로 네 겹이었다. 정작
+     이 화면에서 하는 일은 기준을 고치는 것 하나인데, 그 앞에 네 줄이 서 있었다.
+
+     · 제목과 버튼을 한 줄에 세운다(왼쪽 이름 / 오른쪽 조작).
+     · 설명 두 줄을 뺀다. 끌어다 놓으면 옮겨진다는 것은 해 보면 아는 일이고,
+       읽어야 아는 화면이면 설명이 아니라 화면을 고쳐야 한다.
+     · 교육 모드를 뺀다 — 지금 OFF 이고(training_mode=[false]) 기준은 계속 적용된다.
+       _csTraining 변수와 판정 코드는 그대로 두었다. 화면에서 스위치만 걷은 것이라,
+       다시 필요하면 이 자리에 버튼 한 줄만 되돌리면 된다.
+     · 버튼은 둘. 시트 내려받기가 주된 행동이라 하나만 채우고, 정렬은 무채색.
+     ═══════════════════════════════════════════════════════════════════════ */
+  var canEd = (typeof expCanEdit==="function") && expCanEdit();
+  var isAdmin = (typeof currentUserRole!=="undefined" && currentUserRole==="admin");
+  var acts = "";
+  if(isAdmin) acts += '<button class="cs-act cs-act-go" onclick="_csSeedStandards()" title="'
+    + _csT("6개 PC 맵 목표를 리포트 서버에 기록 · 기존과 병합 · 재실행해도 안전",
+           "Writes the 6 PC map targets to the report server · merges · safe to re-run")
+    + '">' + _csT("기준 EXP 시트","EXP sheet") + '</button>';
+  if(canEd) acts += '<button class="cs-act" onclick="_csResetCardOrder()" title="'
+    + _csT("드래그로 바꾼 순서를 초기화","Clears the dragged order")
+    + '">' + _csT("PC 순서로","By PC") + '</button>';
+  var ro = canEd ? "" : ('<span class="cs-ro">' + _csT("보기 전용","Read only") + '</span>');
+  otherView.innerHTML =
+      '<div class="cs-wrap">'
+    +   '<div class="cs-hd">'
+    +     '<div class="cs-hd-l"><div class="att-eyebrow">' + _csT("게임 · 기준","Game · Standard") + '</div>'
+    +       '<div class="ph">' + _csT("기준 EXP","EXP Standards") + '</div></div>'
+    +     '<div class="cs-hd-r">' + ro + acts + '</div>'
+    +   '</div>'
+    +   '<div class="cs-grid" id="cs-grid"><div class="cs-loading">' + _csT("불러오는 중…","Loading…") + '</div></div>'
+    +   '<div class="cs-ed-bg" id="cs-ed-bg" onclick="if(event.target===this)_csEditClose()"><div class="cs-ed-modal" id="cs-ed-modal"></div></div>'
+    + '</div>';
 }
 
 function _csRenderGrid(calc){
