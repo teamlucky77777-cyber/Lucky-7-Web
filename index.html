@@ -4,7 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
 <title>ARASAKA Corp</title>
-<!-- BUILD: v1304 | 캔버스 카드 팝업 — 상태줄 제거·우선순위 크게 · 리마인더 크게 · 메모+할일 한 상자로 -->
+<!-- BUILD: v1305 | 캔버스 팝업 — 메모 상자·빈 날짜칸 제거(할 일 하나로) · 카드 카운트다운 시:분:초로 매초 -->
 <!-- v745 기록은 git 이력(v1302 이전 커밋)에 있다 — 100KB 변경사 주석을 배포에서 제거 -->
 <!-- [v677] a <link href> cannot read a CSS variable, so the favicon carries its own copy.
      64px: a browser tab draws it at 16-32px, so this is 2x-DPR sharp at 11KB. -->
@@ -20509,9 +20509,7 @@ function _mtcRemindTick(){
       el.classList.remove('mtcn-fired');
       b.classList.remove('off');
       const s = Math.round(left/1000);
-      const txt = s >= 3600 ? Math.floor(s/3600)+'시간 '+Math.floor((s%3600)/60)+'분'
-                : s >= 60   ? Math.floor(s/60)+'분'
-                            : s+'초';
+      const txt = _mtcCd(s);
       if(b.textContent !== txt){ b.textContent = txt; b.title = txt + ' 뒤 알림'; }
       const lv = left <= 60*1000 ? 3 : left <= 5*60*1000 ? 2 : left <= 30*60*1000 ? 1 : 0;
       if(lv) b.classList.add('b'+lv);
@@ -24960,6 +24958,13 @@ function _mtcNote(kind, item, today, pos){
      남은 시간을 세어 보여주고, 시계는 뗀다. 그리고 시간이 줄수록 카드가 빨라진다:
      1시간 밖이면 조용하고, 30분 안쪽부터 아주 느리게 뛰기 시작해, 1분 안쪽에서는
      빠르게 뛴다. 숫자를 읽지 않아도 판 전체에서 급한 카드가 먼저 눈에 걸린다. */
+/* [v1305] 남은 시간 — 시:분:초. 매초 눈에 보이게 줄어들어야 한다. */
+function _mtcCd(sec){
+  sec = Math.max(0, Math.round(sec||0));
+  var h = Math.floor(sec/3600), m = Math.floor((sec%3600)/60), x = sec%60;
+  var p = function(v){ return String(v).padStart(2,"0"); };
+  return h ? (h + ":" + p(m) + ":" + p(x)) : (p(m) + ":" + p(x));
+}
   let _beatCls = '';
   const remindB = item.remindAt ? (() => {
     const rms = new Date(item.remindAt).getTime();
@@ -24970,10 +24975,12 @@ function _mtcNote(kind, item, today, pos){
       if(!item.beatAck) _beatCls = ' mtcn-fired';
       return `<span class="mtcn-remind off" title="리마인더 울림 — 카드를 누르면 멈춥니다">울림</span>`;
     }
+    /* [v1305] boss "리마인더 넣으면 숫자가 실시간으로 줄어드는게 카드에 보이게끔"
+       예전에는 한 시간 밖이면 '2시간 13분', 안쪽이면 '7분' 이라 1초마다 다시 그려도
+       화면의 글자는 1분에 한 번만 바뀌었다 — 멈춘 것처럼 보였다.
+       시:분:초로 적으면 매초 눈에 보이게 줄어든다. 자릿수가 고정이라 흔들리지도 않는다. */
     const s = Math.round(left/1000);
-    const txt = s >= 3600 ? Math.floor(s/3600)+'시간 '+Math.floor((s%3600)/60)+'분'
-              : s >= 60   ? Math.floor(s/60)+'분'
-                          : s+'초';
+    const txt = _mtcCd(s);
     /* 박동 단계 — 남은 시간이 줄수록 주기가 짧아진다 */
     const beat = left <= 60*1000   ? ' b3'
                : left <= 5*60*1000 ? ' b2'
@@ -26327,8 +26334,6 @@ function mtCanvasHTML(ctx){
   .mtcpop-detail{border:1px solid var(--br2,#2f2f2d);border-radius:10px;padding:7px 8px 2px;margin-bottom:7px}
   .mtcpop-detail-h{font-size:10px;font-weight:800;letter-spacing:.06em;color:var(--tx3,#6c6b66);margin-bottom:6px}
   /* [v1301] 알림은 접어 둔다 — 시계 하나로, 누를 때만 펼친다 */
-  .mtcpop-clkwrap{display:none}
-  .mtcpop-clkwrap.open{display:block}
   .mtcpop-clk{margin-left:auto;background:none;border:1px solid var(--br2,#2f2f2d);border-radius:7px;
     cursor:pointer;font-size:11px;line-height:1;padding:4px 6px;color:var(--tx3,#6c6b66);opacity:.75}
   .mtcpop-clk:hover{opacity:1;border-color:color-mix(in srgb,var(--pc) 40%,transparent)}
@@ -26473,7 +26478,8 @@ function mtCanvasHTML(ctx){
   .mtcn-day.old{color:#e0a0a0;background:rgba(196,106,106,.14)}
   .mtcn-memo,.mtcn-steps{font-size:.78em;font-family:ui-monospace,monospace;color:rgba(235,235,245,.42);flex:none}
   /* [v917] 리마인더 배지 — 아직 안 울림=금색, 이미 울림=흐리게 */
-  .mtcn-remind{font-size:.7em;font-family:ui-monospace,monospace;color:#e2c48f;background:rgba(226,196,143,.14);border-radius:3px;padding:0 4px;flex:none;font-weight:700}
+  /* [v1305] 카운트다운은 카드에서 읽히라고 있는 것이다 — 조금 키우고 자릿수를 고정한다 */
+  .mtcn-remind{font-size:.8em;font-family:ui-monospace,monospace;color:#e2c48f;background:rgba(226,196,143,.16);border-radius:4px;padding:1px 5px;flex:none;font-weight:800;letter-spacing:.02em;font-variant-numeric:tabular-nums}
   .mtcn-remind.off{color:rgba(235,235,245,.32);background:rgba(255,255,255,.04);font-weight:400}
   /* [v946] boss "일일업무 카드 옮길때 렉 있는데" — v945의 심박이 원인이었다. 두 가지가 비쌌다.
        ① .mtc-note:has(.mtcn-remind.b3) — :has()는 DOM이 바뀔 때마다 후보 전체를 다시 판정한다.
@@ -30088,10 +30094,10 @@ function _mtcShowPop(noteEl, pinned){
           onclick="mtcPopField('${kind}',${id},'priority','${p}')" title="${MT_PRI[p].label}">
           <b>${MT_PRI[p].num}</b><i>${MT_PRI[p].label}</i></button>`).join('')}
     </div>
-    <div class="mtcpop-row">
-      ${/* [v1304] 작은 우선순위 알약은 위 큰 칸으로 올라갔다. 이 줄엔 마감일만 남는다. */''}
-      <input type="date" class="mtcpop-in mtcpop-date" value="${item.due||''}" onchange="mtcPopField('${kind}',${id},'due',this.value||null)">
-    </div>` : ''}
+    ${/* [v1305] boss "이거 빼 그리고 그냥" — 빈 날짜 칸('연도. 월. 일.').
+         마감일은 아무도 안 채웠고, 빈 칸이 줄 하나를 먹으면서 '뭘 넣으라는 거지'
+         하게 만들었다. 급한 것은 우선순위로, 시각은 리마인더로 말한다.
+         item.due 필드는 그대로 둔다 — 다른 코드가 읽으므로 지우면 안 된다. */''}` : ''}
     ${/* [v1277] boss "캔버스에서 이거 인터페이스에서 빼" — 담당 드롭다운.
          담당은 카드를 사람 위로 끌어다 놓아서 정한다. 그게 이 판의 방식이고,
          드롭다운은 같은 일을 두 번째 방법으로 또 적어 둔 것이었다.
@@ -30135,10 +30141,10 @@ function _mtcShowPop(noteEl, pinned){
          합치고 이름을 갈라 준다 — '적기' 와 '할 일'. */''}
     <div class="mtcpop-detail">
     <div class="mtcpop-detail-h">세부 내용</div>
-    <div class="mtcpop-memowrap${(item.memo||'').trim() ? ' can-drag' : ''}" onpointerdown="_mtcMemoWrapDown(event,${id})">
-      <textarea class="mtcpop-memo" placeholder="적기 — 자유롭게 (Enter=확정 · Shift+Enter=줄바꿈)" onkeydown="if(event.key==='Enter'&&!event.shiftKey){event.preventDefault();this.blur()}" onblur="mtcPopField('${kind}',${id},'memo',this.value)">${_mtcEsc(item.memo||'')}</textarea>
-      ${(item.memo||'').trim() ? `<span class="mtcpop-memohint">✥ 잡아서 보드로</span>` : ''}
-    </div>
+    ${/* [v1305] boss "완전히 하나로 합쳐"
+         메모 상자를 뺐다. 이제 세부 내용은 '할 일' 목록 하나뿐이다.
+         지우기 전에 확인했다 — 실제 카드 중 메모가 들어 있는 것은 0건이라
+         잃는 내용이 없다. item.memo 필드 자체는 남긴다(문틈·복사·승계 코드가 읽는다). */''}
     ${steps.length?`<div class="mtcpop-steps">
       <div class="mtcpop-steps-h">할 일 <span>⠿ 잡고 보드로 빼면 카드 ↗</span></div>
       ${steps.map((s,i)=>{
