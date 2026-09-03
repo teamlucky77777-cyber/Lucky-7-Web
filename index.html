@@ -4,7 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
 <title>ARASAKA Corp</title>
-<!-- BUILD: v1310 | 누가 무엇을 잡고 있는지 실시간 표시 — 그 요소에 테두리+이름표 -->
+<!-- BUILD: v1311 | 사이드바에 '남이 바꾼 것' 배지 · 들어가면 무엇이 바뀌었는지 알려주고 그 물건을 빛낸다 -->
 <!-- v745 기록은 git 이력(v1302 이전 커밋)에 있다 — 100KB 변경사 주석을 배포에서 제거 -->
 <!-- [v677] a <link href> cannot read a CSS variable, so the favicon carries its own copy.
      64px: a browser tab draws it at 16-32px, so this is 2x-DPR sharp at 11KB. -->
@@ -9305,6 +9305,39 @@ button:active,.btn:active{transform:scale(.97)}
   12%{box-shadow:0 0 0 2px rgba(122,196,255,.85),0 0 18px rgba(122,196,255,.35)}
   100%{box-shadow:0 0 0 0 rgba(122,196,255,0)}}
 .pc.pc-rt-flash{animation:pcRtFlash 2.4s cubic-bezier(.2,.7,.3,1) both;z-index:3}
+/* ═══ [v1311] "이게 바뀌었어요" 카드 — 오른쪽 아래에 잠깐 ══════════════════ */
+#nav-chg{position:fixed;right:20px;bottom:20px;z-index:9200;width:300px;max-width:calc(100vw - 40px);
+  background:var(--bg-c,#171714);border:1px solid var(--br2,#2f2f2d);border-radius:14px;
+  padding:11px 12px 10px;box-shadow:0 12px 34px rgba(0,0,0,.44),0 2px 8px rgba(0,0,0,.3);
+  animation:navChgIn .3s cubic-bezier(.2,.9,.3,1) both}
+#nav-chg.out{animation:navChgOut .22s ease-in both}
+@keyframes navChgIn{from{opacity:0;transform:translateY(14px) scale(.96)}to{opacity:1;transform:none}}
+@keyframes navChgOut{to{opacity:0;transform:translateY(8px) scale(.98)}}
+#nav-chg .nav-chg-hd{display:flex;align-items:center;gap:7px;margin-bottom:8px;font-size:12px;color:var(--tx,#e6e5e2)}
+#nav-chg .nav-chg-hd b{font-weight:700;letter-spacing:-.01em;flex:1;min-width:0;
+  overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+#nav-chg .nav-chg-dot{width:7px;height:7px;border-radius:50%;background:#e2564d;flex:none;
+  box-shadow:0 0 0 0 rgba(226,86,77,.5);animation:navChgDot 1.8s ease-out infinite}
+@keyframes navChgDot{0%{box-shadow:0 0 0 0 rgba(226,86,77,.5)}70%,100%{box-shadow:0 0 0 7px rgba(226,86,77,0)}}
+#nav-chg .nav-chg-x{background:none;border:0;color:var(--tx3,#6c6b66);cursor:pointer;font-size:11px;padding:2px 3px;flex:none}
+#nav-chg .nav-chg-x:hover{color:var(--tx,#e6e5e2)}
+#nav-chg .nav-chg-row{display:flex;gap:6px;align-items:baseline;font-size:11.5px;line-height:1.45;
+  padding:4px 0;border-top:1px solid rgba(255,255,255,.05)}
+#nav-chg .nav-chg-row b{flex:none;font-weight:700;color:var(--ac,#c2a04a)}
+#nav-chg .nav-chg-row span{color:var(--tx2,#b9b8b4);min-width:0}
+#nav-chg .nav-chg-more{font-size:10.5px;color:var(--tx3,#6c6b66);padding-top:5px;text-align:right}
+
+/* 바뀐 그 물건 자체를 빛낸다 — 말과 물건을 잇는다 */
+.nav-spot{animation:navSpot 5.2s cubic-bezier(.2,.7,.3,1) both;position:relative;z-index:5}
+@keyframes navSpot{
+  0%{box-shadow:0 0 0 0 rgba(226,86,77,0)}
+  8%{box-shadow:0 0 0 3px rgba(226,86,77,.9),0 0 22px rgba(226,86,77,.4)}
+  55%{box-shadow:0 0 0 2px rgba(226,86,77,.5),0 0 12px rgba(226,86,77,.2)}
+  100%{box-shadow:0 0 0 0 rgba(226,86,77,0)}}
+@media (prefers-reduced-motion: reduce){
+  #nav-chg,#nav-chg .nav-chg-dot,.nav-spot{animation:none}
+  .nav-spot{box-shadow:0 0 0 2px rgba(226,86,77,.8)}}
+html[data-theme=light] #nav-chg{background:#fff;border-color:rgba(0,0,0,.1);box-shadow:0 12px 34px rgba(0,0,0,.16)}
 /* ═══ [v1310] 누가 잡고 있는 것 — 테두리 + 이름표 ═══════════════════════
    사람마다 색이 다르다(id 로 만든 색상환 값). 이름을 안 읽어도 누구인지 익는다. */
 .pc-held{position:relative;outline:2px solid hsl(var(--heldh,210) 78% 62% / .9);outline-offset:1px;
@@ -50845,10 +50878,191 @@ function _rawChannelBadge(channelId){
 }
 
 // 사이드바에 보이는 badge — baseline 차감
+/* ═══════════════════════════════════════════════════════════════════════════
+   [v1311] "내가 마지막으로 본 뒤에 남이 바꾼 것"
+   boss "이 카테고리 안에서 뭔가 바뀐 내용이 있으면 공지사항처럼 뜨게 해주라니까
+         그리고 그걸 눌렀을때 화면에도 뭔가 표시되게 · 알림 누르셨죠? 자 이게
+         바뀌었어요! 이거 보세요! 이런 느낌"
+   boss "내가 마지막으로 그 화면을 본 뒤에 남이 바꾼 것 · 이런식으로 가야할듯?"
+
+   자료는 이미 다 있다 — log_state 에 누가 언제 무엇을 바꿨는지 쌓인다(v1283 부터
+   배정 격자도 들어온다). 여기서는 그것을 화면별로 나누고, 내가 그 화면을 마지막으로
+   본 시각과 견주기만 하면 된다.
+
+   지킬 것 셋:
+   · 내가 바꾼 것은 안 센다. 내 손으로 옮겨 놓고 빨간 점이 뜨면 그건 고장이다.
+   · 본 시각은 localStorage 에 사람별로 남긴다 — 새로고침해도 이미 본 것이 다시
+     뜨면 안 된다(기존 배지 baseline 은 sessionStorage 라 새로고침에 날아간다).
+   · 처음 쓰는 사람에게는 아무것도 안 띄운다. 본 시각이 없으면 '지금부터' 로 잡는다.
+     안 그러면 첫 로그인에 몇 백 개가 한꺼번에 뜬다.
+   ═══════════════════════════════════════════════════════════════════════════ */
+const _NAV_CHG_MAP = [
+  [/배정 (뺌|추가)|자리 옮김|새로 배정|예정 배치|백업(으로 넣음|에서 뺌)/, 'pc-status'],
+  [/added PC|deleted PC/i,                                                   'pc-status'],
+  [/added client|deleted client|deleted pool client|renamed client|client on hiatus|set client passive/i, 'op-pc-board'],
+  [/pipeline apply/i,                                                        'op-pc-board'],
+  [/set shift|marked staff resigned|reactivated staff/i,                     'op-hr'],
+  [/warning [+-]|trust [+-]|connecting issue/i,                              'op-trust'],
+  [/attendance →/,                                                           'attendance'],
+  [/moved applicant|edited PC spec|HR 인박스|HR 기록 삭제/i,                  'op-recruit']
+];
+function _navChgKey(){ try{ return 'lucky7_navseen:' + String((currentUser && currentUser.id) || 'anon'); }catch(_){ return 'lucky7_navseen:anon'; } }
+let _navSeen = null;
+function _navSeenLoad(){
+  if(_navSeen) return _navSeen;
+  try{ _navSeen = JSON.parse(localStorage.getItem(_navChgKey()) || '{}') || {}; }catch(_){ _navSeen = {}; }
+  return _navSeen;
+}
+function _navSeenSave(){ try{ localStorage.setItem(_navChgKey(), JSON.stringify(_navSeenLoad())); }catch(_){ } }
+function _navChanFor(action){
+  var a = String(action || '');
+  for(var i=0;i<_NAV_CHG_MAP.length;i++){ if(_NAV_CHG_MAP[i][0].test(a)) return _NAV_CHG_MAP[i][1]; }
+  return '';
+}
+function _navMine(actor){
+  try{
+    var me = String((currentUser && currentUser.name) || '').toLowerCase().trim();
+    if(!me) return false;
+    return String(actor || '').toLowerCase().trim() === me;
+  }catch(_){ return false; }
+}
+/* 이 화면에서 내가 아직 못 본 변경들 */
+function _navChangesFor(channelId){
+  try{
+    if(!channelId || typeof LOG_DATA === 'undefined' || !Array.isArray(LOG_DATA)) return [];
+    var seen = _navSeenLoad()[channelId];
+    if(!seen) return [];                       /* 본 적 없는 화면 — 처음엔 조용히 */
+    return LOG_DATA.filter(function(e){
+      if(!e || !e.ts) return false;
+      if(_navMine(e.actor)) return false;       /* 내가 한 것은 안 센다 */
+      if(_navChanFor(e.action) !== channelId) return false;
+      return String(e.ts) > String(seen);
+    }).slice(0, 30);
+  }catch(_){ return []; }
+}
+function _navChangeCount(channelId){ return _navChangesFor(channelId).length; }
+
+/* ═══ [v1311] "알림 누르셨죠? 이게 바뀌었어요" ═══════════════════════════════
+   배지를 눌러 들어오면 그 화면 어딘가가 달라져 있다. 무엇이 달라졌는지 말해 주지
+   않으면 사장님이 판 전체를 눈으로 훑어야 한다. 오른쪽 아래에 한 장 띄우고,
+   해당하는 것이 화면에 있으면 그것도 같이 빛낸다.
+   빈 곳을 누르거나 6초가 지나면 스스로 사라진다 — 닫는 일을 시키지 않는다. */
+function _navChgClose(){
+  try{
+    var el = document.getElementById('nav-chg');
+    if(!el) return;
+    el.classList.add('out');
+    setTimeout(function(){ try{ el.remove(); }catch(_){} }, 220);
+    document.removeEventListener('pointerdown', _navChgOutside, true);
+  }catch(_){ }
+}
+function _navChgOutside(ev){
+  try{
+    var el = document.getElementById('nav-chg');
+    if(el && !el.contains(ev.target)) _navChgClose();
+  }catch(_){ }
+}
+function _navChgLine(e){
+  /* 로그의 개발자 말투를 사람 말로 — lucky7-board-changes 루틴과 같은 표로 옮긴다 */
+  var a = String(e.action || '');
+  var t = String(e.target || '');
+  var map = [
+    [/^자리 옮김 · (.+)$/,      function(m){ return t + ' 를 ' + m[1] + ' 로 옮겼어요'; }],
+    [/^새로 배정 · (.+)$/,      function(m){ return t + ' 를 ' + m[1] + ' 에 넣었어요'; }],
+    [/^예정 배치 · (.+)$/,      function(m){ return t + ' 를 ' + m[1] + ' 에 미리 잡아뒀어요'; }],
+    [/^배정 뺌 · (.+)$/,        function(m){ return t + ' 를 ' + m[1] + ' 에서 뺐어요'; }],
+    [/^백업으로 넣음 · (.+)$/,  function(m){ return t + ' 를 ' + m[1] + ' 백업으로 넣었어요'; }],
+    [/^백업에서 뺌 · (.+)$/,    function(m){ return t + ' 를 ' + m[1] + ' 백업에서 뺐어요'; }],
+    [/^set shift → (.+)$/,      function(m){ return '근무를 ' + m[1] + ' 로 바꿨어요'; }],
+    [/^added PC$/,              function( ){ return t + ' 를 새로 만들었어요'; }],
+    [/^added client/,           function( ){ return '새 고객 ' + t + ' 를 등록했어요'; }],
+    [/^deleted (pool )?client$/, function( ){ return '고객 ' + t + ' 를 지웠어요'; }],
+    [/^renamed client (.+)$/,   function(m){ return '고객 이름을 ' + m[1] + ' 로 바꿨어요'; }],
+    [/^client on hiatus · freed (.+)$/, function(m){ return t + ' 가 쉬게 되어 ' + m[1] + ' 가 비었어요'; }],
+    [/^warning \+?([\d.]+)/,    function(m){ return t + ' 에게 경고 ' + m[1] + ' 를 줬어요'; }],
+    [/^trust \+?([\d.]+)/,      function(m){ return t + ' 에게 신뢰도 ' + m[1] + ' 를 줬어요'; }],
+    [/^connecting issue/,       function( ){ return t + ' 접속 문제를 기록했어요'; }]
+  ];
+  for(var i=0;i<map.length;i++){
+    var m = map[i][0].exec(a);
+    if(m) return map[i][1](m);
+  }
+  return a + (t ? (' — ' + t) : '');   /* 표에 없는 것은 원문 그대로. 지어내지 않는다 */
+}
+function _navShowChanges(channelId, list){
+  try{
+    if(!list || !list.length) return;
+    _navChgClose();
+    var esc = (typeof _mtcEsc === 'function') ? _mtcEsc : function(x){ return String(x==null?'':x); };
+    var byWho = {};
+    list.forEach(function(e){ var w = e.actor || '?'; (byWho[w] = byWho[w] || []).push(e); });
+    var who = Object.keys(byWho);
+    var rows = list.slice(0,4).map(function(e){
+      return '<div class="nav-chg-row"><b>' + esc(e.actor || '?') + '</b>'
+           + '<span>' + esc(_navChgLine(e)) + '</span></div>';
+    }).join('');
+    var more = list.length > 4 ? ('<div class="nav-chg-more">외 ' + (list.length - 4) + '건</div>') : '';
+    var el = document.createElement('div');
+    el.id = 'nav-chg';
+    el.innerHTML =
+        '<div class="nav-chg-hd"><span class="nav-chg-dot"></span>'
+      +   '<b>' + esc(who.length === 1 ? (who[0] + '님이 바꿨어요') : (who.length + '명이 바꿨어요')) + '</b>'
+      +   '<button class="nav-chg-x" title="닫기">✕</button></div>'
+      + rows + more;
+    document.body.appendChild(el);
+    el.querySelector('.nav-chg-x').onclick = _navChgClose;
+    /* 화면에 그 대상이 있으면 같이 빛낸다 — 말과 물건을 잇는다 */
+    try{ _navSpot(list); }catch(_){}
+    setTimeout(function(){ document.addEventListener('pointerdown', _navChgOutside, true); }, 60);
+    setTimeout(_navChgClose, 6000);
+  }catch(e){ console.warn('nav chg:', e && e.message); }
+}
+/* 바뀐 대상이 지금 화면에 있으면 그 요소를 빛낸다 */
+function _navSpot(list){
+  var hit = 0;
+  list.slice(0,6).forEach(function(e){
+    var t = String(e.target || '').trim(); if(!t) return;
+    var el = null;
+    try{
+      var m = /PC-?(\d+)/.exec(t) || /PC-?(\d+)/.exec(String(e.action||''));
+      if(m) el = document.querySelector('.pc[data-id="' + Number(m[1]) + '"]');
+      if(!el){
+        var chips = document.querySelectorAll('[data-staff-chip],[data-cid],.ag-bar');
+        for(var i=0;i<chips.length;i++){
+          if((chips[i].textContent || '').indexOf(t) >= 0){ el = chips[i]; break; }
+        }
+      }
+    }catch(_){ }
+    if(!el) return;
+    hit++;
+    el.classList.remove('nav-spot'); void el.offsetWidth; el.classList.add('nav-spot');
+    if(hit === 1){ try{ el.scrollIntoView({ behavior:'smooth', block:'center' }); }catch(_){} }
+    setTimeout(function(){ try{ el.classList.remove('nav-spot'); }catch(_){} }, 5200);
+  });
+}
+/* 이 화면을 봤다고 도장 — 지금 시각으로 */
+function _navMarkSeen(channelId){
+  try{
+    if(!channelId) return;
+    _navSeenLoad()[channelId] = new Date().toISOString();
+    _navSeenSave();
+  }catch(_){ }
+}
+/* 처음 들어온 사람에게 몇 백 개가 쏟아지지 않게, 아직 도장이 없는 화면은 지금으로 채운다 */
+function _navSeenSeed(){
+  try{
+    var m = _navSeenLoad(), now = new Date().toISOString(), touched = false;
+    _NAV_CHG_MAP.forEach(function(r){ if(!m[r[1]]){ m[r[1]] = now; touched = true; } });
+    if(touched) _navSeenSave();
+  }catch(_){ }
+}
+
 function computeChannelBadge(channelId){
   const raw = _rawChannelBadge(channelId);
   const baseline = channelBadgeBaseline[channelId] || 0;
-  return Math.max(0, raw - baseline);
+  /* 기존 배지(공지·월차 등)와 '남이 바꾼 것'을 더한다. 둘은 세는 방식이 달라
+     (기존은 baseline 빼기, 이쪽은 시각 비교) 서로 섞지 않고 각자 센 뒤 더한다. */
+  return Math.max(0, raw - baseline) + _navChangeCount(channelId);
 }
 
 // 채널 방문 시 baseline을 현재로 동기화 → 배지 0
@@ -50864,7 +51078,13 @@ function setActiveChannel(id){
     const fc = findFirstChannel(visibleTree());
     if(fc) id = fc.id;
   }
+  /* [v1311] 들어가기 직전에 '못 본 변경' 을 챙긴다 — 도장을 찍고 나면 사라지므로
+     반드시 _navMarkSeen 보다 먼저 읽어야 한다. */
+  var _navPend = [];
+  try{ _navPend = _navChangesFor(id); }catch(_){}
   dismissChannelBadge(id);  // 클릭 즉시 해당 채널 배지 소거
+  try{ _navMarkSeen(id); }catch(_){}
+  try{ if(_navPend.length) setTimeout(function(){ _navShowChanges(id, _navPend); }, 420); }catch(_){}
   try{ _mtFlushSave(); }catch(_){}   /* [v901] 보드를 떠나기 전에 대기 중인 저장을 즉시 밀어낸다 — 만들자마자 화면 옮기면 사라지던 것 */
   /* [v902] 새로고침 복원용 — 마지막으로 본 채널을 사용자별로 기억 */
   try{ if(id && currentUser && currentUser.id) localStorage.setItem('lucky7_last_ch:' + String(currentUser.id), String(id)); }catch(_){}
@@ -51315,6 +51535,7 @@ document.addEventListener('click', function(e){
 }, true);
 
 function renderSidebar(){  // 편집 모드 토글 버튼 상태
+  try{ _navSeenSeed(); }catch(_){}   /* [v1311] 도장이 없는 화면은 '지금부터' 로 — 첫 로그인에 수백 건이 쏟아지지 않게 */
   if(!_canEditNav() && sidebarEditMode) sidebarEditMode = false;   // [v406] only managers stay in edit mode
   const editBtn = document.getElementById('sb-edit-btn');
   if(editBtn){ editBtn.style.display = _canEditNav() ? '' : 'none'; editBtn.classList.toggle('on', sidebarEditMode); }   // [v406] hide the editor for non-managers
