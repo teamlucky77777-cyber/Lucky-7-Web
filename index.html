@@ -4,7 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
 <title>ARASAKA Corp</title>
-<!-- BUILD: v1307 | PC 현황·기준 EXP 명령줄 애플식 정리 · 경고 느낌표를 프로필 사진 위로 -->
+<!-- BUILD: v1308 | PC 현황 실시간 — 남이 바꾸면 바로 반영되고 바뀐 카드가 잠깐 빛난다 -->
 <!-- v745 기록은 git 이력(v1302 이전 커밋)에 있다 — 100KB 변경사 주석을 배포에서 제거 -->
 <!-- [v677] a <link href> cannot read a CSS variable, so the favicon carries its own copy.
      64px: a browser tab draws it at 16-32px, so this is 2x-DPR sharp at 11KB. -->
@@ -9287,6 +9287,15 @@ button:active,.btn:active{transform:scale(.97)}
    상단 2px 글로우 한 줄 + 바탕을 살짝 옅게. 카드를 물들이지 않고 위 한 줄로만
    말한다 — 목록을 훑을 때 그 줄만 눈에 걸리면 된다.
    [v1272] 색만 레드(#ef4444)로. 모양·투명도·전환은 그대로. */
+/* ═══ [v1308] 남이 바꾼 카드를 잠깐 빛낸다 ═══════════════════════════════
+   판이 소리 없이 달라지면 무엇이 달라졌는지 모른다. 바뀐 카드만 2.4초 동안
+   테두리가 밝아졌다가 가라앉는다 — 눈이 그리로 한 번 가고, 곧 원래대로. */
+@keyframes pcRtFlash{
+  0%{box-shadow:0 0 0 0 rgba(122,196,255,.0)}
+  12%{box-shadow:0 0 0 2px rgba(122,196,255,.85),0 0 18px rgba(122,196,255,.35)}
+  100%{box-shadow:0 0 0 0 rgba(122,196,255,0)}}
+.pc.pc-rt-flash{animation:pcRtFlash 2.4s cubic-bezier(.2,.7,.3,1) both;z-index:3}
+@media (prefers-reduced-motion: reduce){.pc.pc-rt-flash{animation:none;box-shadow:0 0 0 2px rgba(122,196,255,.7)}}
 .pc.pc-paused{opacity:.82;transition:all .3s cubic-bezier(.4,0,.2,1)}
 .pc.pc-paused::after{content:'';position:absolute;left:0;right:0;top:0;height:2px;
   border-radius:2px 2px 0 0;background:#ef4444;
@@ -52525,8 +52534,99 @@ function savePCState(allowEmpty){
     try{
       const { error } = await _dbUpsert('pc_state', 'default', PCS);
       if(error){ console.warn('pc_state save failed:', error.message); toast('PC save FAILED: ' + error.message, true); }
+      else { try{ _pcRTPing(); }catch(_){} }   /* [v1308] 저장됐다고 알린다 */
     }catch(e){ console.warn('pc_state save error:', e && e.message); toast('PC save error: ' + (e&&e.message), true); }
   }, 400);
+}
+
+/* ═══ [v1308] PC 현황 실시간 — 캔버스와 같은 방식 ═══════════════════════════
+   boss "PC 현황쪽에도 바뀌는게 우리 일일업무 쪽 캔버스처럼 실시간으로 보이게 해줘"
+
+   여태 PC 현황에는 실시간이 하나도 없었다. 발렌이 배정을 옮겨도 사장님 화면은
+   새로고침하기 전까지 옛날 판이었다. 둘이 동시에 만지면 나중에 저장한 쪽이
+   앞사람 것을 덮었고, 덮인 사람은 그 사실조차 몰랐다.
+
+   캔버스(_mtcRT)가 쓰는 것과 같은 broadcast 채널을 쓴다. 저장한 쪽이 신호를
+   쏘고, 받은 쪽이 서버에서 다시 읽어 그린다. 그리고 **무엇이 바뀌었는지**
+   그 카드만 잠깐 빛낸다 — 판이 소리 없이 달라지면 뭐가 달라졌는지 모른다.
+
+   지킬 것:
+   · 내 방송은 내가 안 받는다(self:false + id 대조). 캔버스 v996 에서 이걸
+     빠뜨려 저장할 때마다 자기 화면을 되돌리는 사고가 났다.
+   · 끌고 있는 중에는 다시 그리지 않는다 — 손에 잡은 막대가 갈려나간다.
+   · 편집창이 열려 있으면 미룬다. 남의 변경으로 내 입력이 날아가면 안 된다. */
+let _pcRT = null, _pcRTBusy = false, _pcRTWait = false;
+function _pcRTMe(){ try{ return String((currentUser && currentUser.id) || ''); }catch(_){ return ''; } }
+function _pcRTJoin(){
+  try{
+    if(!sb || _pcRT) return;
+    _pcRT = sb.channel('pcs:board', { config:{ broadcast:{ self:false } } });
+    _pcRT.on('broadcast', { event:'sync' }, function(m){
+      var p = m && m.payload;
+      if(!p || String(p.id||'') === _pcRTMe()) return;   /* 내 방송은 무시 */
+      _pcRTPull(p);
+    });
+    _pcRT.subscribe();
+  }catch(e){ console.warn('pcs rt join:', e && e.message); }
+}
+function _pcRTPing(){
+  try{
+    if(!_pcRT) return;
+    _pcRT.send({ type:'broadcast', event:'sync', payload:{
+      id: _pcRTMe(),
+      by: (currentUser && currentUser.name) || '',
+      at: Date.now()
+    }});
+  }catch(_){ }
+}
+/* 지금 다시 그려도 되는 때인가 */
+function _pcRTSafe(){
+  try{
+    if(window._pcDragging || window._mtcDragging) return false;
+    if(document.querySelector('#ag-wrap.ag-dragging')) return false;
+    if(document.querySelector('.pcb-modal, .cld-modal, #ask-ov')) return false;
+    var a = document.activeElement;
+    if(a && /^(INPUT|TEXTAREA|SELECT)$/.test(a.tagName)) return false;
+    if(a && a.isContentEditable) return false;
+  }catch(_){ }
+  return true;
+}
+async function _pcRTPull(p){
+  if(_pcRTBusy) return;
+  if(!_pcRTSafe()){ _pcRTWait = true; setTimeout(function(){ if(_pcRTWait){ _pcRTWait=false; _pcRTPull(p); } }, 1200); return; }
+  _pcRTBusy = true;
+  try{
+    var before = {};
+    try{ (PCS||[]).forEach(function(x){ if(x && x.id!=null) before[x.id] = JSON.stringify(x); }); }catch(_){ }
+    await loadPCState();
+    try{ render(); }catch(_){ try{ renderPCs(); }catch(_){} }
+    /* 무엇이 바뀌었는지 그 카드만 빛낸다 */
+    var hit = [];
+    try{
+      (PCS||[]).forEach(function(x){
+        if(!x || x.id==null) return;
+        var now = JSON.stringify(x);
+        if(before[x.id] !== undefined && before[x.id] !== now) hit.push(x.id);
+        if(before[x.id] === undefined) hit.push(x.id);
+      });
+    }catch(_){ }
+    _pcRTFlash(hit, p && p.by);
+  }catch(e){ console.warn('pcs rt pull:', e && e.message); }
+  _pcRTBusy = false;
+}
+function _pcRTFlash(ids, who){
+  try{
+    if(!ids || !ids.length) return;
+    ids.slice(0,8).forEach(function(id){
+      var el = document.querySelector('.pc[data-id="'+id+'"]');
+      if(!el) return;
+      el.classList.remove('pc-rt-flash');
+      void el.offsetWidth;                 /* 애니메이션 재시작 */
+      el.classList.add('pc-rt-flash');
+      setTimeout(function(){ try{ el.classList.remove('pc-rt-flash'); }catch(_){} }, 2600);
+    });
+    if(who) try{ toast('🔄 ' + who + '님이 바꿨어요 — PC ' + ids.slice(0,4).join(', ') + (ids.length>4?' 외':'')); }catch(_){}
+  }catch(_){ }
 }
 
 let selectedPC = null, filter = 'all', tlView = 'pc', tlFocus = 'all', tlMode = 'individual';
@@ -57374,6 +57474,7 @@ function _pcApplyCols(){
 }
 function _pcSetCols(v){ try{ localStorage.setItem('pc_cols', String(v)); }catch(_){} _pcApplyCols(); }
 function renderPCs(){
+  try{ _pcRTJoin(); }catch(_){}   /* [v1308] 실시간 채널 — 이미 붙어 있으면 그냥 돌아온다 */
   try{ normalizePCs(); }catch(_){}
   try{ _pcApplyCols(); }catch(_){}
   try{ _applyProfileShiftLens(); }catch(_){}   // [v631] profiles (staff_state) can land AFTER loadStaffPool — refresh real 8/10/12 contract hours on every render
