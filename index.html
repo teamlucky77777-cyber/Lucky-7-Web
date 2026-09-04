@@ -4,7 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
 <title>ARASAKA Corp</title>
-<!-- BUILD: v1353 | 문의 카드 2.0 — 압축 요약(이름·핵심 4줄)+클릭 시 세부 팝업(스프링), 더블클릭 단계 전환 유지 -->
+<!-- BUILD: v1354 | 문의 카드 전면 재설계 — 영웅 이름·스펙 알약·3단계 스트립·바닥 고정 액션 -->
 <!-- v745 기록은 git 이력(v1302 이전 커밋)에 있다 — 100KB 변경사 주석을 배포에서 제거 -->
 <!-- [v677] a <link href> cannot read a CSS variable, so the favicon carries its own copy.
      64px: a browser tab draws it at 16-32px, so this is 2x-DPR sharp at 11KB. -->
@@ -9434,17 +9434,49 @@ html[data-theme=light] #nav-chg{background:#fff;border-color:rgba(0,0,0,.1);box-
 .st-done .sr-iqstage{background:#a87f2e}
 @keyframes iqTestPulse{0%,100%{box-shadow:0 2px 8px rgba(0,0,0,.4)}50%{box-shadow:0 2px 8px rgba(0,0,0,.4),0 0 12px rgba(224,90,77,.6)}}
 .sr-iqload{padding:22px;text-align:center;color:var(--tx3,#8a8a86);font-size:12px;border:1px dashed var(--br2,#33332f)}
-/* [v1353] 압축 요약 카드 — 클라 카드와 같은 결 */
+/* ═══ [v1354] 문의 카드 2.0 — 데이터 카드와 같은 문법 ═══
+   이름이 영웅(클라 카드의 큰 %가 서는 자리), 스펙은 알약, 3단계 진행 스트립이
+   빈 공간을 구조로 바꾸고, 액션은 바닥에 고정된다(높이가 늘어나도 안 뜬다). */
 .sr-iqwrap{cursor:pointer}
-.sr-iqmini{background:var(--bg-c,#161616);border:1px solid var(--br,#232322);border-radius:12px;padding:13px 14px;
-  display:flex;flex-direction:column;gap:6px;transition:border-color .14s,transform .14s}
+.sr-iqmini{height:100%;background:var(--bg-c,#161616);border:1px solid var(--br,#232322);border-radius:12px;
+  padding:13px 14px;display:flex;flex-direction:column;gap:8px;transition:border-color .14s,transform .14s}
 .sr-iqwrap:hover .sr-iqmini{border-color:var(--ac-bord,rgba(194,160,74,.4));transform:translateY(-1px)}
-.sr-iqmini-top{display:flex;align-items:center;gap:8px}
-.sr-iqmini-nm{font-size:15px;font-weight:800;letter-spacing:-.01em;min-width:0}
-.sr-iqmini-nopc{opacity:.55}
-.sr-iqmini-l{font-size:11px;color:var(--tx2,#989792)}
-.sr-iqmini-l.mut{color:var(--tx3,#6b6b67)}
-.sr-iqmini-note{font-size:11px;color:var(--tx3,#6b6b67);font-style:italic;border-top:1px dashed var(--br2,#2c2c2a);padding-top:6px}
+.sr-iqmini-top{display:flex;align-items:center;gap:6px}
+.sr-iqpill{font:800 10px inherit;letter-spacing:.03em;color:#fff;padding:3px 9px;border-radius:7px}
+.st-ask .sr-iqpill{background:#3d8f5c}
+.st-test .sr-iqpill{background:#c24d42;animation:iqTestPulse 1.8s ease-in-out infinite}
+.st-done .sr-iqpill{background:#a87f2e}
+.sr-iqage{font:700 9.5px inherit;color:var(--tx3,#8a8a86);background:var(--bg-i,#1a1a1a);
+  border:1px solid var(--br2,#2f2f2d);padding:2px 6px;border-radius:6px;font-variant-numeric:tabular-nums}
+.sr-iqage.warn{color:#e0a83a;border-color:rgba(224,168,58,.4)}
+.sr-iqmini-top .sr-clcard-pc{margin-left:auto}
+.sr-iqmini-hero{font-size:21px;font-weight:800;letter-spacing:-.015em;line-height:1.1;
+  overflow-wrap:anywhere;word-break:keep-all}
+.sr-iqmini-sub{font-size:11px;color:var(--tx2,#989792)}
+.sr-iqmini-sub.mut{color:var(--tx3,#6b6b67);font-style:italic}
+.sr-iqchips{display:flex;flex-wrap:wrap;gap:5px}
+.sr-iqchip{font:600 10.5px ui-monospace,Consolas,monospace;color:#b8b8b3;background:var(--bg-i,#1a1a1a);
+  border:1px solid var(--br2,#2f2f2d);padding:2px 8px;border-radius:6px;font-variant-numeric:tabular-nums}
+/* 3단계 스트립 — 지나온 곳은 흐리게, 지금 자리는 단계색으로 */
+.sr-iqsteps{display:flex;align-items:center;gap:6px;margin-top:2px}
+.sr-iqstep{font:700 9.5px inherit;letter-spacing:.03em;color:var(--tx4,#5c5c58);font-style:normal;
+  padding:3px 8px;border-radius:6px;border:1px solid transparent;white-space:nowrap}
+.sr-iqstep.past{color:var(--tx3,#8a8a86)}
+.sr-iqstep.now{color:#fff;border-color:transparent}
+.st-ask .sr-iqstep.now{background:#3d8f5c}
+.st-test .sr-iqstep.now{background:#c24d42}
+.st-done .sr-iqstep.now{background:#a87f2e}
+.sr-iqstep-ln{flex:1 1 6px;height:1px;background:var(--br2,#2c2c2a)}
+.sr-iqmini-who{font-size:11px;color:var(--tx2,#989792)}
+.sr-iqmini-note{font-size:11px;color:var(--tx3,#6b6b67);font-style:italic;
+  border-top:1px dashed var(--br2,#2c2c2a);padding-top:7px}
+/* 바닥 고정 액션 */
+.sr-iqmini-ft{margin-top:auto;display:flex;gap:7px;padding-top:8px}
+.sr-iqbtn{flex:1 1 0;background:var(--bg-h,#1e1e20);border:1px solid var(--br2,#2f2f2d);color:var(--tx2,#b5b5b0);
+  font:700 11px inherit;padding:7px 0;border-radius:8px;cursor:pointer;transition:background .13s,border-color .13s,color .13s}
+.sr-iqbtn:hover{background:rgba(201,150,58,.13);border-color:rgba(201,150,58,.5);color:#fff}
+.st-ask .sr-iqbtn.go:hover{background:rgba(76,175,110,.14);border-color:rgba(76,175,110,.6)}
+.st-test .sr-iqbtn.go:hover{background:rgba(224,90,77,.14);border-color:rgba(224,90,77,.6)}
 /* [v1353] 세부 팝업 — 배경이 가라앉고 카드가 스프링으로 떠오른다 */
 #sr-iqpop{position:fixed;inset:0;z-index:100000}
 #sr-iqpop .sr-iqpop-bg{position:absolute;inset:0;background:rgba(6,6,8,.55);backdrop-filter:blur(3px);
@@ -38604,16 +38636,45 @@ function _srRecCardHTML(data){
         if(iq.tester) who.push('테스터 '+_pcbEsc(_pcbStaffName(iq.tester)));
         var age = iq.createdAt ? Math.floor((Date.now()-new Date(iq.createdAt).getTime())/86400000) : 0;
         if(age >= 2) who.push(age+'일째');
+        /* [v1354] boss "인터페이스 갈아엎어야" — 데이터 카드와 같은 문법: 이름이 영웅,
+           스펙은 알약, 3단계 진행 스트립, 하단 고정 액션. 빈 공간이 구조가 된다. */
+        var stepIdx = st === 'ask' ? 0 : (st === 'test' ? 1 : 2);
+        var stepStrip = ['문의','테스트','배치완료'].map(function(nm, i){
+          return '<i class="sr-iqstep'+(i < stepIdx ? ' past' : '')+(i === stepIdx ? ' now' : '')+'">'+nm+'</i>';
+        }).join('<u class="sr-iqstep-ln"></u>');
+        var chips = [];
+        if(iq.lv && !_pcbIsTbd(iq.lv)) chips.push('Lv '+_pcbEsc(String(iq.lv)));
+        if(iq.job && !_pcbIsTbd(iq.job)) chips.push(_pcbEsc(iq.job));
+        if(iq.wep != null && iq.wep !== '') chips.push('검 '+_pcbEsc(String(iq.wep)));
+        if(iq.set != null && iq.set !== '') chips.push('셋 '+_pcbEsc(String(iq.set)));
+        if(iq.server && !_pcbIsTbd(iq.server)) chips.push(_pcbEsc(iq.server));
+        var subBits = [];
+        if(iq.source && !_pcbIsTbd(iq.source)) subBits.push(_pcbEsc(iq.source)+' 경유');
+        if(iq.start && !_pcbIsTbd(iq.start)) subBits.push('시작 '+_pcbEsc(iq.start));
+        if(iq.pay && !_pcbIsTbd(iq.pay)) subBits.push(_pcbEsc(_pcbPickTxt(iq.pay)));
+        var whoBits = [];
+        if((iq.staff||[]).length) whoBits.push('👥 '+iq.staff.map(function(s){ return _pcbEsc(_pcbStaffName(s)); }).slice(0,3).join(' · ')+(iq.staff.length>3?' 외':''));
+        if(iq.tester) whoBits.push('🧪 '+_pcbEsc(_pcbStaffName(iq.tester)));
         return '<div class="sr-iqwrap st-'+st+'" data-iqid="'+iq.id+'"'
           + ' onclick="_srIqPop(event,\''+iq.id+'\')" ondblclick="_srIqCycle(event,\''+iq.id+'\')"'
           + ' title="클릭 — 세부 정보 · 더블클릭 — 단계 전환">'
-          + '<div class="sr-iqstage">'+L[0]+' '+L[1]+'</div>'
           + '<div class="sr-iqmini">'
-          +   '<div class="sr-iqmini-top"><b class="sr-iqmini-nm">'+_pcbEsc(iq.name||'—')+'</b>'
-          +     (pcIt?'<span class="sr-clcard-pc">PC'+_pcbEsc(String(pcIt.pc))+'</span>':'<span class="sr-clcard-pc sr-iqmini-nopc">PC 미정</span>')+'</div>'
-          +   (bits.length||spec.length?('<div class="sr-iqmini-l">'+bits.concat(spec.length?[spec.join(' ')]:[]).join(' · ')+'</div>'):'')
-          +   (who.length?('<div class="sr-iqmini-l mut">'+who.join(' · ')+'</div>'):'')
-          +   (iq.note&&!_pcbIsTbd(iq.note)?('<div class="sr-iqmini-note">'+_pcbEsc(String(iq.note).slice(0,52))+(String(iq.note).length>52?'…':'')+'</div>'):'')
+          +   '<div class="sr-iqmini-top">'
+          +     '<span class="sr-iqpill">'+L[0]+' '+L[1]+'</span>'
+          +     (age >= 2 ? '<span class="sr-iqage'+(age>=7?' warn':'')+'">D+'+age+'</span>' : '')
+          +     (pcIt ? '<span class="sr-clcard-pc">PC'+_pcbEsc(String(pcIt.pc))+'</span>'
+                      : '<span class="sr-clcard-pc sr-iqmini-nopc">PC 미정</span>')
+          +   '</div>'
+          +   '<div class="sr-iqmini-hero">'+_pcbEsc(iq.name||'—')+'</div>'
+          +   (subBits.length ? '<div class="sr-iqmini-sub">'+subBits.join(' · ')+'</div>' : '<div class="sr-iqmini-sub mut">아직 적힌 정보가 없어요 — 눌러서 채우기</div>')
+          +   (chips.length ? '<div class="sr-iqchips">'+chips.map(function(c){ return '<span class="sr-iqchip">'+c+'</span>'; }).join('')+'</div>' : '')
+          +   '<div class="sr-iqsteps">'+stepStrip+'</div>'
+          +   (whoBits.length ? '<div class="sr-iqmini-who">'+whoBits.join('&nbsp;&nbsp;')+'</div>' : '')
+          +   (iq.note && !_pcbIsTbd(iq.note) ? '<div class="sr-iqmini-note">'+_pcbEsc(String(iq.note).slice(0,56))+(String(iq.note).length>56?'…':'')+'</div>' : '')
+          +   '<div class="sr-iqmini-ft">'
+          +     '<button class="sr-iqbtn" onclick="event.stopPropagation();_srIqPop(null,\''+iq.id+'\')">✎ 세부</button>'
+          +     '<button class="sr-iqbtn go" onclick="event.stopPropagation();_srIqCycle(null,\''+iq.id+'\')">단계 ⇄</button>'
+          +   '</div>'
           + '</div></div>';
       }).join('');
     }catch(e){ console.warn('iq cards:', e); return ''; }
