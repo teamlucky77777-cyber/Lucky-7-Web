@@ -4,7 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
 <title>ARASAKA Corp</title>
-<!-- BUILD: v1319 | 백업 빨간 테두리를 막대 위로(가려지던 것) · 빈 PC 흰 테두리 세기만 조금 -->
+<!-- BUILD: v1320 | 클라 배지 색을 근무 시간 수로 — 길수록 뜨겁게(노랑→빨강) -->
 <!-- v745 기록은 git 이력(v1302 이전 커밋)에 있다 — 100KB 변경사 주석을 배포에서 제거 -->
 <!-- [v677] a <link href> cannot read a CSS variable, so the favicon carries its own copy.
      64px: a browser tab draws it at 16-32px, so this is 2x-DPR sharp at 11KB. -->
@@ -2752,13 +2752,26 @@ html[data-theme=light] #dt-pop{background:rgba(255,255,255,.99);border-color:#d8
   font-variant-numeric:tabular-nums;line-height:1}
 .cl-card-shift span{font-size:8.5px;font-weight:700;letter-spacing:.02em;line-height:1;
   color:var(--tx3,#8b8b86)}
-/* 낮은 주황(이 판의 ‘운영중’ 색), 밤은 보라 — 배정 격자의 야간 톤과 같다 */
-.cl-card-shift.day b{color:#e0a83a}
-.cl-card-shift.day{border-color:rgba(224,168,58,.32);background:rgba(224,168,58,.07)}
-.cl-card-shift.night b{color:#a98fd6}
-.cl-card-shift.night{border-color:rgba(169,143,214,.32);background:rgba(169,143,214,.07)}
-/* 24시간 자리는 낮·밤이 없다 — 색도 중립으로 두어 ‘쉬지 않는다’ 만 남긴다 */
-.cl-card-shift.full b{color:var(--tx,#e6e5e2);font-size:14px}
+/* ═══ [v1320] 시간 수 사다리 — 길수록 뜨겁게 ═══════════════════════════════
+   t1 8시간 이하 · t2 9~10 · t3 11~13 · t4 14~19 · t5 20시간 이상.
+   한 갈래(노랑→주황→빨강)로만 올린다. 색이 여러 갈래면 등급이 아니라 분류로
+   읽혀서, 정작 "이게 더 큰 자리" 라는 말이 안 된다.
+   낮·밤은 아래 글자로 남는다 — 색을 시간에 내준 대신 글자가 그 일을 한다. */
+.cl-card-shift.t1{border-color:rgba(150,150,146,.26);background:rgba(150,150,146,.05)}
+.cl-card-shift.t1 b{color:#9a9a96}
+.cl-card-shift.t2{border-color:rgba(214,178,74,.30);background:rgba(214,178,74,.07)}
+.cl-card-shift.t2 b{color:#d6b24a}
+.cl-card-shift.t3{border-color:rgba(224,150,52,.38);background:rgba(224,150,52,.10)}
+.cl-card-shift.t3 b{color:#f0a63a}
+.cl-card-shift.t4{border-color:rgba(228,116,52,.46);background:rgba(228,116,52,.13)}
+.cl-card-shift.t4 b{color:#ff8c42}
+.cl-card-shift.t5{border-color:rgba(226,86,77,.58);background:rgba(226,86,77,.16)}
+.cl-card-shift.t5 b{color:#ff7a6e}
+/* 24시간에 가장 가까운 자리는 숫자도 한 단 크게 — 판에서 가장 무거운 자리다 */
+.cl-card-shift.t5 b{font-size:14px}
+.cl-card-shift.full b{font-size:14px}
+/* 아래 글자(주간·야간)는 색을 따라가되 한 톤 낮춰, 숫자가 먼저 읽히게 */
+.cl-card-shift.t4 span,.cl-card-shift.t5 span{color:var(--tx2,#b9b8b4)}
 .cl-card-mini .cl-card-shift{width:38px;height:38px;border-radius:9px}
 .cl-card-mini .cl-card-shift b{font-size:11.5px}
 .cl-card-mini .cl-card-shift span{font-size:7.5px}
@@ -33624,15 +33637,94 @@ function saveSettlementState(immediate){
   clearTimeout(_settlementSaveTimer);
   const doSave = async () => {
     try{
-      const { error } = await _dbUpsert('settlement_state', 'default', { manual: MANUAL_PAYROLL, sheet: PAYROLL_SHEET });
-      if(error){ console.warn('settlement_state save:', error.message); toast('Settlement save FAILED: ' + error.message, true); }
+      /* ═══ [v1321·관계형 3단계(정산)] 돈의 진실이 행으로 이사 ═══
+         한 사람 = rel_payroll_entries 한 행(바뀐 행만 전송). 블롭 'default'는 아래 이중호환
+         쓰기가 실패해도(투영 전환 후 거부) DB 트리거가 행에서 재조립한다. 월 서랍(YYYY-MM)은
+         스냅샷이라 예전처럼 블롭으로 남긴다. */
+      const _r = await _setSaveRows();
+      if(_r && _r.error){
+        console.warn('settlement rows save:', _r.error.message);
+        _setSaveTries = (_setSaveTries || 0) + 1;
+        if(_setSaveTries <= 5){
+          clearTimeout(_settlementSaveTimer);
+          _settlementSaveTimer = setTimeout(doSave, 5000);   // 급여 수정은 절대 조용히 못 잃는다 — 재시도
+          window._settlementDirtyUntil = Date.now() + 12000;
+          return;
+        }
+        _dbLastFailAt = Date.now(); try{ _dbBadge(); }catch(_){}
+        toast('급여 저장 실패 — 화면을 닫지 말고 잠시 후 다시 수정해 주세요: ' + _r.error.message, true);
+      } else {
+        _setSaveTries = 0;
+        /* 이중호환: 전환 전엔 블롭이 그대로 저장되고, 전환 후엔 거부를 조용히 무시(트리거가 재조립) */
+        try{ sb.from('settlement_state').upsert({ id:'default', data:{ manual: MANUAL_PAYROLL, sheet: PAYROLL_SHEET }, updated_at:new Date().toISOString() }).then(function(){}); }catch(_){}
+      }
       // [v461] also snapshot THIS month under id="YYYY-MM" so My Payslip can show it later as a past month.
-      try{ const _ym=_kb5jMonthOf();   /* [v1294] KST 기준 월 — 브라우저(WIB 등) 지역시간으로 월이 어긋나 옆 달 서랍에 덮어쓰던 것 수정 */ await _dbUpsert('settlement_state', _ym, { manual: MANUAL_PAYROLL, sheet: PAYROLL_SHEET, archivedAt: Date.now() }); }catch(_){}
+      try{ const _ym=_kb5jMonthOf();   /* [v1294] KST 기준 월 */ await _dbUpsert('settlement_state', _ym, { manual: MANUAL_PAYROLL, sheet: PAYROLL_SHEET, archivedAt: Date.now() }); }catch(_){}
     }catch(e){ console.warn('settlement_state save:', e && e.message); }
     finally{ setTimeout(() => { _settlementSaving = false; }, 300); }
   };
   if(immediate){ doSave(); }
   else { _settlementSaveTimer = setTimeout(doSave, 500); }
+}
+/* [v1321·관계형 3단계(정산)] 급여 행 저장 — manual 명단(순서 보존)과 시트를 행으로 풀고,
+   바뀐 행만 upsert, 사라진 키는 서버 명단 대조로 지운다 */
+var _setRowSig = {}, _setSaveTries = 0;
+function _setBuildRows(){
+  var rows = {}, i, k;
+  for(i = 0; i < (MANUAL_PAYROLL || []).length; i++){
+    var m = MANUAL_PAYROLL[i]; if(!m || m.id == null) continue;
+    rows[String(m.id)] = { person_key:String(m.id), manual_id:String(m.id), manual_ord:i,
+      display_name:(m.name==null?null:String(m.name)), role:(m.role==null?null:String(m.role)),
+      short:(m.short==null?null:String(m.short)),
+      manual_extra:(function(){ var e={},kk; for(kk in m){ if(['id','name','role','short'].indexOf(kk)<0) e[kk]=m[kk]; } return e; })(),
+      items:null, entry_extra:{}, total:0 };
+  }
+  for(k in (PAYROLL_SHEET || {})){
+    var ent = PAYROLL_SHEET[k]; if(!ent) continue;
+    var r = rows[String(k)] || (rows[String(k)] = { person_key:String(k), manual_id:null, manual_ord:null,
+      display_name:String(k), role:null, short:null, manual_extra:{}, items:null, entry_extra:{}, total:0 });
+    r.items = Array.isArray(ent.items) ? ent.items : null;
+    r.entry_extra = (function(){ var e={},kk; for(kk in ent){ if(kk!=='items') e[kk]=ent[kk]; } return e; })();
+    r.total = Array.isArray(ent.items) ? ent.items.reduce(function(s,it){ return s + (Number(it && it.amount) || 0); }, 0) : 0;
+  }
+  var out = []; for(k in rows){ rows[k].synced_at = new Date().toISOString(); out.push(rows[k]); }
+  return out;
+}
+async function _setSaveRows(){
+  if(!sb) return { error:{ message:'no server' } };
+  /* 돈 가드 ①: 급여 메모리가 로드되기 전엔 절대 저장하지 않는다(빈 상태로 전량 삭제 방지) */
+  if(!_settlementSynced) return { error:{ message:'급여 데이터 미로드 — 저장 거부' } };
+  var list = _setBuildRows(), rows = [], keep = {}, i;
+  /* 돈 가드 ②: 메모리가 비었는데 서버엔 행이 있다 → 지우지 않고 거부 */
+  if(!list.length){
+    try{ var chk = await sb.from('rel_payroll_entries').select('person_key').limit(1);
+      if(chk && !chk.error && chk.data && chk.data.length) return { error:{ message:'메모리가 비어 있어 저장 거부(서버 자료 보호)' } };
+    }catch(_){}
+  }
+  for(i = 0; i < list.length; i++){
+    var row = list[i]; keep[row.person_key] = 1;
+    var sig; try{ var c = Object.assign({}, row); delete c.synced_at; sig = JSON.stringify(c); }catch(_){ sig = null; }
+    if(sig == null || _setRowSig[row.person_key] !== sig){ row.__sig = sig; rows.push(row); }
+  }
+  if(rows.length){
+    var payload = rows.map(function(r){ var c = Object.assign({}, r); delete c.__sig; return c; });
+    var up = await sb.from('rel_payroll_entries').upsert(payload, { onConflict:'person_key' });
+    if(up && up.error) return up;
+    rows.forEach(function(r){ if(r.__sig) _setRowSig[r.person_key] = r.__sig; });
+  }
+  try{
+    var ex = await sb.from('rel_payroll_entries').select('person_key');
+    if(ex && !ex.error && Array.isArray(ex.data)){
+      var gone = [];
+      ex.data.forEach(function(r){ if(!keep[String(r.person_key)]) gone.push(String(r.person_key)); });
+      if(gone.length){
+        var del = await sb.from('rel_payroll_entries').delete().in('person_key', gone);
+        if(del && del.error) return del;
+        gone.forEach(function(id){ delete _setRowSig[id]; });
+      }
+    }
+  }catch(e){ console.warn('payroll row reconcile:', e && e.message); }
+  return { error:null };
 }
 /* [v1302·감사 LATER-B] 리더 이상만 전체 급여 블롭을 받는다 — 직원 세션은 my_payslip RPC로 본인 몫만.
    (DB 읽기 정책 is_leader_plus 와 같은 명단 — 여기서 걸러야 직원 탭이 헛 요청·오류를 안 만든다) */
@@ -52251,11 +52343,21 @@ async function renderClients(){
 function _cliShiftTag(st, en){
   var a = ((Number(st)||0)%24+24)%24, b = ((Number(en)||0)%24+24)%24;
   var span = b - a; if(span <= 0) span += 24;
-  if(span >= 23) return { h: span + 'H', lb: '', cls: 'full' };
+  /* ═══ [v1320] 색은 시간 수가 정한다 ═══════════════════════════════════════
+     boss "시간대 별로 색으로 차이좀 두자 24시간이 중요하니까 많은시간대가 더
+           중요한 색으로"
+     전에는 주간(금색)·야간(보라)으로 갈랐다. 그런데 이 화면에서 눈이 찾는 것은
+     낮밤이 아니라 **몇 시간짜리 자리인가** 다 — 20시간 클라와 8시간 클라는 무게가
+     다르다. 색을 시간 수에 준다. 낮밤은 글자로 그대로 남으니 잃는 정보가 없다.
+     한 갈래 색(노랑→주황→빨강)으로만 올린다. 여러 색을 쓰면 등급이 아니라
+     분류로 읽힌다. */
+  var tier = span >= 20 ? 5 : span >= 14 ? 4 : span >= 11 ? 3 : span >= 9 ? 2 : 1;
+  var tc = ' t' + tier;
+  if(span >= 23) return { h: span + 'H', lb: '', cls: 'full' + tc };
   var mid = (a + span/2) % 24;
   var day = (mid >= 6 && mid < 18);
   var ko = (typeof _uiLang !== 'function') || _uiLang() === 'ko';
-  return { h: span + 'H', lb: day ? (ko?'주간':'Day') : (ko?'야간':'Night'), cls: day ? 'day' : 'night' };
+  return { h: span + 'H', lb: day ? (ko?'주간':'Day') : (ko?'야간':'Night'), cls: (day ? 'day' : 'night') + tc };
 }
   const summary = `<div class="cl-summary">
     <div class="cl-sum-card"><div class="cl-sum-lbl">고객</div><div class="cl-sum-val">${total}<span>명</span></div></div>
