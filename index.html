@@ -4,7 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
 <title>ARASAKA Corp</title>
-<!-- BUILD: v1365 | 새 PC 번호 입력·인원 위치·빈 카드 안내·문의 테두리 한 겹·무효 font 축약(inherit) 전부 교정 -->
+<!-- BUILD: v1366 | 기록·통계 날짜 묶음: 오늘만 펼치고 나머지는 접힘(연/닫은 건 기억) -->
 <!-- v745 기록은 git 이력(v1302 이전 커밋)에 있다 — 100KB 변경사 주석을 배포에서 제거 -->
 <!-- [v677] a <link href> cannot read a CSS variable, so the favicon carries its own copy.
      64px: a browser tab draws it at 16-32px, so this is 2x-DPR sharp at 11KB. -->
@@ -37600,7 +37600,7 @@ function _srRecToolsHTML(){
 function _srRecModeBy(m){ window._srRecMode=m||'staff'; window._srRecFilter=''; window._srRecClient=''; _srRecReRender(); }
 function _srRecClientBy(c){ window._srRecClient=c||''; if(c) window._srRecFilter=''; _srRecReRender(); }
 function _srRecClientByIdx(i){ var c=(window._srRecClients||[])[i]; window._srRecClient=c||''; window._srRecFilter=''; _srRecReRender(); }
-function _srSlToggle(id){ var w=document.getElementById(id); if(!w) return; var c=w.classList.toggle('collapsed'); var h=w.previousElementSibling; var a=h&&h.querySelector('.sr-sl-ca'); if(a) a.textContent=c?'▸':'▾'; }
+function _srSlToggle(id){ var w=document.getElementById(id); if(!w) return; var c=w.classList.toggle('collapsed'); try{ var _d=w.getAttribute('data-d'); if(_d){ window._srSlOpen=window._srSlOpen||{}; window._srSlOpen[_d]=!c; } }catch(_){}   /* [v1366] 연/닫은 묶음 기억 */ var h=w.previousElementSibling; var a=h&&h.querySelector('.sr-sl-ca'); if(a) a.textContent=c?'▸':'▾'; }
 function _srRecGroupBy(g){ g=g||'all';
   /* [v1039] boss "야간 토글이 안 꺼진다" — 켜져 있는 칩을 다시 누르면 꺼져야 한다.
      지금까지는 같은 그룹을 다시 눌러도 그 그룹으로 '다시 선택'만 해서, 한 번 켜면
@@ -38261,8 +38261,13 @@ function _srRecCardHTML(data){
       var _dayIds=rws.map(function(x){return x.id;}).filter(Boolean);
       var _dayAllIg=(_dayIds.length>0)&&rws.every(function(x){return !!x.ignored;});
       var _dKo=(_uiLang()==='ko');
+      /* [v1366] boss "기록·통계 누르면 이렇게 접어버려야지, 오늘 거 빼고" — 날짜 묶음은 오늘만 펼치고
+         나머지는 접은 채로 연다. '오늘'은 리포트 날짜 규칙(KST 02시 경계 = KST−2h)과 같은 날짜.
+         사용자가 열고 닫은 묶음은 window._srSlOpen 에 기억해 실시간 재렌더에도 그대로 둔다. */
+      var _recToday=(function(){ try{ return new Date(Date.now()+7*3600*1000).toISOString().slice(0,10); }catch(_){ return ''; } })();
+      var _open=(window._srSlOpen && Object.prototype.hasOwnProperty.call(window._srSlOpen,d)) ? !!window._srSlOpen[d] : (d===_recToday);
       var _dayIgBtn=(isAdmin&&_dayIds.length)?('<button type="button" class="sr-sl-dayign'+(_dayAllIg?' on':'')+'" data-ids="'+esc(_dayIds.join(','))+'" data-ig="'+(_dayAllIg?'0':'1')+'" onclick="event.stopPropagation();_srRecToggleIgnoreDay(this)" title="'+(_dKo?'이 날 전체를 성과 계산에서 제외/포함':'Exclude/include the WHOLE day from performance')+'">'+(_dayAllIg?(_dKo?'✓ 포함 (전체)':'✓ Include all'):(_dKo?'미반영 (전체)':'Exclude all'))+'</button>'):'';
-      var head='<div class="sr-sl-day" onclick="_srSlToggle(\''+wid+'\')"><span class="sr-sl-ca">▾</span><span class="sr-sl-dn">'+dayLabelKo(d)+'</span><span class="sr-sl-dc">'+rws.length+'</span>'+_dayIgBtn+'</div>';
+      var head='<div class="sr-sl-day" onclick="_srSlToggle(\''+wid+'\')"><span class="sr-sl-ca">'+(_open?'▾':'▸')+'</span><span class="sr-sl-dn">'+dayLabelKo(d)+'</span><span class="sr-sl-dc">'+rws.length+'</span>'+_dayIgBtn+'</div>';
       // [v372] one row per report, except CLEAN readings in the same clock-hour + client + map collapse
       // into a single merged row showing the hour's combined gain (expandable). Check-ins and flagged
       // (jump/typo) reports always stay individual so they remain directly editable.
@@ -38331,7 +38336,7 @@ function _srRecCardHTML(data){
         var merged={ id:last.id, name:last.name, key:last.key, date:last.date, ms:last.ms, tag:anyOut?'checkout':'status', client:last.client, pc:last.pc, lv:last.lv, map:last.map, gain:sum, ade:adeSum, expAt:last.expAt, target:last.target, sh:last.sh, sl:last.sl, flag:false, brk:(sorted[0]&&sorted[0].brk), _lastGain:(last.gain||0) };
         return slRow(merged,{merged:true});   // [v373] plain merged row (combined gain — not inline-editable) — one row, combined hourly gain, no ×N badge / no expand
       }).join('');
-      var body='<div class="sr-sl-wrap" id="'+wid+'"><table class="sr-sl-tbl"><thead><tr><th>직원</th><th>작성시각</th><th>구분</th><th>클라</th><th>PC</th><th>LV</th><th>사냥터</th><th class="sr-num">실제 EXP</th><th class="sr-num">아데나</th><th class="sr-num">Goal</th><th class="sr-num">Stable</th><th class="sr-num">Cut Below</th><th class="sr-num">차이</th><th class="sr-num">판정</th>'+(isAdmin?'<th></th>':'')+'</tr></thead><tbody>'
+      var body='<div class="sr-sl-wrap'+(_open?'':' collapsed')+'" id="'+wid+'" data-d="'+esc(d)+'"><table class="sr-sl-tbl"><thead><tr><th>직원</th><th>작성시각</th><th>구분</th><th>클라</th><th>PC</th><th>LV</th><th>사냥터</th><th class="sr-num">실제 EXP</th><th class="sr-num">아데나</th><th class="sr-num">Goal</th><th class="sr-num">Stable</th><th class="sr-num">Cut Below</th><th class="sr-num">차이</th><th class="sr-num">판정</th>'+(isAdmin?'<th></th>':'')+'</tr></thead><tbody>'
         +rowsHTML+'</tbody></table></div>';
       return head+body;
     }).join('');
