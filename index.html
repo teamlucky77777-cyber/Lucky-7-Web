@@ -4,7 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
 <title>ARASAKA Corp</title>
-<!-- BUILD: v1336 | 끌어놓은 뒤 격자가 흐려지던 것 · 클라 카드 더블클릭으로 앞면 복귀 -->
+<!-- BUILD: v1337 | PC 실시간 신선도 수술 4곳 — 첫신호 삼킴·미룬저장 거짓신호·일시정지 증발·재접속 공백 + 증거 계수기 -->
 <!-- v745 기록은 git 이력(v1302 이전 커밋)에 있다 — 100KB 변경사 주석을 배포에서 제거 -->
 <!-- [v677] a <link href> cannot read a CSS variable, so the favicon carries its own copy.
      64px: a browser tab draws it at 16-32px, so this is 2x-DPR sharp at 11KB. -->
@@ -53425,13 +53425,19 @@ let _pcLoaded = false, _pcSaveTimer = null;
 async function loadPCState(){
   if(!sb){ _pcLoaded = true; return; }   // dev/no-backend: allow local-only edits
   try{
-    const { data, error } = await sb.from('pc_state').select('data').eq('id','default').maybeSingle();
+    const { data, error } = await sb.from('pc_state').select('data, ver').eq('id','default').maybeSingle();
     if(error){
       console.warn('pc_state load failed:', error.message);
       toast('PC load error: ' + error.message + ' — saves paused to protect data', true);
       return;   // do NOT set _pcLoaded → saves blocked until a clean load
     }
     if(data && Array.isArray(data.data)){ PCS = data.data; try{ normalizePCs(); }catch(_){} }
+    /* ═══ [v1336·PC 실시간 ①] 첫 신호가 통째로 삼켜지던 것 ═══
+       실시간 수신(_pcRTPull)은 _pullShared 를 쓰는데, _pullShared 는 "처음 보는 표"의
+       첫 조회를 기준선으로만 삼고 적용하지 않는다(부팅 폴 설계로는 맞다). 그래서 부팅 뒤
+       첫 실시간 신호가 매번 조용히 사라졌다 — 시연 때 "한 번 움직였는데 안 보인다"의 정체.
+       부팅 로드가 이미 최신을 손에 쥔 지금, 기준선과 CAS 버전을 여기서 심는다. */
+    try{ if(data){ _pullSig['pc_state'] = JSON.stringify(data.data); if(data.ver != null) _casVer['pc_state:default'] = data.ver; } }catch(_){}
     _pcLoaded = true;   // success — including a legit empty / no-row result
   }catch(e){
     console.warn('pc_state load error:', e && e.message);
@@ -53475,9 +53481,26 @@ function savePCState(allowEmpty){
       var _sig = '';
       try{ _sig = JSON.stringify(PCS); }catch(_){ _sig = String(Date.now()); }
       if(_sig === _pcSaveSig) return;
-      const { error } = await _dbUpsert('pc_state', 'default', PCS);
-      if(error){ console.warn('pc_state save failed:', error.message); toast('PC save FAILED: ' + error.message, true); }
-      else { _pcSaveSig = _sig; try{ _pcRTPing(); }catch(_){} }   /* 실제로 달라졌을 때만 알린다 */
+      const _res = await _dbUpsert('pc_state', 'default', PCS);
+      if(_res && _res.error){ console.warn('pc_state save failed:', _res.error.message); toast('PC save FAILED: ' + _res.error.message, true); }
+      else if(_res && _res.deferred){
+        /* ═══ [v1336·PC 실시간 ②] 미룬 저장에 신호를 쏘던 거짓말 ═══
+           서버가 식는 동안(backoff) 저장은 큐에 담기고 10초 펌프가 나중에 올린다. 예전엔
+           이 경우에도 즉시 신호를 쐈다 — 상대는 신호를 받고 읽었는데 서버엔 아직 옛 판.
+           상대의 기준선만 옛 판으로 굳고, 진짜 판이 오른 뒤엔 아무도 알리지 않았다.
+           이제 큐가 비는 것을 확인한 "그때" 쏜다. */
+        _pcSaveSig = _sig;
+        clearTimeout(window._pcPingOwedT);
+        (function _owe(n){
+          window._pcPingOwedT = setTimeout(function(){
+            try{
+              if(_dbPending['pc_state:default']){ if(n < 20) _owe(n + 1); return; }   /* 아직 안 올랐다 — 더 기다림(최대 40초) */
+              _pcRTPing();
+            }catch(_){}
+          }, 2000);
+        })(0);
+      }
+      else { _pcSaveSig = _sig; try{ _pcRTPing(); }catch(_){} }   /* 실제로 달라졌을 때만, 실제로 오른 뒤에만 알린다 */
     }catch(e){ console.warn('pc_state save error:', e && e.message); toast('PC save error: ' + (e&&e.message), true); }
   }, 400);
 }
@@ -53499,6 +53522,9 @@ function savePCState(allowEmpty){
    · 끌고 있는 중에는 다시 그리지 않는다 — 손에 잡은 막대가 갈려나간다.
    · 편집창이 열려 있으면 미룬다. 남의 변경으로 내 입력이 날아가면 안 된다. */
 let _pcRT = null, _pcRTBusy = false, _pcRTWait = false;
+/* [v1336·⑤] 증거 계수기 — "안 된다" 소리가 나오면 양쪽 콘솔에서 `_pcRTStat` 한 줄만 보면 된다.
+   joins=붙은 횟수, tx=보낸 신호, rx=받은 신호, applied=화면에 적용, paused=일시정지에 걸려 재시도 */
+window._pcRTStat = { status:'-', statusAt:'', joins:0, tx:0, rx:0, applied:0, paused:0 };
 function _pcRTMe(){ try{ return String((currentUser && currentUser.id) || ''); }catch(_){ return ''; } }
 /* ═══ [v1325] 캔버스와 똑같이 만든다 ═══════════════════════════════════════
    boss "그냥 캔버스처럼 실시간으로 뜨게끔 해주면 되는 문제 아니냐"
@@ -53523,6 +53549,7 @@ function _pcRTJoin(){
     _pcRT = sb.channel('pcs:board', { config:{ broadcast:{ self:false } } });
     _pcRT.on('broadcast', { event:'sync' }, function(m){
       var p = m && m.payload;
+      try{ window._pcRTStat.rx++; }catch(_){}
       /* [v1325] 탭 단위로 가른다 — 같은 계정을 두 탭에 띄워도 서로 보인다(캔버스와 같음) */
       if(!p) return;
       if(p.tab ? (p.tab === _PC_TAB_ID) : (String(p.id||'') === _pcRTMe())) return;
@@ -53550,6 +53577,12 @@ function _pcRTJoin(){
        이게 없으면 한 번 끊긴 뒤로 영영 죽는다. */
     _pcRT.subscribe(function(st){
       try{ console.info('[PC 실시간]', st); }catch(_){}
+      try{ window._pcRTStat.status = st; window._pcRTStat.statusAt = new Date().toISOString(); }catch(_){}
+      if(st === 'SUBSCRIBED'){
+        /* [v1336·④] 붙은(다시 붙은) 직후 한 번 따라잡는다 — 끊겨 있던 사이의 신호는 영영 안 오니까 */
+        try{ window._pcRTStat.joins++; }catch(_){}
+        setTimeout(function(){ try{ _pcRTPull({ by:'' }); }catch(_){} }, 300);
+      }
       if(st === 'CHANNEL_ERROR' || st === 'TIMED_OUT' || st === 'CLOSED'){
         try{ sb.removeChannel(_pcRT); }catch(_){}
         _pcRT = null;
@@ -53597,6 +53630,7 @@ function _pcRTPollStart(){
 function _pcRTPing(){
   try{
     if(_pcRTOff() || !_pcRT) return;
+    try{ window._pcRTStat.tx++; }catch(_){}
     _pcRT.send({ type:'broadcast', event:'sync', payload:{
       id: _pcRTMe(), tab: _PC_TAB_ID,
       by: (currentUser && currentUser.name) || '',
@@ -53680,8 +53714,17 @@ async function _pcRTPull(p){
        아니라 그것을 부른다. 캔버스가 pollMTSystem 을 부르는 것과 같은 모양이다. */
     if(typeof _pullShared === 'function'){
       await _pullShared('pc_state',
-        function(d){ if(Array.isArray(d)){ PCS = d; try{ normalizePCs(); }catch(_){} } },
+        function(d){ if(Array.isArray(d)){ PCS = d; try{ normalizePCs(); }catch(_){} try{ window._pcRTStat.applied++; }catch(_){} } },
         function(){ try{ render(); }catch(_){ try{ renderPCs(); }catch(_){} } });
+      /* ═══ [v1336·PC 실시간 ③] 일시정지 창에 삼켜지던 신호 ═══
+         _pullShared 는 내가 방금 뭔가 저장했으면(pauseSync 5~7초) 조용히 돌아온다 —
+         옳은 방어지만 재시도가 없어서, 그 창에 도착한 남의 신호는 그냥 증발했다.
+         창이 닫힌 직후 한 번 다시 본다. */
+      if(Date.now() < _syncPausedUntil){
+        try{ window._pcRTStat.paused++; }catch(_){}
+        clearTimeout(window._pcRTPauseT);
+        window._pcRTPauseT = setTimeout(function(){ try{ _pcRTPull({ by:'' }); }catch(_){} }, Math.max(400, _syncPausedUntil - Date.now() + 400));
+      }
     } else {
       await loadPCState();
       try{ render(); }catch(_){ try{ renderPCs(); }catch(_){} }
