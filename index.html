@@ -4,7 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
 <title>ARASAKA Corp</title>
-<!-- BUILD: v1324 | 배지가 안 뜨던 것 수정(로그 갱신 후 사이드바 재계산) · 실시간 안전망 20초 폴 -->
+<!-- BUILD: v1325 | 실시간을 캔버스와 똑같이 — 끊기면 다시 붙는다(빠뜨렸던 것) -->
 <!-- v745 기록은 git 이력(v1302 이전 커밋)에 있다 — 100KB 변경사 주석을 배포에서 제거 -->
 <!-- [v677] a <link href> cannot read a CSS variable, so the favicon carries its own copy.
      64px: a browser tab draws it at 16-32px, so this is 2x-DPR sharp at 11KB. -->
@@ -53237,14 +53237,32 @@ function savePCState(allowEmpty){
    · 편집창이 열려 있으면 미룬다. 남의 변경으로 내 입력이 날아가면 안 된다. */
 let _pcRT = null, _pcRTBusy = false, _pcRTWait = false;
 function _pcRTMe(){ try{ return String((currentUser && currentUser.id) || ''); }catch(_){ return ''; } }
+/* ═══ [v1325] 캔버스와 똑같이 만든다 ═══════════════════════════════════════
+   boss "그냥 캔버스처럼 실시간으로 뜨게끔 해주면 되는 문제 아니냐"
+
+   맞다. 캔버스(_mtcBusJoin)는 오래 굴러서 안정된 코드인데, 나는 그것을 보고
+   비슷하게 새로 쓰면서 **가장 중요한 한 가지를 빠뜨렸다 — 끊기면 다시 붙는 것.**
+
+   실시간 채널은 생각보다 자주 끊긴다. 노트북이 자거나, 잠깐 네트워크가 흔들리거나,
+   서버가 채널을 정리하면 끊긴다. 캔버스는 그때 채널을 버리고 2~4초 뒤 새로 붙는다.
+   내 것은 그 코드가 없어서, 한 번 끊기면 영영 죽은 채로 남았다. 화면은 멀쩡해
+   보이는데 신호만 안 오는 상태 — 만지님 화면이 그랬을 것이다.
+
+   그리고 currentUser 가 없을 때는 붙지 않는다(캔버스와 같은 조건). 내가 누구인지
+   모르면 '내 방송 걸러내기' 가 안 돌아 자기 화면을 자기가 되돌린다.
+   같은 계정을 두 탭에 띄운 경우까지 캔버스와 같게 탭 단위로 가른다. */
+let _PC_TAB_ID = (typeof _MT_TAB_ID !== 'undefined') ? _MT_TAB_ID
+                 : (Date.now().toString(36) + Math.random().toString(36).slice(2,7));
 function _pcRTJoin(){
   try{
     if(_pcRTOff()) return;   /* [v1313] 끄기 스위치 */
-    if(!sb || _pcRT) return;
+    if(!sb || !sb.channel || !currentUser || _pcRT) return;
     _pcRT = sb.channel('pcs:board', { config:{ broadcast:{ self:false } } });
     _pcRT.on('broadcast', { event:'sync' }, function(m){
       var p = m && m.payload;
-      if(!p || String(p.id||'') === _pcRTMe()) return;   /* 내 방송은 무시 */
+      /* [v1325] 탭 단위로 가른다 — 같은 계정을 두 탭에 띄워도 서로 보인다(캔버스와 같음) */
+      if(!p) return;
+      if(p.tab ? (p.tab === _PC_TAB_ID) : (String(p.id||'') === _pcRTMe())) return;
       _pcRTPull(p);
     });
     /* ═══ [v1310] 누가 무엇을 잡고 있는지 ═══════════════════════════════════
@@ -53265,9 +53283,16 @@ function _pcRTJoin(){
       _pcHeld.delete(String(p.id||''));
       _pcHeldPaint();
     });
+    /* [v1325] 끊기면 버리고 다시 붙는다 — 캔버스 _mtcBusJoin 과 같은 처리.
+       이게 없으면 한 번 끊긴 뒤로 영영 죽는다. */
     _pcRT.subscribe(function(st){
-      /* 연결이 됐는지 안 됐는지 알 수 있어야 한다 — 조용히 실패하면 원인을 못 찾는다 */
       try{ console.info('[PC 실시간]', st); }catch(_){}
+      if(st === 'CHANNEL_ERROR' || st === 'TIMED_OUT' || st === 'CLOSED'){
+        try{ sb.removeChannel(_pcRT); }catch(_){}
+        _pcRT = null;
+        clearTimeout(window._pcRTReT);
+        window._pcRTReT = setTimeout(function(){ try{ _pcRTJoin(); }catch(_){} }, 2000 + Math.random()*2000);
+      }
     });
     _pcRTPollStart();
     /* 브라우저가 죽거나 탭이 닫히면 free 가 안 온다 — 8초 지난 것은 스스로 지운다 */
@@ -53310,7 +53335,7 @@ function _pcRTPing(){
   try{
     if(_pcRTOff() || !_pcRT) return;
     _pcRT.send({ type:'broadcast', event:'sync', payload:{
-      id: _pcRTMe(),
+      id: _pcRTMe(), tab: _PC_TAB_ID,
       by: (currentUser && currentUser.name) || '',
       at: Date.now()
     }});
