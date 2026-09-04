@@ -4,7 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
 <title>ARASAKA Corp</title>
-<!-- BUILD: v1338 | 잡고 있습니다 표시 부활 — 격자 포인터 잡기/놓기에 grab 신호 연결(v1310 UI는 배선만 끊겨 있었다) -->
+<!-- BUILD: v1340 | 격자 실시간 2탄 — 끄는 중 좌표 중계(100ms)+미끄러지는 막대, 이름표 오른쪽 위 부양 -->
 <!-- v745 기록은 git 이력(v1302 이전 커밋)에 있다 — 100KB 변경사 주석을 배포에서 제거 -->
 <!-- [v677] a <link href> cannot read a CSS variable, so the favicon carries its own copy.
      64px: a browser tab draws it at 16-32px, so this is 2x-DPR sharp at 11KB. -->
@@ -9400,13 +9400,21 @@ html[data-theme=light] #nav-chg{background:#fff;border-color:rgba(0,0,0,.1);box-
   border-radius:inherit;animation:pcHeldIn .26s cubic-bezier(.34,1.4,.64,1) both;z-index:6}
 @keyframes pcHeldIn{from{outline-color:hsl(var(--heldh,210) 78% 62% / 0);outline-offset:5px}
   to{outline-color:hsl(var(--heldh,210) 78% 62% / .9);outline-offset:1px}}
-.pc-held-tag{position:absolute;left:0;top:-9px;z-index:7;pointer-events:none;
-  background:hsl(var(--heldh,210) 78% 56%);color:#fff;
+/* [v1339] boss "왼쪽 상단에 뜨는 거 오른쪽 상단으로 · 막대격자랑 안 겹치게" —
+   막대 오른쪽 '위 허공'에 떠 있는 칩 + 아래로 향한 꼬리. 막대 내용을 가리지 않는다. */
+.pc-held-tag{position:absolute;left:auto;right:-2px;top:-20px;z-index:7;pointer-events:none;
+  background:hsl(var(--heldh,210) 70% 46%);color:#fff;
   font-size:9.5px;font-weight:800;letter-spacing:-.01em;line-height:1;
-  padding:3px 6px;border-radius:5px;white-space:nowrap;
-  box-shadow:0 1px 4px rgba(0,0,0,.35);
-  animation:pcHeldTagIn .26s cubic-bezier(.34,1.4,.64,1) both}
-@keyframes pcHeldTagIn{from{opacity:0;transform:translateY(3px) scale(.9)}to{opacity:1;transform:none}}
+  padding:4px 7px;border-radius:6px;white-space:nowrap;
+  box-shadow:0 2px 8px rgba(0,0,0,.45), inset 0 1px 0 hsl(var(--heldh,210) 80% 62% / .6);
+  animation:pcHeldTagIn .32s cubic-bezier(.3,1.45,.5,1) both}
+.pc-held-tag::after{content:"";position:absolute;right:7px;top:100%;
+  border:4px solid transparent;border-top-color:hsl(var(--heldh,210) 70% 46%)}
+@keyframes pcHeldTagIn{from{opacity:0;transform:translateY(5px) scale(.85)}to{opacity:1;transform:none}}
+/* [v1339] boss "옮길 때 애니메이션이 딱딱" — 남이 끄는 막대는 프레임 사이를 미끄러진다.
+   내가 잡은 막대(.act)는 손가락을 즉시 따라야 하니 전환 없음. */
+#ag-wrap .ag-bar.rt-live{transition:left .16s linear, width .16s linear;will-change:left,width}
+#ag-wrap .ag-bar.act{transition:none !important}
 /* 잡힌 것은 살짝 숨을 쉰다 — 지금 누가 손대고 있다는 뜻 */
 .pc-held::after{content:"";position:absolute;inset:-2px;border-radius:inherit;pointer-events:none;
   box-shadow:0 0 0 0 hsl(var(--heldh,210) 78% 62% / .45);
@@ -53575,6 +53583,12 @@ function _pcRTJoin(){
        마우스를 그리는 것보다 이쪽이 맞다. 격자는 칸이 정해진 판이라 커서가
        떠다녀도 알려주는 게 없지만, "이 막대를 발렌이 지금 잡고 있다" 는
        바로 쓸 수 있는 정보다 — 손대기 전에 비킬 수 있다. */
+    _pcRT.on('broadcast', { event:'drag' }, function(m){   /* [v1339] 끄는 중 좌표 중계 수신 */
+      var p = m && m.payload;
+      if(!p) return;
+      if(p.tab ? (p.tab === _PC_TAB_ID) : (String(p.id||'') === _pcRTMe())) return;
+      _pcRTDragPaint(p);
+    });
     _pcRT.on('broadcast', { event:'grab' }, function(m){
       var p = m && m.payload;
       if(!p || String(p.id||'') === _pcRTMe()) return;
@@ -53771,6 +53785,46 @@ function _pcRTGrab(what, again){
     if(!_pcRT) return;
     _pcRT.send({ type:'broadcast', event:'grab', payload:{
       id:_pcRTMe(), by:(currentUser && currentUser.name) || '?', what:what }});
+  }catch(_){ }
+}
+/* ═══ [v1339] 끄는 중 실시간 중계 ═══
+   boss "Manji가 잡았을 때는 딱 실시간으로 뜨는게 옮기는 건 안 떠"
+   잡기(grab)와 결과(sync)만 있고 그 사이가 비어 있었다 — 상대 화면에선 막대가
+   놓는 순간 순간이동한다. 캔버스가 이미 푼 문제다(v902 _mtcRTMove: 끄는 동안
+   100ms 스로틀로 좌표를 중계하고, 놓는 순간 마지막 프레임은 스로틀 무시).
+   같은 원리로 격자의 start/len 을 중계한다. 데이터는 안 건드린다 — 그림만. */
+function _pcRTDrag(pc, idx, start, len, force){
+  try{
+    if(_pcRTOff() || !_pcRT) return;
+    var now = Date.now();
+    if(!force && now - (window._agRTLast || 0) < 90) return;   /* 초당 ~10프레임 */
+    window._agRTLast = now;
+    _pcRT.send({ type:'broadcast', event:'drag', payload:{
+      id:_pcRTMe(), tab:_PC_TAB_ID, pc:pc, idx:idx, start:start, len:len }});
+  }catch(_){ }
+}
+/* 수신: 그 막대(조각 포함)를 부드럽게 따라 그린다 — v1327 조각 규칙 그대로 */
+function _pcRTDragPaint(p){
+  try{
+    if(document.getElementById('ch-pc-status') == null) return;
+    var sel = '.ag-bar[data-pc="'+p.pc+'"][data-idx="'+p.idx+'"]';
+    var pieces = document.querySelectorAll(sel);
+    if(!pieces.length) return;
+    if(pieces[0].classList.contains('act')) return;   /* 같은 막대를 나도 잡는 중 — 내 손이 우선 */
+    var segs = _agSegs(Number(p.start)||0, Math.max(1, Number(p.len)||1));
+    pieces.forEach(function(el, i){
+      el.classList.add('rt-live');
+      if(segs[i]){
+        el.style.display = '';
+        el.style.left  = (segs[i][0]/24*100)+'%';
+        el.style.width = (segs[i][1]/24*100)+'%';
+      } else el.style.display = 'none';
+      var hh = el.querySelector('.ag-hh'); if(hh) hh.textContent = (Number(p.len)||1)+'h';
+    });
+    clearTimeout(window._agRTLiveT);
+    window._agRTLiveT = setTimeout(function(){   /* 3초 소식 없으면 매끈 모드 해제(다음 sync가 진실을 그린다) */
+      try{ document.querySelectorAll('.ag-bar.rt-live').forEach(function(el){ el.classList.remove('rt-live'); }); }catch(_){}
+    }, 3000);
   }catch(_){ }
 }
 function _pcRTFree(){
@@ -58515,6 +58569,7 @@ function _agBind(host){
       });
       const hh = bar.querySelector('.ag-hh'); if(hh) hh.textContent = a.len+'h';
       bar.setAttribute('title', pad2(_tzH(a.start))+'–'+pad2(_tzH((a.start+a.len)%24))+' · '+a.len+'h');
+      try{ _pcRTDrag(pcId, idx, a.start, a.len); }catch(_){}   /* [v1339] 끄는 중 상대 화면에도 흐르게 */
     };
     const mv = e2 => {
       if(e2.pointerId !== ev.pointerId) return;    /* [v1292] 다른 손가락 무시 */
@@ -58533,6 +58588,7 @@ function _agBind(host){
       if(raf){ cancelAnimationFrame(raf); raf = 0; }
       if(moved) paint();
       host.classList.remove('ag-dragging'); bar.classList.remove('act','willdrop');
+      try{ if(moved) _pcRTDrag(pcId, idx, a.start, a.len, true); }catch(_){}   /* [v1339] 마지막 프레임은 스로틀 무시 — 캔버스 v902와 같음 */
       try{ _pcRTFree(); }catch(_){}   /* [v1338] 놓는 순간 상대 화면의 "잡고 있음" 표시를 거둔다 */
       /* [v1103] 끌지 않고 그냥 눌렀다 = 이 배정을 어떻게 할지 묻는 것.
          예전엔 아무 일도 안 일어나서, 해제하려면 우클릭을 알아야 했다. */
