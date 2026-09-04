@@ -4,7 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
 <title>ARASAKA Corp</title>
-<!-- BUILD: v1325 | 실시간을 캔버스와 똑같이 — 끊기면 다시 붙는다(빠뜨렸던 것) -->
+<!-- BUILD: v1326 | PC 현황 실시간 기본 꺼짐(막대 조절 망가짐 · 원인 규명까지) · 빈 줄 흰 테두리 제거 -->
 <!-- v745 기록은 git 이력(v1302 이전 커밋)에 있다 — 100KB 변경사 주석을 배포에서 제거 -->
 <!-- [v677] a <link href> cannot read a CSS variable, so the favicon carries its own copy.
      64px: a browser tab draws it at 16-32px, so this is 2x-DPR sharp at 11KB. -->
@@ -8729,8 +8729,9 @@ html[data-theme=light] #ag-wrap .ag-track{background:rgba(0,0,0,.04);
 /* [v1319] boss "비어있는 PC 흰색으로 테두리 있는거 그것도 진짜 조금만 더 잘보이게"
    두께(1px)는 그대로 두고 세기만 올린다 — .16 → .30. 굵어지면 빈 줄이
    차 있는 줄보다 도드라져서 거꾸로가 된다. */
-#ag-wrap .ag-row.vacant .ag-track{box-shadow:inset 0 0 0 1px rgba(255,255,255,.30)}
-html[data-theme=light] #ag-wrap .ag-row.vacant .ag-track{box-shadow:inset 0 0 0 1px rgba(0,0,0,.26)}
+/* [v1326] boss "비어있는 PC 하얀색 테두리 그냥 없애는게 나을듯" — 뺐다.
+   빈 줄은 아무것도 없다는 것으로 이미 충분히 보인다. 테두리를 두르면 오히려
+   '뭔가 들어 있는 줄' 처럼 읽혔다. .ag-row.vacant 클래스 자체는 남겨 둔다. */
 #ag-wrap .ag-row.conflict .ag-lab b{color:#ff8f8f}
 /* ═══ [v1319] 백업 빨간 테두리가 막대에 가려지던 것 ═══════════════════════════
    boss "백업 들어간거 빨간색 테두리 뜨잖아 그거 플레이어 시간 격자에 가려져서
@@ -53320,7 +53321,7 @@ function _pcRTJoin(){
    PC 현황을 보고 있을 때만 돈다 — 다른 화면에서까지 20초마다 읽을 이유가 없다. */
 let _pcRTPollTimer = null;
 function _pcRTPollStart(){
-  if(_pcRTPollTimer || _pcRTOff()) return;
+  if(_pcRTPollTimer || _pcRTOff()) return;   /* [v1326] 꺼져 있으면 폴도 안 돈다 */
   _pcRTPollTimer = setInterval(function(){
     try{
       if(document.hidden) return;
@@ -53369,7 +53370,27 @@ function _pcRTSafe(){
    을 넣고 새로고침하면 이 화면의 실시간이 통째로 꺼진다. 원래대로는
      localStorage.removeItem('lucky7_rt_off')
    무엇이 잘못되든 사장님이 스스로 화면을 되찾을 수 있어야 한다. */
-function _pcRTOff(){ try{ return localStorage.getItem('lucky7_rt_off') === '1'; }catch(_){ return false; } }
+/* ═══ [v1326] PC 현황 실시간을 기본 꺼짐으로 돌린다 ══════════════════════════
+   boss "실시간으로 누가 만지고 있는지 그거 뜨고 서로 공유되고 반영되는 기능
+         업데이트 했다고 했잖아 근데 아예 적용이 안돼"
+   boss "이번에는 카드길이 늘리고 줄이는게 망가졌는데"
+
+   v1308 부터 여섯 번 고쳤는데 아직 안 되고, 이제 막대 길이 조절까지 망가졌다.
+   원인이 내 쪽일 가능성이 크다 — 남의 변경을 받아 render() 를 부르는 코드가
+   조절 중에 끼어들면 잡고 있던 막대가 갈려 나간다. 자정을 넘는 막대는 두 조각으로
+   그려지므로 특히 잘 깨진다.
+
+   고장난 것을 켜 둔 채로 계속 고치는 것보다, 꺼서 판을 정상으로 돌려놓고 원인을
+   제대로 찾는 것이 맞다. 코드는 그대로 두고 스위치만 뒤집는다.
+
+   다시 켤 때(콘솔):  localStorage.lucky7_rt_on = '1'   → 새로고침
+   끌 때:            localStorage.removeItem('lucky7_rt_on') */
+function _pcRTOff(){
+  try{
+    if(localStorage.getItem('lucky7_rt_off') === '1') return true;   /* 예전 스위치도 계속 듣는다 */
+    return localStorage.getItem('lucky7_rt_on') !== '1';             /* 기본 = 꺼짐 */
+  }catch(_){ return true; }
+}
 async function _pcRTPull(p){
   if(_pcRTOff()) return;
   if(_pcRTBusy) return;
