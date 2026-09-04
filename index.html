@@ -4,7 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
 <title>ARASAKA Corp</title>
-<!-- BUILD: v1316 | 배정 격자 시인성 — 6시간 기둥·줄무늬·짚은 줄 강조·지금선 삼각표식 -->
+<!-- BUILD: v1317 | 격자는 배경 격자만 남기고 나머지 다섯은 롤백 -->
 <!-- v745 기록은 git 이력(v1302 이전 커밋)에 있다 — 100KB 변경사 주석을 배포에서 제거 -->
 <!-- [v677] a <link href> cannot read a CSS variable, so the favicon carries its own copy.
      64px: a browser tab draws it at 16-32px, so this is 2x-DPR sharp at 11KB. -->
@@ -8746,39 +8746,11 @@ html[data-theme=light] #ag-wrap .ag-track{
     repeating-linear-gradient(90deg,rgba(0,0,0,.10) 0 1px,transparent 1px calc(100%/8)),
     repeating-linear-gradient(90deg,transparent 0,transparent calc(100%/24 - 1px),rgba(0,0,0,.06) calc(100%/24 - 1px),rgba(0,0,0,.06) calc(100%/24))}
 
-/* ── ② 줄무늬 — 세로로 눈이 미끄러지지 않게 ────────────────────────────────
-   장부·표가 한 줄 걸러 색을 까는 이유와 같다. 아주 옅게, 있는 줄 모를 만큼만. */
-#ag-wrap .ag-body .ag-row:nth-child(even) .ag-track{background-color:rgba(255,255,255,.022)}
-html[data-theme=light] #ag-wrap .ag-body .ag-row:nth-child(even) .ag-track{background-color:rgba(0,0,0,.022)}
-
-/* ── ③ 짚은 줄은 끝까지 밝아진다 ──────────────────────────────────────────
-   마우스를 올린 줄만 이름칸부터 오른쪽 끝까지 한 줄로 이어진다. 왼쪽 이름을
-   확인하러 눈이 갔다 올 필요가 없어진다 — 줄 자체가 이어 준다. */
-#ag-wrap .ag-body .ag-row:hover .ag-track{background-color:rgba(255,255,255,.055)}
-#ag-wrap .ag-body .ag-row:hover .ag-lab{background:rgba(255,255,255,.05);border-radius:5px}
-#ag-wrap .ag-body .ag-row:hover .ag-lab b{color:var(--ac-strong,#e2b45c)}
-html[data-theme=light] #ag-wrap .ag-body .ag-row:hover .ag-track{background-color:rgba(0,0,0,.05)}
-
-/* ── ④ 지금 시각 — 판에서 가장 또렷한 한 줄 ───────────────────────────────
-   1.5px 실선 하나였다. 머리에 삼각 표식을 얹어 눈금 줄에서부터 눈에 걸리게 하고,
-   선을 조금 굵게·밝게 한다. 이 선은 "지금" 이라 판에서 제일 중요한 세로선이다. */
-#ag-wrap .ag-track::after{width:2px;opacity:1;
-  background:linear-gradient(180deg,#ffd479,#e2b45c);
-  box-shadow:0 0 6px rgba(226,180,92,.55)}
-#ag-wrap .ag-head .ag-track::after{display:block;top:auto;bottom:-2px;height:7px;width:0;
-  background:none;box-shadow:none;border-left:5px solid transparent;border-right:5px solid transparent;
-  border-top:6px solid #ffd479;transform:translateX(-5px)}
-
-/* ── ⑤ 밤 구간을 조금 더 또렷하게 ─────────────────────────────────────────
-   야간조가 대부분이라 밤이 어디서 시작하는지가 이 판의 기준선이다. */
-#ag-wrap .ag-track::before{
-  background:linear-gradient(90deg,rgba(90,110,170,.19) 0,rgba(90,110,170,.19) 25%,
-    transparent 25%,transparent 87.5%,rgba(90,110,170,.19) 87.5%),var(--six)}
-
-/* ── ⑥ 막대 안 글자 — 얇은 막대에서도 읽히게 ─────────────────────────────── */
-#ag-wrap .ag-bar{text-shadow:0 1px 2px rgba(0,0,0,.45)}
-
-@media (prefers-reduced-motion: reduce){#ag-wrap .ag-track::after{box-shadow:none}}
+/* [v1317] boss "그 숫자 잘보이는거랑 뒷 배경격자 빼고는 다 롤백하자"
+   v1316 에서 여섯 가지를 넣었는데 사장님이 둘만 남기라고 했다 — 숫자(원래부터 있던 것)와
+   위의 배경 격자. 나머지 다섯(줄무늬 · 짚은 줄 강조 · 지금선 삼각표식 · 밤 음영 강화 ·
+   막대 글자 그림자)은 걷었다. 판이 조용한 편이 낫다는 판단이고, 그게 맞다 —
+   길을 그어 주는 일은 배경 격자 하나로 이미 된다. 나머지는 그 위에 얹은 장식이었다. */
 #ag-wrap .ag-track:hover{background-color:rgba(255,255,255,.028)}
 #ag-wrap .ag-bar{cursor:grab}
 #ag-wrap.ag-dragging .ag-track{cursor:grabbing}
