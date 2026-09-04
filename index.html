@@ -4,7 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
 <title>ARASAKA Corp</title>
-<!-- BUILD: v1313 | 신호가 와도 내용이 그대로면 다시 안 그린다 · 실시간 끄기 스위치 -->
+<!-- BUILD: v1314 | 관계형 1단계 — 그림자 표 5개(트리거 자동 동기화)+지원자 첨부 일괄 이관 버튼(관리자) -->
 <!-- v745 기록은 git 이력(v1302 이전 커밋)에 있다 — 100KB 변경사 주석을 배포에서 제거 -->
 <!-- [v677] a <link href> cannot read a CSS variable, so the favicon carries its own copy.
      64px: a browser tab draws it at 16-32px, so this is 2x-DPR sharp at 11KB. -->
@@ -16517,6 +16517,8 @@ async function renderRecruit(){
         ${/* [v1299] 같은 종류라 같이 걷는다 — 지원자 수는 아래 칸 배지에 이미 있다. */''}
       </div>
       <div class="recruit-head-r">
+        ${currentUserRole==='admin' && (typeof _recLegacyCount==='function' ? _recLegacyCount() : 0) > 0
+          ? `<button class="btn btn-sm" onclick="_recMigrateLegacyFiles()" title="블롭에 박힌 base64 첨부를 비공개 창고로 옮깁니다">📦 첨부 이관 ${_recLegacyCount()}</button>` : ''}
         <button class="btn btn-sm" onclick="openShiftInfo()">시프트 정보</button>
         <button class="btn btn-ac" onclick="openAddApplicantPanel()">+ 지원자 추가</button>
       </div>
@@ -17119,6 +17121,41 @@ async function _recSignedUrl(path, sec){
   const { data, error } = await sb.storage.from(REC_FILE_BUCKET).createSignedUrl(path, sec || 300);
   if(error || !data || !data.signedUrl){ console.warn('recruit file sign:', error && error.message); return null; }
   return data.signedUrl;
+}
+/* [v1314·관계형 1단계 마감] 유산 base64 첨부 → 창고 일괄 이관 (관리자 원클릭)
+   블롭(recruit_state) 7MB의 몸통이 이 사진들이다. 성공한 것만 원본을 지우고, 실패는 그대로 둔다. */
+function _recLegacyCount(){
+  var n = 0;
+  try{ (APPLICANTS||[]).forEach(function(a){ (a.files||[]).forEach(function(f){
+    if((f.url && String(f.url).indexOf('data:')===0) || (!f.url && !f.path && f._lite)) n++; }); }); }catch(_){}
+  return n;
+}
+async function _recMigrateLegacyFiles(){
+  if(currentUserRole !== 'admin'){ toast('대표 전용입니다', true); return; }
+  if(!sb){ toast('서버 연결이 필요합니다', true); return; }
+  /* 보드가 가벼운 사본(_lite)이면 원본부터 다 받는다 */
+  try{ if((APPLICANTS||[]).some(a => (a.files||[]).some(f => !f.url && !f.path && f._lite))){
+    toast('원본 첨부 데이터 받는 중…'); await syncRecruitsFromCloud(); _recruitLite = false;
+  } }catch(_){}
+  var total = 0;
+  (APPLICANTS||[]).forEach(a => (a.files||[]).forEach(f => { if(f.url && String(f.url).indexOf('data:')===0) total++; }));
+  if(!total){ toast('이관할 첨부가 없습니다'); try{ renderRecruit(); }catch(_){} return; }
+  if(!await _askC('지원자 첨부 ' + total + '건을 비공개 창고로 이관할까요?\n장부가 몇 MB 가벼워집니다. 성공한 것만 원본을 지웁니다.')) return;
+  var moved = 0, failed = 0;
+  for(const a of (APPLICANTS||[])){
+    for(const f of (a.files||[])){
+      if(!(f.url && String(f.url).indexOf('data:')===0)) continue;
+      try{
+        const p = await _recUpload(_dataUrlToBlob(f.url), f.name || 'file', f.type);
+        if(p){ f.path = p; f.url = null; delete f._lite; moved++; if(moved % 3 === 0 || moved === total) toast('이관 중… ' + moved + '/' + total); }
+        else failed++;
+      }catch(e){ failed++; console.warn('migrate file:', e && e.message); }
+    }
+  }
+  if(moved){ try{ await saveRecruits(true); }catch(e){ toast('저장 실패 — 다시 눌러 이어서 하세요: ' + (e && e.message), true); return; } }
+  toast('✓ 이관 완료 ' + moved + '건' + (failed ? ' · 실패 ' + failed + '건(원본 유지, 다시 누르면 재시도)' : ''));
+  try{ renderRecruit(); }catch(_){}
+  try{ if(typeof openApplicantId !== 'undefined' && openApplicantId) renderApplicantPanel(); }catch(_){}
 }
 /* 패널 렌더 뒤 스토리지 썸네일을 서명 URL로 늦게 채운다 */
 async function _recFillThumbs(){
