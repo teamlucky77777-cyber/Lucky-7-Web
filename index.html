@@ -4,7 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
 <title>ARASAKA Corp</title>
-<!-- BUILD: v1320 | 채용 3단계 마감 — 보드 씨앗 쓰기도 투영 거부 무시형으로 -->
+<!-- BUILD: v1319 | 백업 빨간 테두리를 막대 위로(가려지던 것) · 빈 PC 흰 테두리 세기만 조금 -->
 <!-- v745 기록은 git 이력(v1302 이전 커밋)에 있다 — 100KB 변경사 주석을 배포에서 제거 -->
 <!-- [v677] a <link href> cannot read a CSS variable, so the favicon carries its own copy.
      64px: a browser tab draws it at 16-32px, so this is 2x-DPR sharp at 11KB. -->
@@ -8713,10 +8713,27 @@ html[data-theme=light] #ag-wrap .ag-track{background:rgba(0,0,0,.04);
   background:rgba(226,84,79,.16);border-radius:4px;padding:0 3px;flex:0 0 auto;white-space:nowrap}
 /* [v1265] 아무도 안 들어간 줄 — 겹침 줄의 붉은 테두리와 같은 자리에 흰 선 하나.
    경고가 아니라 빈자리라서 색은 쓰지 않고 세기만 낮춘다. */
-#ag-wrap .ag-row.vacant .ag-track{box-shadow:inset 0 0 0 1px rgba(255,255,255,.16)}
-html[data-theme=light] #ag-wrap .ag-row.vacant .ag-track{box-shadow:inset 0 0 0 1px rgba(0,0,0,.14)}
+/* [v1319] boss "비어있는 PC 흰색으로 테두리 있는거 그것도 진짜 조금만 더 잘보이게"
+   두께(1px)는 그대로 두고 세기만 올린다 — .16 → .30. 굵어지면 빈 줄이
+   차 있는 줄보다 도드라져서 거꾸로가 된다. */
+#ag-wrap .ag-row.vacant .ag-track{box-shadow:inset 0 0 0 1px rgba(255,255,255,.30)}
+html[data-theme=light] #ag-wrap .ag-row.vacant .ag-track{box-shadow:inset 0 0 0 1px rgba(0,0,0,.26)}
 #ag-wrap .ag-row.conflict .ag-lab b{color:#ff8f8f}
-#ag-wrap .ag-row.conflict .ag-track{box-shadow:inset 0 0 0 1px rgba(226,92,92,.55)}
+/* ═══ [v1319] 백업 빨간 테두리가 막대에 가려지던 것 ═══════════════════════════
+   boss "백업 들어간거 빨간색 테두리 뜨잖아 그거 플레이어 시간 격자에 가려져서
+         안보이니까 그거 보이게끔 해주고 두께는 건들지마"
+
+   테두리를 .ag-track 의 inset box-shadow 로 그렸다. inset 그림자는 그 요소의
+   배경 위에 칠해지지만 **자식보다는 아래**다. 막대(.ag-bar)는 position:absolute
+   자식이라 그 위를 덮는다. 줄이 꽉 찰수록 테두리가 사라졌다 — 정작 백업이
+   들어간 줄은 대개 꽉 차 있으니 필요할 때만 안 보인 셈이다.
+
+   줄 자체에 겹을 하나 더 얹어 막대보다 위에 놓는다(z-index 8 · 격자 안에서
+   가장 높은 것이 6). 두께는 1px 그대로, 세기만 .55 → .9 로 올린다. */
+#ag-wrap .ag-row.conflict{position:relative}
+#ag-wrap .ag-row.conflict::after{content:'';position:absolute;left:var(--lab);right:0;top:0;bottom:0;
+  border-radius:6px;pointer-events:none;z-index:8;
+  box-shadow:inset 0 0 0 1px rgba(226,92,92,.9)}
 #ag-wrap .ag-row.conflict .ag-lab b::after{content:' ⚠';font-size:8px}
 /* [v1103] 빈 자리는 눌러서 채운다 — 손이 갈 자리라는 걸 보이게 한다.
    막대 위에서는 커서를 되돌린다(거기는 끄는 자리다). */
