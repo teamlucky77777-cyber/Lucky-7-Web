@@ -4,7 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
 <title>ARASAKA Corp</title>
-<!-- BUILD: v1318 | 배정 격자 손질 전부 되돌림 — 원래대로 -->
+<!-- BUILD: v1319 | 관계형 3단계(채용) — 지원자 저장을 행 단위로(바뀐 행만), 블롭은 이중호환 후 투영 강등 -->
 <!-- v745 기록은 git 이력(v1302 이전 커밋)에 있다 — 100KB 변경사 주석을 배포에서 제거 -->
 <!-- [v677] a <link href> cannot read a CSS variable, so the favicon carries its own copy.
      64px: a browser tab draws it at 16-32px, so this is 2x-DPR sharp at 11KB. -->
@@ -15346,7 +15346,11 @@ async function _doSaveRecruits(){
     }
   }catch(e){ console.warn('recruit_state pre-save merge skipped:', e && e.message); }   // fall back to plain local save
   var res;
-  try{ res = await _dbUpsert('recruit_state', 'default', toSave); }
+  /* ═══ [v1319·관계형 3단계(채용)] 진실이 행으로 이사한다 ═══
+     이제 지원자는 rel_applicants 에 "한 사람 = 한 행"으로 저장된다(바뀐 행만 전송).
+     블롭(recruit_state)은 아래에서 한 번 더 써 주는데(이중호환), DB 전환 뒤에는
+     투영 거부로 실패해도 무시한다 — 그때부터는 DB 트리거가 행에서 블롭을 재조립한다. */
+  try{ res = await _recSaveRows(toSave, _recruitDeletedIds.slice()); }
   catch(e){ res = { error:(e || { message:'save failed' }) }; }
   // an error (e.g. statement timeout) OR a backoff-deferral both mean the data did NOT land — keep trying
   if(res && (res.error || res.deferred)){
@@ -15372,7 +15376,61 @@ async function _doSaveRecruits(){
   _recruitDeletedIds = [];
   _recruitSaveTries = 0;
   try{ _recruitCacheSave(); }catch(_){}   // [v160] keep the instant-open cache fresh
-  try{ _dbUpsert('recruit_state', RECRUIT_BOARD_ID, _recruitStripped()); }catch(_){}  // [v161] refresh board row
+  /* [v1319] 이중호환 블롭 쓰기 — DB 전환 전엔 예전 그대로 동작, 전환 후엔 투영 거부를 조용히 무시
+     (그때부터 블롭·보드 행은 DB 트리거가 행에서 재조립한다). _dbUpsert 를 안 쓰는 이유:
+     거부가 빨간 저장실패 배지를 켜면 안 되기 때문. */
+  try{ sb.from('recruit_state').upsert({ id:'default', data:toSave, updated_at:new Date().toISOString() }).then(function(){}); }catch(_){}
+  try{ sb.from('recruit_state').upsert({ id:RECRUIT_BOARD_ID, data:_recruitStripped(), updated_at:new Date().toISOString() }).then(function(){}); }catch(_){}
+}
+/* [v1319·관계형 3단계(채용)] 지원자 행 저장 — 바뀐 행만 upsert, 지운 행만 delete, 마지막에 서버와 명단 대조 */
+var _recRowSig = {};   // id -> 마지막으로 보낸 행 JSON (세션 내 변경 감지)
+var _REC_COLS = ['id','name','stage','source','applied_shift','spec_status','staff_id','staff_registered','created','updated','rejected_at','short'];
+function _recRowOf(a, i){
+  var extra = {}, k;
+  for(k in a){ if(_REC_COLS.indexOf(k) < 0) extra[k] = a[k]; }
+  return {
+    id: String(a.id), pool: 'main', ord: i,
+    name: a.name==null?null:String(a.name), stage: a.stage==null?null:String(a.stage),
+    source: a.source==null?null:String(a.source), applied_shift: a.applied_shift==null?null:String(a.applied_shift),
+    spec_status: a.spec_status==null?null:String(a.spec_status), staff_id: a.staff_id==null?null:String(a.staff_id),
+    staff_registered: a.staff_registered==null?null:!!a.staff_registered,
+    created: a.created==null?null:String(a.created), updated: a.updated==null?null:String(a.updated),
+    rejected_at: a.rejected_at==null?null:String(a.rejected_at), short: a.short==null?null:String(a.short),
+    n_files: Array.isArray(a.files)?a.files.length:0,
+    n_comments: Array.isArray(a.comments)?a.comments.length:0,
+    n_reports: Array.isArray(a.reports)?a.reports.length:0,
+    extra: extra, synced_at: new Date().toISOString()
+  };
+}
+async function _recSaveRows(list, deletedIds){
+  if(!sb) return { error:{ message:'no server' } };
+  var rows = [], keep = {}, i;
+  for(i = 0; i < list.length; i++){
+    var a = list[i]; if(!a || a.id == null) continue;
+    var row = _recRowOf(a, i); keep[row.id] = 1;
+    var sig; try{ sig = JSON.stringify(row); }catch(_){ sig = null; }
+    if(sig == null || _recRowSig[row.id] !== sig){ rows.push(row); if(sig != null) row.__sig = sig; }
+  }
+  if(rows.length){
+    var payload = rows.map(function(r){ var c = Object.assign({}, r); delete c.__sig; return c; });
+    var up = await sb.from('rel_applicants').upsert(payload, { onConflict:'id' });
+    if(up && up.error) return up;
+    rows.forEach(function(r){ if(r.__sig) _recRowSig[r.id] = r.__sig; });
+  }
+  /* 지우기: 이 세션에서 명시적으로 지운 것 + 서버에만 남은 유령(명단 대조) */
+  try{
+    var gone = (deletedIds || []).map(String).filter(function(id){ return !keep[id]; });
+    var ex = await sb.from('rel_applicants').select('id').eq('pool','main');
+    if(ex && !ex.error && Array.isArray(ex.data)){
+      ex.data.forEach(function(r){ if(!keep[String(r.id)] && gone.indexOf(String(r.id)) < 0) gone.push(String(r.id)); });
+    }
+    if(gone.length){
+      var del = await sb.from('rel_applicants').delete().in('id', gone).eq('pool','main');
+      if(del && del.error) return del;
+      gone.forEach(function(id){ delete _recRowSig[id]; });
+    }
+  }catch(e){ console.warn('recruit row reconcile:', e && e.message); }
+  return { error:null };
 }
 // [v159] cheap change-detection signature.
 // applicants embed base64 image/attachment data-URLs (often multi-MB total); stringifying
