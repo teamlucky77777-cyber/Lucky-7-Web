@@ -4,7 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
 <title>ARASAKA Corp</title>
-<!-- BUILD: v1357 | 문의 카드 더블클릭 수정(클릭 260ms 지연)·3단계 줄·카드 메모 제거 -->
+<!-- BUILD: v1358 | 클라별: 휴면·나간 클라 숨김(로스터 active:false / 로스터·PC판 모두 없음) + '☾ N개 보기' 토글 -->
 <!-- v745 기록은 git 이력(v1302 이전 커밋)에 있다 — 100KB 변경사 주석을 배포에서 제거 -->
 <!-- [v677] a <link href> cannot read a CSS variable, so the favicon carries its own copy.
      64px: a browser tab draws it at 16-32px, so this is 2x-DPR sharp at 11KB. -->
@@ -9442,6 +9442,8 @@ html[data-theme=light] #nav-chg{background:#fff;border-color:rgba(0,0,0,.1);box-
   padding:15px 15px 13px;display:flex;flex-direction:column;gap:9px;transition:border-color .16s,transform .16s,box-shadow .16s}
 .sr-iqwrap:hover .sr-iqmini{border-color:var(--ac-bord,rgba(194,160,74,.4));transform:translateY(-2px);box-shadow:0 10px 26px rgba(0,0,0,.32)}
 .sr-iqmini-top{display:flex;align-items:center;gap:6px;justify-content:flex-end;min-height:18px}   /* [v1355] 걸치는 배지 자리 비우고 칩은 오른쪽 */
+.sr-clhid{grid-column:1/-1;justify-self:start;background:transparent;border:1px dashed var(--br2,#2f2f33);color:#7a7a76;border-radius:10px;padding:8px 12px;font:600 12px inherit;cursor:pointer;transition:color .14s,border-color .14s}   /* [v1358] 숨긴 클라 토글 */
+.sr-clhid:hover{color:#c9c9c4;border-color:#55555a}
 .sr-iqage{font:700 9.5px inherit;color:var(--tx3,#8a8a86);background:var(--bg-i,#1a1a1a);
   border:1px solid var(--br2,#2f2f2d);padding:2px 6px;border-radius:6px;font-variant-numeric:tabular-nums}
 .sr-iqage.warn{color:#e0a83a;border-color:rgba(224,168,58,.4)}
@@ -38371,6 +38373,18 @@ function _srRecCardHTML(data){
     if(fa!==fb) return fa?-1:1;
     return String(byClient[a].client||a).localeCompare(String(byClient[b].client||b));
   });
+  /* [v1358] boss "PC2 데포요정쌤 휴면인데 왜 나오냐 / 18번 불요정쌤 / 19번 데컨기사쌤도 나갔고"
+     클라별은 리포트로 묶여서 로스터에서 빼도 기간 안에 리포트가 있으면 카드가 남았다.
+     규칙: 로스터가 휴면(active===false)이면 숨김 · 로스터에 없고 PC판에도 없으면(나감) 숨김.
+     훈련 계정은 예외. 숨긴 건 그리드 끝 '☾ N개 보기'로 언제든 펼친다(_srClShowHidden). */
+  var _hidCl=[];
+  try{
+    var _rosterN={}; (typeof CLIENT_ACCOUNTS!=='undefined'&&Array.isArray(CLIENT_ACCOUNTS)?CLIENT_ACCOUNTS:[]).forEach(function(r){ if(r&&r.name){ var k=clNorm(String(r.name)); if(k) _rosterN[k]=r; } });
+    var _boardN={}; if(typeof PCS!=='undefined'&&Array.isArray(PCS)) PCS.forEach(function(p){ if(!p||p.status==='offline') return; (p.clients||[]).forEach(function(cid){ var co=(typeof clientById==='function')?clientById(cid):null; if(co&&co.name){ var k=clNorm(String(co.name)); if(k) _boardN[k]=1; } }); });
+    clKeys.forEach(function(k){ var o=byClient[k]; if(!o) return; if(/training|훈련|연습/i.test(String(o.client||''))) return;
+      var r=_rosterN[k]; var hide=r?(r.active===false):!_boardN[k]; if(hide){ o._hidden=r?'hiatus':'gone'; _hidCl.push(k); } });
+    if(!window._srClShowHidden) clKeys=clKeys.filter(function(k){ return !(byClient[k]&&byClient[k]._hidden); });
+  }catch(_){}
   window._srRecClients=clKeys;
 
   // ════════════════ CLIENT FOCUS (한 클라만) ════════════════
@@ -38899,7 +38913,8 @@ function _srRecCardHTML(data){
   var _iqAdd='<button class="sr-iqadd" onclick="_srIqAdd()" title="'+(_uiLang()==='ko'?'새 문의 카드 — PC 없이도 만들 수 있어요(PC는 임대 후 연결)':'New inquiry card')+'">＋ '+(_uiLang()==='ko'?'문의':'Inquiry')+'</button>';
   /* [v1352] boss "밑으로 가게 해야지 위가 아니고" — 문의 카드는 기존 카드들이 끝나는
      그 다음 칸부터 이어진다(새 PC 가 자연히 붙는 자리). ＋문의 타일이 맨 끝. */
-  var clientCards=(_realN?_realCards:('<div class="sr-empty">'+(_uiLang()==='ko'?'클라이언트 세션이 없어요.':'No client sessions yet.')+'</div>'))+_iqCards+_iqAdd;
+  var _hidLink=_hidCl.length?('<button class="sr-clhid" onclick="window._srClShowHidden=!window._srClShowHidden;try{_srRecReRender()}catch(_){renderRecords(true)}">☾ '+(_uiLang()==='ko'?(window._srClShowHidden?'휴면·나간 클라 다시 숨기기':'휴면·나간 클라 '+_hidCl.length+'개 보기'):(window._srClShowHidden?'Hide inactive clients':'Show '+_hidCl.length+' inactive clients'))+'</button>'):'';   /* [v1358] */
+  var clientCards=(_realN?_realCards:('<div class="sr-empty">'+(_uiLang()==='ko'?'클라이언트 세션이 없어요.':'No client sessions yet.')+'</div>'))+_iqCards+_iqAdd+_hidLink;
   /* [v1302] boss "직원별 클라별 옆에 시계 그거 지워버려 그냥 이미 PC 현황쪽에
      있으니까 필요없어" — 같은 시계 보드가 PC 현황에 있다. 두 곳에 두면 어느 쪽이
      최신인지 매번 헷갈리고, 여기서는 아무도 안 봤다.
