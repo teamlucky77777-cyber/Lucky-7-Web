@@ -4,7 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
 <title>ARASAKA Corp</title>
-<!-- BUILD: v1348 | 전체 기준 뒤집기 수리 — 기준 선확보+강제 재채움(첫 장만 나오던 것), 아데나 툴팁 HTML 누출 수정 -->
+<!-- BUILD: v1349 | 아데나 순수 벌이 — 소모품 지출 반영·창고/본주급 낙차와 가짜 급증 ±30만 컷(실측 근거) -->
 <!-- v745 기록은 git 이력(v1302 이전 커밋)에 있다 — 100KB 변경사 주석을 배포에서 제거 -->
 <!-- [v677] a <link href> cannot read a CSS variable, so the favicon carries its own copy.
      64px: a browser tab draws it at 16-32px, so this is 2x-DPR sharp at 11KB. -->
@@ -37778,7 +37778,16 @@ function _srRecCompute(reports, clients){
       segGain[r.id]=gainedPct(r);   /* [v392] actual per-report result, matches Discord */
       var _pa = prev ? (Number(prev.adena)||0)
                      : (r.prevAdena!=null ? Number(r.prevAdena) : (Number(r.adena)||0));
-      var _ag = (Number(r.adena)||0) - _pa; if(!(_ag>0)) _ag = 0;
+      var _ag = (Number(r.adena)||0) - _pa;
+      /* ═══ [v1349] boss "리밋을 두는 건 어떤데? 창고에 넣는 돈이나 본주가 들어와서 돈 썼다거나
+         하면 큰 변화가 있기 마련이잖아 그건 다 필터" ═══
+         예전엔 음수를 전부 0으로 쳤다(감소=구매로 간주). 실측(30일 4,953건)을 보니 음수가
+         절반인데 그 94%가 10만 미만 — 매시간 물약·소모품을 쓰는 게 정상이고, 그건 사냥의
+         비용이라 반영해야 '순수 벌이'가 읽힌다. 창고 입금·본주 소비급(100만+)은 21건뿐.
+         컷 ±30만: 정상 벌이 상위 10%가 +6만이라(제프·클라우스의 '가끔 7만' 포함) 4배 여유로
+         통과하고, 창고/본주급 낙차와 '본주가 돈 넣고 간' 가짜 급증만 양방향으로 걸러진다. */
+      if(!isFinite(_ag)) _ag = 0;
+      if(Math.abs(_ag) > 300000) _ag = 0;   /* 창고·본주·거래 — 사냥의 이야기가 아니다 */
       /* ìë°ëë ì ìë¤. ìì  ê¸°ë¡ ì´ ê¼­ì '1.806' ê°ì ììì  ìë ¥ì´ ë°í ìì´
          í©ê³ê° '78,128,247.108' ì²ë£¨ ëìë¤ â ëì ë°ë¡ âê³ ì¥ì´ë ì«ìâ ë¡ ì½íë¤. */
       segAde[r.id]=Math.round(_ag);
