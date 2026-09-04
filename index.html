@@ -4,7 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
 <title>ARASAKA Corp</title>
-<!-- BUILD: v1327 | 자정 넘는 막대가 조절 중 사라지던 것 수정 (조각을 전부 갱신) -->
+<!-- BUILD: v1328 | PC 현황 실시간 다시 켬 (막대 사라짐은 v1327 의 별개 버그였음) -->
 <!-- v745 기록은 git 이력(v1302 이전 커밋)에 있다 — 100KB 변경사 주석을 배포에서 제거 -->
 <!-- [v677] a <link href> cannot read a CSS variable, so the favicon carries its own copy.
      64px: a browser tab draws it at 16-32px, so this is 2x-DPR sharp at 11KB. -->
@@ -53385,11 +53385,15 @@ function _pcRTSafe(){
 
    다시 켤 때(콘솔):  localStorage.lucky7_rt_on = '1'   → 새로고침
    끌 때:            localStorage.removeItem('lucky7_rt_on') */
+/* [v1328] boss "어 막대 문제 해결 됐어 실시간 켜" — 다시 기본 켜짐.
+   v1326 에서 껐던 것은 막대가 사라지는 원인을 실시간으로 의심했기 때문인데,
+   실제 원인은 v1327 의 조각 갱신 버그였다(꺼도 그대로였다). 의심이 풀렸으니
+   되돌린다. 끄는 스위치는 그대로 남긴다 — 무엇이 잘못되든 사장님이 스스로
+   화면을 되찾을 수 있어야 한다.
+     끄기:  localStorage.lucky7_rt_off = '1'   → 새로고침
+     켜기:  localStorage.removeItem('lucky7_rt_off') */
 function _pcRTOff(){
-  try{
-    if(localStorage.getItem('lucky7_rt_off') === '1') return true;   /* 예전 스위치도 계속 듣는다 */
-    return localStorage.getItem('lucky7_rt_on') !== '1';             /* 기본 = 꺼짐 */
-  }catch(_){ return true; }
+  try{ return localStorage.getItem('lucky7_rt_off') === '1'; }catch(_){ return false; }
 }
 async function _pcRTPull(p){
   if(_pcRTOff()) return;
