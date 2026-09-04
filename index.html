@@ -4,7 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
 <title>ARASAKA Corp</title>
-<!-- BUILD: v1321 | 관계형 3단계(정산) — 급여 저장 행 단위(바뀐 행만)+돈 가드 2중, 블롭 이중호환 -->
+<!-- BUILD: v1322 | 관계형 3단계(직원) — 직원 저장 행 단위(휴식도 그 사람 행만)+존재 깃발, 블롭 이중호환 -->
 <!-- v745 기록은 git 이력(v1302 이전 커밋)에 있다 — 100KB 변경사 주석을 배포에서 제거 -->
 <!-- [v677] a <link href> cannot read a CSS variable, so the favicon carries its own copy.
      64px: a browser tab draws it at 16-32px, so this is 2x-DPR sharp at 11KB. -->
@@ -46079,9 +46079,83 @@ async function saveStaffState(){
   try{ localStorage.setItem(_STAFF_STATE_KEY, JSON.stringify(payload)); }catch(_){}
   if(!sb) return;
   try{
-    const { error } = await _dbUpsert('staff_state', 'default', payload);
-    if(error){ console.warn('staff_state save:', error.message); toast('Staff info save FAILED: ' + error.message, true); }
+    /* ═══ [v1322·관계형 3단계(직원)] 진실이 행으로 — 사람=rel_staff 한 행, 바뀐 행만 전송.
+       휴식 기록도 그 직원 행 하나만 나간다(예전엔 51명 블롭 통째). 블롭은 아래 이중호환 쓰기가
+       거부돼도(투영 전환 후) DB 트리거가 행에서 재조립한다. */
+    const _r = await _stfSaveRows();
+    if(_r && _r.error){
+      console.warn('staff rows save:', _r.error.message);
+      _stfSaveTries = (_stfSaveTries || 0) + 1;
+      if(_stfSaveTries <= 5){ setTimeout(function(){ try{ saveStaffState(); }catch(_){} }, 5000); return; }
+      _stfSaveTries = 0; _dbLastFailAt = Date.now(); try{ _dbBadge(); }catch(_){}
+      toast('직원 정보 저장 실패 — 잠시 후 다시 시도해 주세요: ' + _r.error.message, true);
+      return;
+    }
+    _stfSaveTries = 0;
+    try{ sb.from('staff_state').upsert({ id:'default', data:payload, updated_at:new Date().toISOString() }).then(function(){}); }catch(_){}
   }catch(e){ console.warn('staff_state save:', e && e.message); }
+}
+/* [v1322·관계형 3단계(직원)] 행 빌더·저장 — profiles/details 는 "있고 없음" 자체가 정보라 깃발로 나른다 */
+var _stfRowSig = {}, _stfSaveTries = 0;
+var _STF_DKEYS = ['activity','backup_pool','evaluations','hr_notes','resigned','resigned_at','warnings'];
+function _stfBuildRows(){
+  var keys = {}, k, kk, out = [];
+  for(k in (STAFF_PROFILE || {})) keys[k] = 1;
+  for(k in (STAFF_DETAILS || {})) keys[k] = 1;
+  for(k in keys){
+    var p = (STAFF_PROFILE || {})[k], d = (STAFF_DETAILS || {})[k];
+    var pe = {}, de = {};
+    if(p){ for(kk in p){ if(kk !== 'manual_shift' && kk !== 'personal') pe[kk] = p[kk]; } }
+    if(d){ for(kk in d){ if(_STF_DKEYS.indexOf(kk) < 0) de[kk] = d[kk]; } }
+    out.push({ staff_key: String(k),
+      has_profile: !!p, has_detail: !!d,
+      manual_shift: (p && p.manual_shift != null) ? String(p.manual_shift) : null,
+      personal: (p && p.personal !== undefined) ? p.personal : null,
+      resigned: (d && d.resigned != null) ? !!d.resigned : null,
+      resigned_at: (d && d.resigned_at != null) ? String(d.resigned_at) : null,
+      backup_pool: (d && d.backup_pool != null) ? !!d.backup_pool : null,
+      warnings: (d && d.warnings != null && isFinite(Number(d.warnings))) ? Number(d.warnings) : null,
+      activity: (d && d.activity !== undefined) ? d.activity : null,
+      evaluations: (d && d.evaluations !== undefined) ? d.evaluations : null,
+      hr_notes: (d && d.hr_notes !== undefined) ? d.hr_notes : null,
+      profile_extra: pe, detail_extra: de,
+      synced_at: new Date().toISOString() });
+  }
+  return out;
+}
+async function _stfSaveRows(){
+  if(!sb) return { error:{ message:'no server' } };
+  var list = _stfBuildRows(), rows = [], keep = {}, i;
+  /* 빈 메모리 가드(저장측): 서버에 행이 있는데 메모리가 비면 전량 삭제로 이어진다 — 거부 */
+  if(!list.length){
+    try{ var chk = await sb.from('rel_staff').select('staff_key').limit(1);
+      if(chk && !chk.error && chk.data && chk.data.length) return { error:{ message:'메모리가 비어 있어 저장 거부(서버 자료 보호)' } };
+    }catch(_){}
+  }
+  for(i = 0; i < list.length; i++){
+    var row = list[i]; keep[row.staff_key] = 1;
+    var sig; try{ var c = Object.assign({}, row); delete c.synced_at; sig = JSON.stringify(c); }catch(_){ sig = null; }
+    if(sig == null || _stfRowSig[row.staff_key] !== sig){ row.__sig = sig; rows.push(row); }
+  }
+  if(rows.length){
+    var payload = rows.map(function(r){ var c = Object.assign({}, r); delete c.__sig; return c; });
+    var up = await sb.from('rel_staff').upsert(payload, { onConflict:'staff_key' });
+    if(up && up.error) return up;
+    rows.forEach(function(r){ if(r.__sig) _stfRowSig[r.staff_key] = r.__sig; });
+  }
+  try{
+    var ex = await sb.from('rel_staff').select('staff_key');
+    if(ex && !ex.error && Array.isArray(ex.data) && list.length){
+      var gone = [];
+      ex.data.forEach(function(r){ if(!keep[String(r.staff_key)]) gone.push(String(r.staff_key)); });
+      if(gone.length){
+        var del = await sb.from('rel_staff').delete().in('staff_key', gone);
+        if(del && del.error) return del;
+        gone.forEach(function(id){ delete _stfRowSig[id]; });
+      }
+    }
+  }catch(e){ console.warn('staff row reconcile:', e && e.message); }
+  return { error:null };
 }
 async function loadStaffState(){
   var local = null;
@@ -46096,7 +46170,8 @@ async function loadStaffState(){
       console.warn('[staff_state] 클라우드가 비어 있습니다 — 이 기기의 사본으로 되돌립니다 (항목 '
         + _stCount(local) + '개)');
       try{ toast('직원 설정이 서버에서 비어 있었어요 — 이 기기에 남아 있던 자료로 되돌렸습니다', true); }catch(_){}
-      try{ await _dbUpsert('staff_state', 'default', local); }catch(e){ console.warn('staff_state 되돌리기 실패:', e && e.message); }
+      /* [v1322] 되돌리기도 행으로 — 로컬 사본을 메모리에 적용한 뒤 행 저장(블롭 직접 쓰기는 투영 전환 후 거부됨) */
+      try{ _applyStaffPayload(local); await _stfSaveRows(); }catch(e){ console.warn('staff_state 되돌리기 실패:', e && e.message); }
       return;
     }
     _applyStaffPayload(data.data);
