@@ -4,7 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
 <title>ARASAKA Corp</title>
-<!-- BUILD: v1343 | 스탠다드 팝업에서 바로 편집 — 기준표와 같은 편집기를 그 자리에서(같은 잠금·같은 저장) -->
+<!-- BUILD: v1344 | 직원 칩 적응형 개편 — 컨테이너 쿼리로 제 폭 감지, 절단 대신 줄바꿈·라벨 접기(창 크기·배율 무관) -->
 <!-- v745 기록은 git 이력(v1302 이전 커밋)에 있다 — 100KB 변경사 주석을 배포에서 제거 -->
 <!-- [v677] a <link href> cannot read a CSS variable, so the favicon carries its own copy.
      64px: a browser tab draws it at 16-32px, so this is 2x-DPR sharp at 11KB. -->
@@ -10845,6 +10845,44 @@ body.pcboxes-on .pbox .pool-rolegrid .s-chip,
 .s-chip-nm .s-chip-standby,.s-chip-nm .s-chip-new{flex:0 0 auto}
 .pbox .s-chip .s-chip-standby{font-size:7.5px;padding:0 4px;margin-left:4px;letter-spacing:0}
 .s-chip .s-chip-meta{white-space:nowrap}
+/* ═══ [v1344] 직원 칩 — 제 폭을 스스로 재는 카드 ═══
+   boss "짤리는 인터페이스도 많고 이름도 제대로 안 나오고 · 직원마다 축소확대 비율도
+   크롬창 크기도 다를 거라 · 이 문제를 싹다 잡는 UI 패치"
+   원인 셋: ① 칩이 overflow:hidden 인데 윗줄·메타가 줄바꿈 금지 → 좁아지면 오른쪽부터
+   절단(OFF→'F', '11/12H·[' 중간 절단, 이름 'M…') ② 시간 칸이 20px 고정 12개 = 240px
+   최소인데 수축 허용이라 슬리버로 으깨짐 ③ 창 크기·배율이 제각각이라 언제든 재현.
+   처방: 픽셀을 창에 맞추는 게 아니라 칩이 컨테이너 쿼리로 "제 폭"을 재고
+   — 잘리는 대신 내려앉고, 내려앉을 자리가 없으면 저정보 라벨부터 접는다. */
+.s-chip{container-type:inline-size}
+.s-chip-top{flex-wrap:wrap;row-gap:4px}
+.s-chip-info{flex:1 1 130px;min-width:0}
+.s-chip-nm{flex-wrap:wrap;row-gap:2px}
+.s-chip .s-nm-t{flex:1 1 auto;min-width:0;max-width:100%}
+.s-chip .dayoff-toggle,.s-chip .s-chip-status,.s-chip .leader-grab{flex:0 0 auto}
+.s-chip .s-chip-meta,.pbox .s-chip .s-chip-meta,.pooldock .s-chip-meta{
+  white-space:normal;flex-wrap:wrap;row-gap:2px;overflow:visible}
+.s-chip .s-chip-meta > *{flex:0 0 auto}
+/* 시간 칸: 으깨지지 말고(수축 금지) 내려앉아라 */
+.s-chip .seg{flex:0 0 auto}
+.s-chip .segs,.pooldock .segs{flex-wrap:wrap;row-gap:3px}
+/* 폭 260px↓ — 저정보 라벨 접기: '잔여'·주N일·👑글자 */
+@container (max-width:260px){
+  .hrs-rem-lbl{display:none}
+  .wd-tag{display:none}
+  .lg-t{display:none}
+  .s-chip-status{font-size:8px;padding:2px 5px}
+}
+/* 폭 210px↓ — 초압축: 직급 태그·0/12H 접고 아바타 축소, 칸도 살짝 줄임 */
+@container (max-width:210px){
+  .pos-tag{display:none}
+  .hrs-used.zero{display:none}
+  .s-chip-av{width:24px;height:24px;font-size:9px}
+  .seg{width:17px;height:21px;font-size:9.5px}
+  .cover-grab{font-size:9px;padding:3px 6px}
+}
+/* 잡기 이름표(v1338)는 칩의 overflow:hidden 에 잘려 안 보였다 — 칩 안쪽 오른쪽 위로 */
+.s-chip .pc-held-tag{top:2px;right:2px;left:auto}
+.s-chip .pc-held-tag::after{display:none}
 /* 이름 88px + 아바타 20 + 12H 24 + 👑 22 + 여백 → 한 칸 최소 190px */
 /* [v1165] 크기 변화를 뺐으니 넓은 간격이 필요 없다 — 8px 로 되돌린다.
    간격이 넓으면 카드가 서로 떨어진 섬처럼 보여 그것도 ‘붕 뜬’ 느낌을 만든다. */
