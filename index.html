@@ -4,7 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
 <title>ARASAKA Corp</title>
-<!-- BUILD: v1335 | 본인 막대에 Cover 를 놓으면 그 막대가 초록 백업으로 -->
+<!-- BUILD: v1336 | 끌어놓은 뒤 격자가 흐려지던 것 · 클라 카드 더블클릭으로 앞면 복귀 -->
 <!-- v745 기록은 git 이력(v1302 이전 커밋)에 있다 — 100KB 변경사 주석을 배포에서 제거 -->
 <!-- [v677] a <link href> cannot read a CSS variable, so the favicon carries its own copy.
      64px: a browser tab draws it at 16-32px, so this is 2x-DPR sharp at 11KB. -->
@@ -38323,12 +38323,28 @@ function _srRecCardHTML(data){
     try{
       if(ev){ ev.preventDefault(); ev.stopPropagation(); }
       clearTimeout(window._srClTapT);                       /* 한 번 누른 것은 취소 */
-      /* 글자를 끌어 고르는 중이면 뒤집지 않는다 — 더블클릭이 선택과 겹친다(ck-flip 과 같은 판단) */
-      try{ var sel = window.getSelection && window.getSelection(); if(sel && String(sel).length > 1) return; }catch(_){}
-      /* 뒷면에서 글자를 두 번 눌러 고른 것은 뒤집기가 아니다 */
-      if(ev && ev.type === "dblclick" && ev.target && ev.target.closest && ev.target.closest(".sr-clback")) return;
       var card = document.querySelector(".sr-clcard[data-ci='" + ci + "']");
       if(!card) return;
+      var _onBack = !!(ev && ev.target && ev.target.closest && ev.target.closest(".sr-clback"));
+      /* ═══ [v1336] 뒷면에서 두 번 더 누르면 앞면으로 돌아온다 ═══════════════════
+         boss "저거 더블클릭 다시 하면 원래 화면으로 돌아오게 해야지"
+
+         v1331 은 뒷면에서의 더블클릭을 통째로 막았다 — 글자를 두 번 눌러 고르는
+         것과 겹칠까 봐. 그런데 그 바람에 돌아오는 길이 오른쪽 위 ↩ 하나뿐이
+         되었다. 뒤집은 손짓으로 되돌리는 게 당연한데 그게 안 됐다.
+
+         뒷면은 읽는 면이다(고치는 것은 편집 단추가 창을 연다). 그러니 글자가
+         골라졌으면 지우고 넘어간다. 단추·입력칸 위에서는 뒤집지 않는다 —
+         거기서의 두 번 누름은 그 단추에게 한 말이다. */
+      if(_onBack){
+        if(ev && ev.type === "dblclick" && ev.target.closest
+           && ev.target.closest("button,input,select,textarea,a")) return;
+        try{ var _s2 = window.getSelection && window.getSelection();
+             if(_s2 && _s2.removeAllRanges) _s2.removeAllRanges(); }catch(_){}
+      } else {
+        /* 앞면 — 글자를 끌어 고르는 중이면 뒤집지 않는다(ck-flip 과 같은 판단) */
+        try{ var sel = window.getSelection && window.getSelection(); if(sel && String(sel).length > 1) return; }catch(_){}
+      }
       if(!card.classList.contains("flipped")){ try{ _srClBackFill(card); }catch(_){} }
       card.classList.toggle("flipped");
     }catch(e){ console.warn("cl flip:", e); }
@@ -57518,7 +57534,10 @@ function _agBrksOf(staffId, nm){
 }
 function _agRender(){
   const host = _agHost(); if(!host) return;
-  if(host.classList.contains('ag-dragging')) return;   /* [v1292] 드래그 중 리렌더 금지 — 잡은 막대가 갈려나가 손을 놓치던 것 */
+  if(host.classList.contains('ag-dragging')) return;
+  /* [v1336] 마지막 그물 — 강조할 막대가 하나도 없는데 흐림만 켜져 있으면 끈다.
+     어떤 길로 새든 화면이 통째로 흐려진 채 남는 일은 없게 한다. */
+  try{ if(host.classList.contains('ag-hi-on') && !host.querySelector('.ag-bar.ag-hi')) host.classList.remove('ag-hi-on'); }catch(_){}   /* [v1292] 드래그 중 리렌더 금지 — 잡은 막대가 갈려나가 손을 놓치던 것 */
   /* [v1266] 휴식 자료가 아직 없으면 지금 불러온다. 도착하면 스스로 한 번 더 그린다. */
   try{ if(_agBrk === null) _agBrkLoad(); }catch(_){}
   /* ═══ [v1135] boss “그 스타크래프트 그거 적용된거임? 배정 격자쪽에 안나오는거 같은데” ═══
@@ -58166,6 +58185,7 @@ function _agLabLeave(e){
 function _agLabDrop(e, pcId){
   const el = e.currentTarget; if(el) el.classList.remove('lab-over','k-backup','k-client','k-leader');
   if(!_pcGuardEdit()){ try{ e.preventDefault(); e.stopPropagation(); }catch(_){} return; }   /* [v1332] */
+  _agDragCleanup();   /* [v1336] */
   try{ e.preventDefault(); e.stopPropagation(); }catch(_){}
   const k = _agLabKind(); if(!k) return;
   const p = PCS.find(x=>x.id===pcId); if(!p) return;
@@ -58675,6 +58695,7 @@ function _agDrop(e, pcId){
   const tr = e.currentTarget; if(tr) tr.classList.remove('over');
   if(!_pcGuardEdit()){ try{ e.preventDefault(); e.stopPropagation(); }catch(_){} return; }   /* [v1332] */
   try{ e.preventDefault(); e.stopPropagation(); }catch(_){}
+  _agDragCleanup();   /* [v1336] render() 가 손잡이를 지우기 전에 강조부터 끈다 */
   /* [v1333] 🛟 Cover — 막대 위에 놓았을 때만 받는다 */
   if(dragMode === 'cover'){
     var _cbar = e.target && e.target.closest ? e.target.closest('.ag-bar') : null;
@@ -59286,6 +59307,26 @@ function _poolHiOff(){
     w.classList.remove('ag-hi-on');
     w.querySelectorAll('.ag-bar.ag-hi').forEach(function(b){ b.classList.remove('ag-hi'); });
   }catch(_){}
+}
+/* ═══ [v1336] 끌기가 끝나면 강조를 반드시 끈다 ═══════════════════════════════
+   boss "슈리가 변하긴 하는데 화면이 이렇게 다 색이 빠져버리네"
+
+   직원 카드에 손을 올리면 _poolHi 가 #ag-wrap 에 ag-hi-on 을 건다. 그 규칙은
+   `#ag-wrap.ag-hi-on .ag-bar{opacity:.18;filter:saturate(.35)}` — 즉 '그 사람
+   막대만 남기고 나머지는 죽인다'. 끄는 쪽은 onmouseleave 하나뿐이었다.
+
+   그런데 끌기(HTML5 drag)가 시작되면 브라우저가 마우스 이벤트를 멈춘다.
+   mouseleave 가 안 온다. 그리고 드롭한 뒤 render() 가 직원 풀을 다시 그리면서
+   끌고 있던 손잡이(.cover-grab)를 지워 버리므로 dragend 마저 안 온다.
+   그래서 ag-hi-on 이 켜진 채로 남고, 다시 그려진 막대에는 ag-hi 가 없으니
+   살아남는 막대가 하나도 없다 — 화면 전체가 흐려진다.
+
+   Cover 만의 문제가 아니라 풀에서 끌어다 놓는 모든 길이 같다.
+   그래서 끄는 일을 한곳에 모으고, 드롭을 받는 자리마다 먼저 부른다. */
+function _agDragCleanup(){
+  try{ if(typeof _poolHiOff === 'function') _poolHiOff(); }catch(_){}
+  try{ document.body.classList.remove('dragging-staff','dragging-client','dragging-leader'); }catch(_){}
+  try{ if(typeof _agCovClear === 'function') _agCovClear(); }catch(_){}
 }
 function isBackupId(id){
   try{
@@ -60903,7 +60944,7 @@ function dragEnd(e){
   document.body.classList.remove('dragging-staff','dragging-client','dragging-leader');
   document.querySelectorAll('.seg.dragging,.slot.dragging').forEach(el=>el.classList.remove('dragging'));
   document.querySelectorAll('.pc.drop-staff,.pc.drop-client,.pc.drop-leader').forEach(el=>el.classList.remove('drop-staff','drop-client','drop-leader'));
-  try{ _agCovClear(); }catch(_){}   /* [v1333] 커버 표적 표시도 같이 거둔다 */
+  try{ _agDragCleanup(); }catch(_){}   /* [v1333·v1336] 표적 표시·풀 강조를 같이 거둔다 */
   dragType = null; dragId = null; dragHours = 0; dragMode = null; dragFrom = null;
   try{ _pcRTFree(); }catch(_){}   /* [v1310] 잡고 있던 표시를 거둔다 */
 }
