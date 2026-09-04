@@ -4,7 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
 <title>ARASAKA Corp</title>
-<!-- BUILD: v1319 | 관계형 3단계(채용) — 지원자 저장을 행 단위로(바뀐 행만), 블롭은 이중호환 후 투영 강등 -->
+<!-- BUILD: v1320 | 채용 3단계 마감 — 보드 씨앗 쓰기도 투영 거부 무시형으로 -->
 <!-- v745 기록은 git 이력(v1302 이전 커밋)에 있다 — 100KB 변경사 주석을 배포에서 제거 -->
 <!-- [v677] a <link href> cannot read a CSS variable, so the favicon carries its own copy.
      64px: a browser tab draws it at 16-32px, so this is 2x-DPR sharp at 11KB. -->
@@ -14997,7 +14997,8 @@ async function syncRecruitsFromCloud(){
       APPLICANTS.length = 0;
       arr.forEach(a => APPLICANTS.push(a));
       // [v161] seed/refresh the tiny board row so future cold opens are fast (fire-and-forget)
-      try{ _dbUpsert('recruit_state', RECRUIT_BOARD_ID, _recruitStripped()); }catch(_){}
+      // [v1320] 투영 전환 뒤엔 거부되는 게 정상 — 원시 upsert로 조용히 (빨간 배지 금지)
+      try{ sb.from('recruit_state').upsert({ id:RECRUIT_BOARD_ID, data:_recruitStripped(), updated_at:new Date().toISOString() }).then(function(){}); }catch(_){}
     } else { console.warn('recruit_state load:', error.message); }
   }catch(e){ console.warn('recruit_state load:', e && e.message); }
 }
