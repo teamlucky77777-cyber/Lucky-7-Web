@@ -4,7 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
 <title>ARASAKA Corp</title>
-<!-- BUILD: v1332 | PC 현황 배정 격자 — Player 는 보기만 (컨트롤 잠금) -->
+<!-- BUILD: v1333 | 🛟 Cover 를 배정 격자 막대에 드롭 — 원래 막대는 백업 막대로 -->
 <!-- v745 기록은 git 이력(v1302 이전 커밋)에 있다 — 100KB 변경사 주석을 배포에서 제거 -->
 <!-- [v677] a <link href> cannot read a CSS variable, so the favicon carries its own copy.
      64px: a browser tab draws it at 16-32px, so this is 2x-DPR sharp at 11KB. -->
@@ -8684,6 +8684,10 @@ html[data-theme=light] #ag-wrap .ag-track{background:rgba(0,0,0,.04);
   border-left:1px solid rgba(255,255,255,.75);border-right:1px solid rgba(255,255,255,.75)}
 /* [v1278] 맞바꾸기 — 상대 막대 위에 겹치면 둘 다 보라로 빛난다 */
 #ag-wrap .ag-bar.ag-swtgt{box-shadow:0 0 0 2px #a98fd6,0 0 12px rgba(169,143,214,.55);z-index:6}
+/* [v1333] 🛟 Cover 를 받을 막대 — 손에 든 것과 같은 파랑(.cover-grab)으로 말한다.
+   자리 바꾸기(보라)와 다른 색이라 무슨 일이 일어날지 놓기 전에 안다. */
+#ag-wrap .ag-bar.ag-covtgt{box-shadow:0 0 0 2px #4aa0c2,0 0 12px rgba(74,160,194,.6);z-index:6}
+
 #ag-wrap .ag-bar.willswap{box-shadow:0 0 0 2px #a98fd6;opacity:.85}
 /* 끌어올 때 — 놓으면 어디에 들어갈지 미리 보여준다 */
 #ag-wrap .ag-track.over{box-shadow:inset 0 0 0 1px var(--ac,#c9963a)}
@@ -58528,9 +58532,60 @@ function _agBind(host){
   });
 }
 /* ── 직원 풀에서 끌어다 놓기 — 놓은 x 가 곧 시작 시각 ── */
+/* ═══ [v1333] 🛟 Cover 를 배정 격자의 막대에 떨어뜨린다 ═══════════════════════
+   boss "cover 버튼 드래그앤드롭으로 배정격자 직원 막대에 딱 놓으면
+         기존 막대가 백업 막대로 바뀌어야지"
+
+   여태 격자는 Cover 를 아예 안 받았다(_agOver·_agDrop 이 hours·pc-staff 만
+   통과시켰다). PC 카드에 놓는 길만 있었고, 거기서는 '지금 시각에 그 PC 에 있던
+   사람'을 자동으로 골랐다 — 급할 때는 맞지만, 누구 자리를 대신하는지 손으로
+   짚고 싶을 때는 짚을 데가 없었다.
+
+   막대 위에 놓으면 상대가 분명하다. 그래서 커버는 그 막대의 시간을 그대로
+   물려받고(그 시프트를 대신 서는 것이다), 원래 막대는 백업 막대가 된다.
+   '백업 막대'는 새로 만들지 않았다 — 이미 a.bk 가 그것이고, 막대 우클릭의
+   '🛟 백업으로 표시' 가 같은 값을 켠다. 길만 하나 더 낸 것이다. */
+function _agCovClear(){
+  try{
+    var h = (typeof _agHost==='function') ? _agHost() : null;
+    (h||document).querySelectorAll('.ag-bar.ag-covtgt')
+      .forEach(function(x){ x.classList.remove('ag-covtgt'); });
+  }catch(_){}
+}
+/* 이 막대를 대신 선다 — 원래 막대는 백업 막대가 되고, 커버 막대가 그 위에 앉는다 */
+function _agCoverOnBar(pcId, idx, staffId){
+  if(!_pcGuardEdit()) return;
+  var kl = (typeof _uiLang!=='function') || _uiLang()==='ko';
+  var p = (typeof PCS!=='undefined'?PCS:[]).find(function(x){ return x.id===pcId; }); if(!p) return;
+  var a = (p.assignments||[])[idx]; if(!a) return;
+  var sid = staffId; if(!sid) return;
+  if(a.cover){ try{ toast(kl?'대타 막대 위에는 또 얹을 수 없어요':'Cannot cover a cover bar', true); }catch(_){} return; }
+  if(String(a.staff) === String(sid)){ try{ toast(kl?'같은 사람이에요':'Same person', true); }catch(_){} return; }
+  if((p.assignments||[]).length >= MAX_SLOTS){ try{ toast(kl?('이미 '+MAX_SLOTS+'명 배정됨'):('Already '+MAX_SLOTS+' assigned'), true); }catch(_){} return; }
+  var snap = (typeof _agTake==='function') ? _agTake() : null;
+  a.bk = true;                                        /* 기존 막대 → 백업 막대 */
+  p.assignments.push({ staff:sid, start:a.start, len:a.len, cover:true,
+                       coverFor:a.staff, open:false, reason:'etc', game:a.game });
+  var who = _agWho(sid), ow = _agWho(a.staff);
+  try{ _agLog('커버 투입 · PC-'+pad2(pcId)+' '+_agWhen(a.start, a.len)+' · '+ow+' 자리', who); }catch(_){}
+  try{ _agCommit(snap, '커버|cover'); }catch(_){}
+  try{ toast('🛟 '+who+' → '+ow+' 자리 대신 · PC-'+pad2(pcId)+' '+_agWhen(a.start, a.len)); }catch(_){}
+  try{ render(); }catch(_){ try{ _agRender(); }catch(_){} }
+  try{ _ckRefreshSoon(); }catch(_){}
+}
 function _agOver(e, pcId){
   if(!_pcCanEdit()) return;   /* [v1332] 받을 수 없으면 자리도 안 비춘다 */
   if(typeof dragType==='undefined' || !dragType) return;
+  if(dragMode==='cover'){
+    /* [v1333] 대신할 상대가 있어야 커버다 — 빈 칸에는 안 떨어진다 */
+    var _cb = e.target && e.target.closest ? e.target.closest('.ag-bar') : null;
+    _agCovClear();
+    if(!_cb || _cb.classList.contains('cover')) return;
+    e.preventDefault();
+    try{ e.dataTransfer.dropEffect='move'; }catch(_){}
+    _cb.classList.add('ag-covtgt');
+    return;
+  }
   if(!(dragMode==='hours' || dragMode==='pc-staff')) return;
   e.preventDefault();
   try{ e.dataTransfer.dropEffect='move'; }catch(_){}
@@ -58540,7 +58595,7 @@ function _agOver(e, pcId){
   tr.style.setProperty('--ghost-l', (hh/24*100)+'%');
   tr.style.setProperty('--ghost-w', ((typeof dragHours==='number'?dragHours:1)/24*100)+'%');
 }
-function _agLeave(e){ const tr=e.currentTarget; if(tr && !tr.contains(e.relatedTarget)) tr.classList.remove('over'); }
+function _agLeave(e){ const tr=e.currentTarget; if(tr && !tr.contains(e.relatedTarget)){ tr.classList.remove('over'); _agCovClear(); } }
 /* ═══ [v1283] 배정이 움직이면 시스템 로그에 남긴다 ═══════════════════════════
    boss "PC 현황쪽에 만약 변경사항이 있으면 누가 변경했는지 어딜 어떻게 누가 어디로
          갔는지 초딩도 이해하게 디스코드에 좀 루틴에 넣어줄수있어"
@@ -58563,6 +58618,18 @@ function _agDrop(e, pcId){
   const tr = e.currentTarget; if(tr) tr.classList.remove('over');
   if(!_pcGuardEdit()){ try{ e.preventDefault(); e.stopPropagation(); }catch(_){} return; }   /* [v1332] */
   try{ e.preventDefault(); e.stopPropagation(); }catch(_){}
+  /* [v1333] 🛟 Cover — 막대 위에 놓았을 때만 받는다 */
+  if(dragMode === 'cover'){
+    var _cbar = e.target && e.target.closest ? e.target.closest('.ag-bar') : null;
+    _agCovClear();
+    if(!_cbar || _cbar.classList.contains('cover')){
+      var _kl3 = (typeof _uiLang!=='function') || _uiLang()==='ko';
+      try{ toast(_kl3?'🛟 대신할 직원 막대 위에 놓아주세요':'🛟 Drop it on the bar you are covering', true); }catch(_){}
+      return;
+    }
+    _agCoverOnBar(pcId, Number(_cbar.dataset.idx), dragId);
+    return;
+  }
   if(!(dragMode==='hours' || dragMode==='pc-staff')) return;
   /* [v1285] 되돌리기 — 이 함수의 어느 갈래가 바꾸든, 다 끝난 직후(마이크로태스크) 비교해 남긴다 */
   const uSnap = _agTake();
@@ -59409,7 +59476,7 @@ function staffChipHTML(s){
      여유 시간이 줄어야 하고, 같은 시각에 다른 PC 후보로 뜨면 안 된다. */
   const coverHandle = `<div class="cover-grab" draggable="true"
       ondragstart="dragStartCover(event,'${s.id}')" ondragend="dragEnd(event)"
-      title="${s.name} — 커버로 투입 (1시간부터 시작 · 끝나면 막대를 눌러 종료)">🛟 Cover</div>`;
+      title="${s.name} — 커버 투입 · 배정 격자의 직원 막대에 놓으면 그 시프트를 대신 서고 원래 막대는 백업이 됩니다 · PC 카드에 놓으면 지금부터 1시간(끝나면 막대를 눌러 종료)">🛟 Cover</div>`;
   const leaderHandle = canLead
     ? (isUnavailable
         /* [v1101] 'Leader' 글자를 <i> 로 감싼다 — 풀 안에서는 접고 👑 만 남긴다.
@@ -60777,6 +60844,7 @@ function dragEnd(e){
   document.body.classList.remove('dragging-staff','dragging-client','dragging-leader');
   document.querySelectorAll('.seg.dragging,.slot.dragging').forEach(el=>el.classList.remove('dragging'));
   document.querySelectorAll('.pc.drop-staff,.pc.drop-client,.pc.drop-leader').forEach(el=>el.classList.remove('drop-staff','drop-client','drop-leader'));
+  try{ _agCovClear(); }catch(_){}   /* [v1333] 커버 표적 표시도 같이 거둔다 */
   dragType = null; dragId = null; dragHours = 0; dragMode = null; dragFrom = null;
   try{ _pcRTFree(); }catch(_){}   /* [v1310] 잡고 있던 표시를 거둔다 */
 }
