@@ -4,7 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
 <title>ARASAKA Corp</title>
-<!-- BUILD: v1342 | 격자 실시간 3탄 — 세로 이동·스왑·빼기·풀 조준까지 중계, 휴면 칩 점선→실선 -->
+<!-- BUILD: v1343 | 스탠다드 팝업에서 바로 편집 — 기준표와 같은 편집기를 그 자리에서(같은 잠금·같은 저장) -->
 <!-- v745 기록은 git 이력(v1302 이전 커밋)에 있다 — 100KB 변경사 주석을 배포에서 제거 -->
 <!-- [v677] a <link href> cannot read a CSS variable, so the favicon carries its own copy.
      64px: a browser tab draws it at 16-32px, so this is 2x-DPR sharp at 11KB. -->
@@ -10575,6 +10575,13 @@ body.pcboxes-on .pbox .pool-rolegrid .s-chip,
 #ag-std .agstd-body{padding:13px 17px;overflow:auto;flex:1}
 #ag-std .agstd-card+.agstd-card{margin-top:16px;padding-top:14px;border-top:1px solid #2f2f2d}
 #ag-std .agstd-cn{font-size:16px;font-weight:800;color:#f2f1ee;margin-bottom:8px}
+/* [v1343] 이름 줄 오른쪽 — 기준표와 같은 편집기를 그 자리에서 연다 */
+#ag-std .agstd-cnrow{display:flex;align-items:center;gap:8px}
+#ag-std .agstd-cnrow .agstd-cn{margin-bottom:0}
+#ag-std .agstd-ed{margin-left:auto;flex:0 0 auto;background:#242424;border:1px solid #2f2f2d;color:#cfcecb;
+  border-radius:8px;padding:5px 10px;font:700 11px inherit;cursor:pointer;transition:background .14s,border-color .14s,color .14s}
+#ag-std .agstd-ed:hover{background:rgba(201,150,58,.14);border-color:rgba(201,150,58,.5);color:#fff}
+#ag-std .agstd-cnrow + .agstd-chips,#ag-std .agstd-cnrow + .agstd-maps{margin-top:8px}
 #ag-std .agstd-chips{display:flex;flex-wrap:wrap;gap:5px;margin-bottom:9px}
 #ag-std .agstd-chip{font:600 10.5px ui-monospace,Consolas,monospace;color:#b8b8b3;
   background:#242424;border:1px solid #2f2f2d;border-radius:6px;padding:3px 8px}
@@ -58313,6 +58320,8 @@ async function _agStdPopup(pcId){
     return;
   }
   const norm = s => { try{ return _csNorm(s); }catch(_){ return String(s||'').trim().toLowerCase(); } };
+  window._agStdCalc = calc;   /* [v1343] 편집 버튼이 이 최신 사본으로 _csRows 를 다시 짓는다 — 낡은 카드로 저장하는 사고 방지 */
+  const _canStdEd = (typeof expCanEdit === 'function') && expCanEdit();
   const html = names.map(nm => {
     const mc = calc.find(e => e && (String(e.name||'').trim() === String(nm).trim() || norm(e.name) === norm(nm))) || {};
     const chips = [];
@@ -58323,11 +58332,35 @@ async function _agStdPopup(pcId){
     if(mc.ac != null && mc.ac !== '') chips.push(`AC ${_mtcEsc(String(mc.ac))}`);
     if(mc.job) chips.push(_mtcEsc(String(mc.job)));
     return `<div class="agstd-card">
-      <div class="agstd-cn">${_mtcEsc(String(nm))}</div>
+      <div class="agstd-cnrow"><div class="agstd-cn">${_mtcEsc(String(nm))}</div>
+        ${_canStdEd ? `<button class="agstd-ed" data-nm="${_mtcEsc(String(nm))}" onclick="_agStdEdit(this.dataset.nm)">편집 ✎</button>` : ''}</div>
       ${chips.length ? `<div class="agstd-chips">${chips.map(c => `<span class="agstd-chip">${c}</span>`).join('')}</div>` : ''}
       <div class="agstd-maps">${_agStdRows(mc)}</div></div>`;
   }).join('');
   el.querySelector('.agstd-body').innerHTML = html;
+}
+/* ═══ [v1343] 스탠다드 팝업에서 바로 편집 ═══
+   boss "PC 현황에서 이거 스탠다드 수정 바로 가능하게 · 인터페이스는 기준 EXP 쪽이랑 완전히 동일하게"
+   새 편집기를 만들지 않는다(v1232의 규칙 — 두 벌이면 서로 다른 값을 저장한다).
+   v1331이 기준표 편집기(_csOpenEditor)를 어느 화면에서든 열리게 만들어 뒀으니 그것을 그대로 연다 —
+   같은 상자, 같은 권한 잠금(expGuardEdit), 같은 저장 경로(밴드 이력 보존 v748 포함). */
+async function _agStdEdit(nm){
+  try{
+    if(typeof expGuardEdit === 'function' && !expGuardEdit()) return;   /* 기준표와 같은 잠금 */
+    /* 팝업이 방금 받아 둔 최신 기준으로 줄 목록을 다시 짓는다 — 낡은 _csRows 로 열면 저장이 새 값을 덮는다 */
+    var calc = Array.isArray(window._agStdCalc) ? window._agStdCalc
+             : ((Array.isArray(_csClients) && _csClients.length) ? _csClients : await _srGetCalc('clients'));
+    _csBuildRows(Array.isArray(calc) ? calc : []);
+    var i = (typeof window._srClCsIdx === 'function') ? window._srClCsIdx(nm) : -1;
+    if(i < 0 && Array.isArray(_csRows)){   /* _srClCsIdx 는 기록·통계를 연 적이 있어야 생긴다 — 같은 규칙으로 자체 조회 */
+      var want = String(nm || '').trim(), k;
+      for(k = 0; k < _csRows.length; k++){ if(String(_csRows[k].name || '').trim() === want){ i = k; break; } }
+      if(i < 0){ var wn = _csNorm(want); for(k = 0; k < _csRows.length; k++){ if(_csNorm(_csRows[k].name) === wn){ i = k; break; } } }
+    }
+    if(i < 0){ toast('이 클라이언트의 기준 카드가 아직 없어요 — 기준표 화면에서 먼저 추가해 주세요', true); return; }
+    _agStdClose();
+    _csOpenEditor(i);
+  }catch(e){ toast('편집기를 여는 데 실패했어요: ' + (e && e.message), true); }
 }
 function _agLabKind(){
   if(dragMode==='hours' || dragMode==='pc-staff') return 'backup';
