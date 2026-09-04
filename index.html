@@ -4,7 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
 <title>ARASAKA Corp</title>
-<!-- BUILD: v1345 | 이름은 사람이다 자르지 않는다 — 칩 이름 말줄임 제거(두 줄 흘림), 대롱대롱 구분점 정리 -->
+<!-- BUILD: v1346 | 절단 금지 클라 칩까지 확장 · 시간칸 끌기에 잡기 신호 · 풀 칩 링 안쪽 고정 -->
 <!-- v745 기록은 git 이력(v1302 이전 커밋)에 있다 — 100KB 변경사 주석을 배포에서 제거 -->
 <!-- [v677] a <link href> cannot read a CSS variable, so the favicon carries its own copy.
      64px: a browser tab draws it at 16-32px, so this is 2x-DPR sharp at 11KB. -->
@@ -10890,6 +10890,20 @@ body.pcboxes-on .pbox .pool-rolegrid .s-chip,
 /* 잡기 이름표(v1338)는 칩의 overflow:hidden 에 잘려 안 보였다 — 칩 안쪽 오른쪽 위로 */
 .s-chip .pc-held-tag{top:2px;right:2px;left:auto}
 .s-chip .pc-held-tag::after{display:none}
+/* ═══ [v1346] boss "직원풀 카드도 테두리 나오게" — 풀 칩의 잡기 링은 안쪽으로 ═══
+   outline 은 상자 밖에 그려져 풀의 스크롤/숨김 상자에 잘려 안 보였다.
+   칩에서는 링을 카드 안쪽(-2px)에 감아 어떤 상자 안에서도 보이게 한다. */
+.s-chip.pc-held,.c-chip.pc-held{outline-offset:-2px}
+.s-chip.pc-held::after,.c-chip.pc-held::after{inset:0}
+/* ═══ [v1346] boss "클라이언트랑 다 적용" — 클라 칩에도 같은 처방 ═══ */
+.c-chip{container-type:inline-size}
+.c-chip-nm,.pbox .c-chip .c-chip-nm{
+  white-space:normal;overflow-wrap:anywhere;word-break:keep-all;
+  display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;
+  overflow:hidden;text-overflow:ellipsis}
+.c-chip .c-chip-meta,.pooldock .c-chip-meta{white-space:normal;flex-wrap:wrap;row-gap:2px;overflow:visible}
+.c-chip .c-chip-meta > *,.c-chip .c-chip-sched > *{flex:0 0 auto}
+.c-chip .c-chip-sched{white-space:normal;flex-wrap:wrap;row-gap:2px}
 /* 이름 88px + 아바타 20 + 12H 24 + 👑 22 + 여백 → 한 칸 최소 190px */
 /* [v1165] 크기 변화를 뺐으니 넓은 간격이 필요 없다 — 8px 로 되돌린다.
    간격이 넓으면 카드가 서로 떨어진 섬처럼 보여 그것도 ‘붕 뜬’ 느낌을 만든다. */
@@ -10960,6 +10974,16 @@ body.pcboxes-on .pbox .pool-rolegrid .s-chip,
 .c-chip.editing{cursor:default;border-color:var(--ac);background:var(--bg-c);box-shadow:var(--glow-ac)}
 .c-chip-r1{display:flex;align-items:center;gap:6px;margin-bottom:3px}
 .c-chip-nm{font-size:var(--t-cap);font-weight:600;color:var(--tx);flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;letter-spacing:-0.005em}
+/* [v1346] 이름 절단 금지(v1345와 동일 방향) — 원본 규칙 '바로 뒤'에 둬야 이긴다(캐스케이드).
+   위의 nowrap+ellipsis 를 두 줄 흘림으로 전복. */
+.c-chip-nm,.pbox .c-chip .c-chip-nm{
+  white-space:normal;overflow-wrap:anywhere;word-break:keep-all;
+  display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;
+  overflow:hidden;text-overflow:ellipsis}
+/* [v1346] 칩의 잡기 링 — 등장 애니메이션이 outline-offset 을 쥐고 있어 정적 -2px 가
+   안 먹었다. 칩에선 애니메이션을 빼고 즉시 안쪽(-2px) 고정 — 어떤 상자 안에서도 안 잘린다.
+   (숨쉬는 광륜 ::after 와 이름표 등장은 그대로 살아 있다) */
+.s-chip.pc-held,.c-chip.pc-held{animation:none;outline-offset:-2px}
 .c-chip-cls{font-size:9px;font-weight:700;padding:1px 6px;border-radius:3px;background:var(--ac-bg);color:var(--ac-strong);flex-shrink:0;letter-spacing:.02em}
 .c-chip-edit{font-size:11px;color:var(--tx3);cursor:pointer;padding:2px 5px;border-radius:3px;line-height:1;transition:all var(--d-fast) var(--ease);opacity:0;flex-shrink:0}
 .c-chip:hover .c-chip-edit,.c-chip.editing .c-chip-edit{opacity:1}
@@ -61169,6 +61193,7 @@ function _schedPlaceOn(pcId){
 }
 function dragStartSeg(e, staffId, hours, planned){
   armSeg = null; _schedArmBar();   /* [v1252] 끌기 시작하면 집어둔 것은 놓아준다 */
+  try{ _pcRTGrab('staff:'+staffId); }catch(_){}   /* [v1346] 시간 칸 끌기가 진짜 '잡기'다 — 여태 칩 몸통·Cover·리더만 신호를 쐈다 */
   dragType = 'staff'; dragMode = 'hours'; dragId = staffId; dragHours = hours;
   window._dragPlanned = !!planned;   /* [v1072] 휴무자를 끌면 예정배치 */
   e.dataTransfer.effectAllowed = 'move';
