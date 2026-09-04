@@ -4,7 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
 <title>ARASAKA Corp</title>
-<!-- BUILD: v1350 | 아데나 확인 문구 — 세션 로그에 ⚡에이스(6만+ 진짜 벌이)·제외(±30만 컷) 표시 -->
+<!-- BUILD: v1351 | 문의가 클라별에 산다 — 계정보드 폼 추출 이식·3단계(문의/테스트/배치완료)·PC현황 테스트 배지·실시간·Namgang 병합 -->
 <!-- v745 기록은 git 이력(v1302 이전 커밋)에 있다 — 100KB 변경사 주석을 배포에서 제거 -->
 <!-- [v677] a <link href> cannot read a CSS variable, so the favicon carries its own copy.
      64px: a browser tab draws it at 16-32px, so this is 2x-DPR sharp at 11KB. -->
@@ -9420,6 +9420,29 @@ html[data-theme=light] #nav-chg{background:#fff;border-color:rgba(0,0,0,.1);box-
 .ck-card.rt-tgt,.pc.rt-tgt{box-shadow:0 0 0 2px hsl(var(--rth,210) 78% 62% / .8), 0 0 14px hsl(var(--rth,210) 78% 62% / .3);transition:box-shadow .15s}
 #ag-wrap .ag-bar.rt-swtgt{box-shadow:0 0 0 2px #a98fd6,0 0 12px rgba(169,143,214,.55);z-index:6}
 #ag-wrap .ag-bar.rt-out{opacity:.38;filter:grayscale(.6);transition:opacity .15s,filter .15s}
+/* ═══ [v1351] 문의 카드 in 클라별 — 3단계 색 테두리 ═══
+   문의중=초록(새 손님 들어옴) · 테스트중=빨강(지금 검증 중, PC현황 배지와 같은 말) · 배치완료=금색(우리 색) */
+.sr-iqwrap{position:relative;border-radius:14px;padding:3px}
+.sr-iqwrap .pcb-iq{cursor:default}
+.sr-iqwrap.st-ask{outline:2px solid rgba(76,175,110,.85);outline-offset:-1px}
+.sr-iqwrap.st-test{outline:2px solid rgba(224,90,77,.9);outline-offset:-1px}
+.sr-iqwrap.st-done{outline:2px solid rgba(201,150,58,.85);outline-offset:-1px}
+.sr-iqstage{position:absolute;top:-9px;left:12px;z-index:5;font:800 10px inherit;letter-spacing:.04em;
+  padding:3px 9px;border-radius:7px;color:#fff;box-shadow:0 2px 8px rgba(0,0,0,.4)}
+.st-ask .sr-iqstage{background:#3d8f5c}
+.st-test .sr-iqstage{background:#c24d42;animation:iqTestPulse 1.8s ease-in-out infinite}
+.st-done .sr-iqstage{background:#a87f2e}
+@keyframes iqTestPulse{0%,100%{box-shadow:0 2px 8px rgba(0,0,0,.4)}50%{box-shadow:0 2px 8px rgba(0,0,0,.4),0 0 12px rgba(224,90,77,.6)}}
+.sr-iqload{padding:22px;text-align:center;color:var(--tx3,#8a8a86);font-size:12px;border:1px dashed var(--br2,#33332f)}
+.sr-iqadd{border:1.5px dashed rgba(76,175,110,.5);background:transparent;color:#4caf6e;border-radius:14px;
+  min-height:64px;font:800 14px inherit;cursor:pointer;transition:background .14s,border-color .14s}
+.sr-iqadd:hover{background:rgba(76,175,110,.09);border-color:rgba(76,175,110,.9)}
+/* ═══ [v1351] PC 현황 — 이 PC 는 신규 테스트 중 (백업 초록 줄무늬의 빨간 판) ═══ */
+.pc-testbadge{display:inline-flex;align-items:center;gap:5px;font:800 9.5px inherit;color:#fff;
+  padding:2px 8px;border-radius:6px;margin-left:6px;
+  background:repeating-linear-gradient(45deg,#c24d42 0 6px,#a03a30 6px 12px);
+  animation:iqTestPulse 1.8s ease-in-out infinite}
+@media (prefers-reduced-motion:reduce){.st-test .sr-iqstage,.pc-testbadge{animation:none}}
 /* 잡힌 것은 살짝 숨을 쉰다 — 지금 누가 손대고 있다는 뜻 */
 .pc-held::after{content:"";position:absolute;inset:-2px;border-radius:inherit;pointer-events:none;
   box-shadow:0 0 0 0 hsl(var(--heldh,210) 78% 62% / .45);
@@ -38147,7 +38170,9 @@ function _srRecCardHTML(data){
     }).join('');
   };
   // [v362] 클라 정규화: 번호 접두("1. ") + 존칭 + 공백 제거로 같은 클라 변형 병합. 빈 클라(트레이닝 등)는 클라 뷰에서 제외.
-  var clNorm=function(n){ n=String(n||'').trim(); n=n.replace(/^\s*\d+\s*[.)\-]\s*/,''); return n.replace(/선생님|사장님|형님|언니|누나|쌤|님|형|씨/g,'').replace(/\b(mr|ms|mrs)\.?\b/gi,'').replace(/[\s·.\-_'"]/g,'').toLowerCase(); };
+  var clNorm=function(n){ n=String(n||'').trim(); n=n.replace(/^\s*\d+\s*[.)\-]\s*/,''); n=n.replace(/선생님|사장님|형님|언니|누나|쌤|님|형|씨/g,'').replace(/\b(mr|ms|mrs)\.?\b/gi,'').replace(/[\s·.\-_'"]/g,'').toLowerCase();
+    /* [v1351] boss "Namgang 은 지우고 남강쌤만" — 로마자 표기를 한글 키에 접붙여 카드 하나로 병합(리포트는 안 건드림) */
+    var _al={ namgang:'남강' }; return _al[n]||n; };
   var byClient={}, _clName={}, _clCnt={};
   sessions.forEach(function(s){ var raw=String(s.client||'').trim(); if(!raw) return; var c=clNorm(raw); if(!c) return;
     if(!byClient[c])byClient[c]={key:c,client:raw,pc:s.pc,reps:0,statuses:0,mgain:0,ade:0,tgtSum:0,clean:0,cleanN:0,staff:{},maps:{},minMs:null,maxMs:null,_reps:[]};
@@ -38169,6 +38194,7 @@ function _srRecCardHTML(data){
     }
     if(s.key)o.staff[s.key]=(o.staff[s.key]||0)+1; if(s.map)o.maps[s.map]=1; if(s.ms){ if(o.minMs==null||s.ms<o.minMs)o.minMs=s.ms; if(o.maxMs==null||s.ms>o.maxMs)o.maxMs=s.ms; } });
   Object.keys(byClient).forEach(function(c){ if(_clName[c]) byClient[c].client=_clName[c]; });
+  try{ if(byClient['남강']) byClient['남강'].client='남강쌤'; }catch(_){}   /* [v1351] 병합 카드의 얼굴은 한글로 */
   // [v400] surface clients ASSIGNED on the PC Status board even with no reports this period (e.g. PC9 with no logs shows as an empty card)
   try{ if(typeof PCS!=='undefined' && Array.isArray(PCS)){ PCS.forEach(function(_p){ if(!_p||_p.status==='offline') return; (_p.clients||[]).forEach(function(_cid){ var _co=(typeof clientById==='function')?clientById(_cid):null; var _nm=(_co&&_co.name)?String(_co.name).trim():''; if(!_nm) return; var _ck=clNorm(_nm); if(!_ck) return; if(!byClient[_ck]){ byClient[_ck]={key:_ck,client:_nm,pc:_p.id,reps:0,statuses:0,mgain:0,tgtSum:0,clean:0,cleanN:0,staff:{},maps:{},minMs:null,maxMs:null,_reps:[],_noData:true}; } else if(byClient[_ck].pc==null||String(byClient[_ck].pc)===''){ byClient[_ck].pc=_p.id; } }); }); } }catch(_){ }
   var clientStat=function(o){ var avg=o.cleanN?(o.clean/o.cleanN):null;
@@ -38494,6 +38520,49 @@ function _srRecCardHTML(data){
       });
     }catch(e){ console.warn('cl flip all:', e); }
   };
+  /* ═══ [v1351] 문의 카드가 클라별에 산다 ═══
+     boss "문의가 오면 기록·통계에 카드를 하나 만들고, 첫 스크린샷처럼 입력하고,
+     테두리 초록 '문의중', 더블클릭으로 문의→테스트→배치완료, 실시간, PC 없이도 생성"
+     폼 몸체는 계정보드에서 추출한 _pcbIqCardHTML 그대로(편집기 두 벌 금지) —
+     여기서 고친 값도 같은 저장(_pcbSave→trust_state pc_board)으로 들어간다. */
+  window._srIqCycle = function(ev, id){
+    try{
+      if(ev && ev.target && ev.target.closest && ev.target.closest('button,input,select,[contenteditable=true],.pcb-person,.pcb-chip,.pcb-file')) return;
+      if(ev){ ev.preventDefault(); ev.stopPropagation(); }
+      var iq = PCB_INQ.find(function(x){ return x.id === id; }); if(!iq) return;
+      var cur = _pcbIqStage3(iq);
+      iq.st3 = cur === 'ask' ? 'test' : (cur === 'test' ? 'done' : 'ask');
+      _pcbSave();
+      try{ toast(iq.st3==='ask'?'📥 문의':(iq.st3==='test'?'🧪 테스트':'✅ 배치완료')); }catch(_){}
+      try{ renderRecords(true); }catch(_){}
+      try{ if(typeof render === 'function') render(); }catch(_){}   /* PC 현황 테스트 배지 갱신 */
+      try{ if(_pcRT) _pcRT.send({ type:'broadcast', event:'inq', payload:{ id:_pcRTMe(), tab:_PC_TAB_ID } }); }catch(_){}
+    }catch(e){ console.warn('iq cycle:', e); }
+  };
+  window._srIqAdd = function(){ try{ _pcbInqNew(); }catch(e){ toast('문의 생성 실패: '+(e&&e.message), true); } };
+  window._srIqCardsHTML = function(){
+    try{
+      if(typeof _pcbLoaded === 'undefined' || !_pcbLoaded){
+        if(!window._srIqLoadKick){ window._srIqLoadKick = 1;
+          try{ _pcbLoad().then(function(){ window._srIqLoadKick = 0; try{ renderRecords(true); }catch(_){} }); }catch(_){ window._srIqLoadKick = 0; } }
+        return '<div class="sr-iqwrap st-ask sr-iqload">문의 불러오는 중…</div>';
+      }
+      try{ _pcbInjectCSS(); }catch(_){}   /* 폼 스타일은 계정보드 주입식 — 여기서도 한 번 심는다(멱등) */
+      try{ _pcRTJoin(); }catch(_){}   /* [v1351] 문의 실시간 — 클라별 화면도 채널에 붙는다(멱등) */
+      var items = _pcbGather();
+      var pcOptions = items.slice().sort(function(a,b){ return Number(a.pc)-Number(b.pc); })
+        .map(function(it){ return '<option value="'+it.key+'">PC '+it.pc+(it.planned?_iqT(' (계획)',' (plan)'):'')+(it.clientName?' — '+_pcbEsc(it.clientName):'')+'</option>'; }).join('');
+      var vet = _pcbVeteranSet();
+      var stL = { ask:['📥','문의중'], test:['🧪','테스트중'], done:['✅','배치완료'] };
+      return (PCB_INQ||[]).filter(Boolean).map(function(iq){
+        var st = _pcbIqStage3(iq); var L = stL[st] || stL.ask;
+        return '<div class="sr-iqwrap st-'+st+'" data-iqid="'+iq.id+'" ondblclick="_srIqCycle(event,\''+iq.id+'\')" title="더블클릭 — 문의→테스트→배치완료 전환">'
+          + '<div class="sr-iqstage">'+L[0]+' '+L[1]+'</div>'
+          + _pcbIqCardHTML(iq, items, pcOptions, vet)
+          + '</div>';
+      }).join('');
+    }catch(e){ console.warn('iq cards:', e); return ''; }
+  };
   /* ═══ [v1331] 뒷면은 기준 EXP 화면의 그 카드 그대로 ═══════════════════════
      v1330 은 PC 시계 보드의 뒷면(_ckStdBack)을 가져왔다. 그건 레벨·사냥터·목표
      세 칸짜리 급한 수정용이라 기준 EXP 화면의 카드와 아예 다르게 생겼다.
@@ -38583,7 +38652,11 @@ function _srRecCardHTML(data){
   var _isTrainClient=function(o){ return /training/i.test(String((o&&o.client)||'')); };   // [v397] training PCs split out of the real-client grid
   var _realCards='', _trainCards='', _realN=0, _trainN=0;
   clKeys.forEach(function(c,ci){ var h=_clCardOne(c,ci); if(_isTrainClient(byClient[c])){ _trainCards+=h; _trainN++; } else { _realCards+=h; _realN++; } });
-  var clientCards=_realN?_realCards:('<div class="sr-empty">'+(_uiLang()==='ko'?'클라이언트 세션이 없어요.':'No client sessions yet.')+'</div>');
+  /* [v1351] 문의 카드(계정보드 파이프라인)가 클라별 맨 앞에 산다 + '＋ 문의' 타일 */
+  var _iqCards='';
+  try{ _iqCards=(typeof window._srIqCardsHTML==='function')?window._srIqCardsHTML():''; }catch(_){}
+  var _iqAdd='<button class="sr-iqadd" onclick="_srIqAdd()" title="'+(_uiLang()==='ko'?'새 문의 카드 — PC 없이도 만들 수 있어요(PC는 임대 후 연결)':'New inquiry card')+'">＋ '+(_uiLang()==='ko'?'문의':'Inquiry')+'</button>';
+  var clientCards=_iqAdd+_iqCards+(_realN?_realCards:('<div class="sr-empty">'+(_uiLang()==='ko'?'클라이언트 세션이 없어요.':'No client sessions yet.')+'</div>'));
   /* [v1302] boss "직원별 클라별 옆에 시계 그거 지워버려 그냥 이미 PC 현황쪽에
      있으니까 필요없어" — 같은 시계 보드가 PC 현황에 있다. 두 곳에 두면 어느 쪽이
      최신인지 매번 헷갈리고, 여기서는 아무도 안 봤다.
@@ -40945,7 +41018,10 @@ function _pcbSave(){
   }
   clearTimeout(_pcbSaveTimer);
   _pcbSaveTimer = setTimeout(async () => {
-    try{ await _dbUpsert('trust_state','pc_board', { __v2:true, state:PCB_STATE, plan:PCB_PLAN, extra:PCB_EXTRA, cols:PCB_COLS_CUSTOM, inq:PCB_INQ }); }
+    try{ await _dbUpsert('trust_state','pc_board', { __v2:true, state:PCB_STATE, plan:PCB_PLAN, extra:PCB_EXTRA, cols:PCB_COLS_CUSTOM, inq:PCB_INQ });
+      /* [v1351] 문의는 이제 기록·통계에도 산다 — 저장이 오르면 상대 화면들에 즉시 알림 */
+      try{ if(typeof _pcRT !== 'undefined' && _pcRT) _pcRT.send({ type:'broadcast', event:'inq', payload:{ id:_pcRTMe(), tab:_PC_TAB_ID } }); }catch(_){}
+    }
     catch(e){ toast('보드 저장 실패: ' + (e && e.message), true); }
   }, 500);
 }
@@ -41051,56 +41127,45 @@ function _pcbEsc(s){ return String(s==null?'':s).replace(/[&<>"']/g, m => ({'&':
    PC·클라이언트·담당·테스터와 연결한 뒤 [테스트 공지]→[확정 적용]으로 공지·캘린더·PC현황·기준EXP까지 이어진다.
    드래그는 전부 초안(v749 원칙 유지) — 실제 반영은 🚀 확정 적용 버튼 하나로만 일어난다.
    전 라벨 _iqT(ko,en) — 언어 전환(재로드) 시 그대로 갈아입는다. */
-async function renderPcBoard(){
-  const host = document.getElementById('ch-other'); if(!host) return;
-  const _ep = (window._chEpoch||0);   /* [v859] 하이재킹 가드 */
-  /* [v987] 판을 다시 그리기 직전 — 팝업에 옮겨 둔 카드는 곧 사라질 자리를 가리키므로 먼저 놓아준다 */
-  try{ _pcbCardPopClose(true); }catch(_){}
-  try{ document.body.classList.toggle('pcb-compact', _pcbCompactOn()); }catch(_){}
-  _pcbInjectCSS();
-  await _pcbLoad();
-  if(_ep !== (window._chEpoch||0)) return;   /* [v859] 채널을 떠났으면 중단 */
-  try{ if(_pcbInqMigrate()) _pcbSave(); }catch(_){}   /* [v1247] 옛 장비 글 → 검·셋 숫자 (카드당 한 번) */
-  if(!Object.keys(PCB_PLAN).length) _pcbSeedPlanFromLive();
-  const items = _pcbGather();
-  const buckets = {}; PCB_COLS.forEach(c => buckets[c.id] = []);
-  const firstCol = (PCB_COLS[0]||{}).id;
-  /* [v988] boss "보드에서만 빼기 — PC/계정은 그대로 두고 이 화면에서만 안 보이게, 되돌릴 수 있게".
-     지우는 게 아니라 이 판에서 내려놓는 것이다. PC도 계정도 배정도 그대로 있고, 상태에 표식
-     하나만 세운다. 그래서 되돌리면 있던 자리로 그대로 돌아온다 — 되돌릴 수 없는 일은 하지 않는다.
-     내려놓은 카드가 몇 장인지는 머리말에 계속 떠 있게 한다. 안 보이는 것은 잊히고,
-     잊힌 채로 쌓이면 "왜 이 PC가 판에 없지?"가 된다. */
-  const _hiddenItems = [];
-  items.forEach(it => {
-    const saved = PCB_STATE[it.key] || PCB_STATE[it.pc] || {};
-    if(saved.hidden){ _hiddenItems.push({ ...it, label: saved.label || '' }); return; }   /* [v988] 내려놓은 카드 */
-    let col = saved.col;
-    if(!col || !buckets[col]) col = it.planned ? 'staffing' : _pcbAutoCol(it);
-    if(!buckets[col]) col = firstCol;
-    /* [v1209] 예전엔 계정이 빠진 PC 를 '빈 PC' 칸으로 몰았다. 그 칸이 없어졌으므로
-       아무 데로도 안 몰고 있던 자리에 둔다. buckets.empty 가 없으므로 조건은 저절로 꺼진다. */
-    if(!it.planned && !it.clientName && col !== 'hold' && buckets.empty) col = 'empty';
-    buckets[col].push({ ...it, note: saved.note || '', label: saved.label || '',
-                        assigned: saved.assigned || '', status: saved.status || '', action: saved.action || '' });
-  });
-  window._pcbHiddenList = _hiddenItems;   /* [v988] 되돌리기 목록이 읽는다 */
-  const iqBuckets = {}; PCB_COLS.forEach(c => iqBuckets[c.id] = []);
-  PCB_INQ.forEach(iq => { const c = iqBuckets[iq.col] ? iq.col : firstCol; if(iqBuckets[c]) iqBuckets[c].push(iq); });
-
-  const vet = _pcbVeteranSet();
-  const pcOptions = items.slice().sort((a,b)=>Number(a.pc)-Number(b.pc))
-    .map(it=>`<option value="${it.key}">PC ${it.pc}${it.planned?_iqT(' (계획)',' (plan)'):''}${it.clientName?' — '+_pcbEsc(it.clientName):''}</option>`).join('');
-
-  /* [v845] boss "1→4 쭉 패스하는 프로세스로 깔끔하게" — 카드 상태에서 자동 계산되는 4단계:
-     ①정보(이름·시작) ②연결(PC+사람) ③테스트(공지) ④적용. 커스텀 칼럼은 안 건드리고 레이어만 얹는다 */
-  const iqSteps = iq => ([
+/* ═══ [v1351] 문의 카드 — renderPcBoard 클로저에서 추출 ═══
+   boss "계정보드 시스템을 기록·통계 클라별에 합쳐버리는 거 어때?"
+   클로저 의존은 items·pcOptions·vet 셋뿐이라 매개변수로 받는다. 저장·핸들러는 전부
+   기존 전역(_pcbInqField 등) 그대로 — 어느 화면에서 열려도 같은 데이터로 저장된다. */
+/* [v1351] boss 3단계 프로세스 — "문의(=문의·대기·모으는중) → 테스트 → 배치완료".
+   기존 4단계 데이터는 안 버리고 겹쳐 읽는다: st3 가 있으면 그것, 없으면 적용됨=done,
+   테스터/테스트공지 있으면 test, 나머지 전부 ask. */
+function _pcbIqStage3(iq){
+  if(iq && iq.st3) return iq.st3;
+  if(iq && iq.applied) return 'done';
+  if(iq && (iq.testAt || iq.tester)) return 'test';
+  return 'ask';
+}
+/* [v1351] 이 PC 에 '테스트중' 문의가 붙어 있나 — PC 현황 빨간 배지용 (pcKey = String(pc.id)) */
+function _pcbTestOnPc(pcId){
+  try{
+    if(typeof PCB_INQ === 'undefined' || !Array.isArray(PCB_INQ) || !PCB_INQ.length){
+      /* 계정보드 데이터가 아직이면 한 번만 청해 두고 지금은 조용히 없음 */
+      if(typeof _pcbLoaded !== 'undefined' && !_pcbLoaded && !window._pcbTestKick && typeof _pcbLoad === 'function'){
+        window._pcbTestKick = 1;
+        _pcbLoad().then(function(){ try{ if(typeof render === 'function') render(); }catch(_){} }).catch(function(){});
+      }
+      return null;
+    }
+    var k = String(pcId);
+    for(var i = 0; i < PCB_INQ.length; i++){
+      var iq = PCB_INQ[i];
+      if(iq && String(iq.pcKey || '') === k && _pcbIqStage3(iq) === 'test') return iq;
+    }
+    return null;
+  }catch(_){ return null; }
+}
+function _pcbIqSteps(iq){ return [
     { n:'①', lb:_iqT('정보','Info'),  done: !!(String(iq.name||'').trim() && (iq.start||iq.pay||iq.hours)) },
     { n:'②', lb:_iqT('연결','Link'),  done: !!(iq.pcKey && ((iq.staff||[]).length || iq.tester)) },
     { n:'③', lb:_iqT('테스트','Test'), done: !!iq.testAt },
     { n:'④', lb:_iqT('적용','Apply'), done: !!iq.applied }
-  ]);
-  /* ── 문의 카드 ── */
-  const iqCard = iq => {
+  ]; }
+function _pcbIqCardHTML(iq, items, pcOptions, vet){
     /* [v824] boss 8/20 "너무 더럽지 않냐" — 이모지·긴 예시·상시 미정버튼이 소음이었다.
        PC 카드 필드(배정/상태/조치)와 같은 라벨-위 구조로 통일, 예시는 짧게, 미정은 hover에서만 등장. */
     const mini = (f, cap, ph, canTbd) => `<div class="pcb-iqcell">
@@ -41173,7 +41238,7 @@ async function renderPcBoard(){
         ${iq.applied?`<span class="pcb-stamp ok" title="${_pcbEsc((iq.applied.at||'').slice(0,10))} · ${_pcbEsc(iq.applied.by||'')}">${_iqT('적용','APPLIED')} ${_pcbEsc(String(iq.applied.at||'').slice(5,10))}</span>`:''}
         <button class="pcb-pcdel" onclick="event.stopPropagation();_pcbInqDel('${iq.id}')" title="${_iqT('문의 삭제','Delete inquiry')}">✕</button>
       </div>
-      ${(()=>{ const ss = iqSteps(iq); const next = ss.find(s=>!s.done);
+      ${(()=>{ const ss = _pcbIqSteps(iq); const next = ss.find(s=>!s.done);
         return `<div class="pcb-steps" title="${_iqT('① 정보 → ② 연결 → ③ 테스트 → ④ 적용','① Info → ② Link → ③ Test → ④ Apply')}">
           ${ss.map(s=>`<i class="pcb-stepseg${s.done?' done':''}${next&&s.n===next.n?' next':''}">${s.n} ${s.lb}</i>`).join('<u class="pcb-stepln"></u>')}
           ${next?`<em class="pcb-stepnext">${_iqT('다음','next')} → ${next.lb}</em>`:`<em class="pcb-stepnext done">${_iqT('완료','done')} ✓</em>`}
@@ -41244,7 +41309,52 @@ async function renderPcBoard(){
         <button class="pcb-mini" style="margin-left:auto" onclick="_pcbInqAttach('${iq.id}')" title="${_iqT('파일 첨부 — 카드당 8개 · 2.5MB까지','Attach files — up to 8 · 2.5MB each')}">📎${(iq.files&&iq.files.length)?' '+iq.files.length:''}</button>
       </div>
     </div>`;
-  };
+  }
+async function renderPcBoard(){
+  const host = document.getElementById('ch-other'); if(!host) return;
+  const _ep = (window._chEpoch||0);   /* [v859] 하이재킹 가드 */
+  /* [v987] 판을 다시 그리기 직전 — 팝업에 옮겨 둔 카드는 곧 사라질 자리를 가리키므로 먼저 놓아준다 */
+  try{ _pcbCardPopClose(true); }catch(_){}
+  try{ document.body.classList.toggle('pcb-compact', _pcbCompactOn()); }catch(_){}
+  _pcbInjectCSS();
+  await _pcbLoad();
+  if(_ep !== (window._chEpoch||0)) return;   /* [v859] 채널을 떠났으면 중단 */
+  try{ if(_pcbInqMigrate()) _pcbSave(); }catch(_){}   /* [v1247] 옛 장비 글 → 검·셋 숫자 (카드당 한 번) */
+  if(!Object.keys(PCB_PLAN).length) _pcbSeedPlanFromLive();
+  const items = _pcbGather();
+  const buckets = {}; PCB_COLS.forEach(c => buckets[c.id] = []);
+  const firstCol = (PCB_COLS[0]||{}).id;
+  /* [v988] boss "보드에서만 빼기 — PC/계정은 그대로 두고 이 화면에서만 안 보이게, 되돌릴 수 있게".
+     지우는 게 아니라 이 판에서 내려놓는 것이다. PC도 계정도 배정도 그대로 있고, 상태에 표식
+     하나만 세운다. 그래서 되돌리면 있던 자리로 그대로 돌아온다 — 되돌릴 수 없는 일은 하지 않는다.
+     내려놓은 카드가 몇 장인지는 머리말에 계속 떠 있게 한다. 안 보이는 것은 잊히고,
+     잊힌 채로 쌓이면 "왜 이 PC가 판에 없지?"가 된다. */
+  const _hiddenItems = [];
+  items.forEach(it => {
+    const saved = PCB_STATE[it.key] || PCB_STATE[it.pc] || {};
+    if(saved.hidden){ _hiddenItems.push({ ...it, label: saved.label || '' }); return; }   /* [v988] 내려놓은 카드 */
+    let col = saved.col;
+    if(!col || !buckets[col]) col = it.planned ? 'staffing' : _pcbAutoCol(it);
+    if(!buckets[col]) col = firstCol;
+    /* [v1209] 예전엔 계정이 빠진 PC 를 '빈 PC' 칸으로 몰았다. 그 칸이 없어졌으므로
+       아무 데로도 안 몰고 있던 자리에 둔다. buckets.empty 가 없으므로 조건은 저절로 꺼진다. */
+    if(!it.planned && !it.clientName && col !== 'hold' && buckets.empty) col = 'empty';
+    buckets[col].push({ ...it, note: saved.note || '', label: saved.label || '',
+                        assigned: saved.assigned || '', status: saved.status || '', action: saved.action || '' });
+  });
+  window._pcbHiddenList = _hiddenItems;   /* [v988] 되돌리기 목록이 읽는다 */
+  const iqBuckets = {}; PCB_COLS.forEach(c => iqBuckets[c.id] = []);
+  PCB_INQ.forEach(iq => { const c = iqBuckets[iq.col] ? iq.col : firstCol; if(iqBuckets[c]) iqBuckets[c].push(iq); });
+
+  const vet = _pcbVeteranSet();
+  const pcOptions = items.slice().sort((a,b)=>Number(a.pc)-Number(b.pc))
+    .map(it=>`<option value="${it.key}">PC ${it.pc}${it.planned?_iqT(' (계획)',' (plan)'):''}${it.clientName?' — '+_pcbEsc(it.clientName):''}</option>`).join('');
+
+  /* [v845] boss "1→4 쭉 패스하는 프로세스로 깔끔하게" — 카드 상태에서 자동 계산되는 4단계:
+     ①정보(이름·시작) ②연결(PC+사람) ③테스트(공지) ④적용. 커스텀 칼럼은 안 건드리고 레이어만 얹는다 */
+  const iqSteps = _pcbIqSteps;   /* [v1351] 전역 추출 — 아래 wrapper 참고 */
+  /* ── 문의 카드 ── [v1351] 몸체는 _pcbIqCardHTML 로 추출 — 기록·통계 클라별의 문의 카드가 같은 몸을 쓴다(편집기 두 벌 금지) */
+  const iqCard = iq => _pcbIqCardHTML(iq, items, pcOptions, vet);
 
   /* ── PC 카드 (가로 압축형) ── */
   const pcCard = it => {
@@ -53725,6 +53835,17 @@ function _pcRTJoin(){
       _pcHeld.set(String(p.id), { what:String(p.what||''), by:String(p.by||''), at:Date.now() });
       _pcHeldPaint();
     });
+    _pcRT.on('broadcast', { event:'inq' }, function(m){   /* [v1351] 문의 카드 변경 — 보고 있는 판을 즉시 맞춘다 */
+      var p = m && m.payload;
+      if(!p) return;
+      if(p.tab ? (p.tab === _PC_TAB_ID) : (String(p.id||'') === _pcRTMe())) return;
+      try{ _pcbLoad().then(function(){
+        try{ if(document.querySelector('.sr-iqwrap')) renderRecords(true); }catch(_){}
+        try{ var v = document.getElementById('ch-pc-status'); if(v && v.offsetParent !== null && typeof render === 'function') render(); }catch(_){}
+        try{ var ch = (typeof findChannelById==='function') ? findChannelById(activeChannelId) : null;
+             if(ch && ch.module === 'pcboard' && typeof renderPcBoard === 'function') renderPcBoard(); }catch(_){}
+      }); }catch(_){}
+    });
     _pcRT.on('broadcast', { event:'aim' }, function(m){   /* [v1341] 풀에서 끌며 조준 중인 줄 */
       var p = m && m.payload;
       if(!p) return;
@@ -58128,6 +58249,9 @@ function _agRender(){
             ? (kl?'클라이언트·직원·리더를 여기로 끌어다 놓으세요 · 우클릭 — 백업 · 클라이언트 · 리더 · PC OFF · 숨김':'drop a client / staff / leader here · right-click for more')
             : (kl?'보기 전용 — 배정은 OP·대표가 바꿉니다':'View only — assignments are managed by OP/CEO'))+'">'
       +   '<b>PC-'+pad2(p.id)+'</b>'
+      +   (function(){ /* [v1351] 이 PC 에서 신규 클라 테스트 중 — 빨간 줄무늬(백업 초록 줄무늬의 빨간 판) */
+            try{ var _tq=(typeof _pcbTestOnPc==='function')?_pcbTestOnPc(p.id):null;
+              return _tq?('<span class="pc-testbadge" title="'+(kl?'신규 클라이언트 테스트 중 — 문의 카드: ':'Testing new client: ')+_mtcEsc(String(_tq.name||''))+'">🧪 '+(kl?'테스트':'TEST')+' · '+_mtcEsc(String(_tq.name||'').slice(0,6))+'</span>'):''; }catch(_){ return ''; } })()
       +   (_pcBrk?('<i class="ag-lbrk" data-no-i18n title="'+(kl?'지금 중단 중 — 인터넷·정전 등 (재개를 안 눌렀습니다)':'downtime open — not resumed yet')+'">'+(kl?'중단':'PAUSE')+'</i>'):'')
       +   (led?('<i class="ag-led" title="'+(kl?'리더 — 누르면 해제':'leader')+'" onclick="event.stopPropagation();_agDelLeader('+p.id+')">👑'+_mtcEsc(String(led.name||'').slice(0,4))+'</i>'):'')
       +   (cl?('<em title="'+(kl?'클라이언트 — 누르면 해제':'client')+'" onclick="event.stopPropagation();_agDelClient('+p.id+',\''+_mtcEsc(String(cid))+'\')">'+_mtcEsc(String(cl).slice(0,8))+'</em>'):'')
