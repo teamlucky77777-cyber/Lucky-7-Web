@@ -4,7 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
 <title>ARASAKA Corp</title>
-<!-- BUILD: v1340 | 격자 실시간 2탄 — 끄는 중 좌표 중계(100ms)+미끄러지는 막대, 이름표 오른쪽 위 부양 -->
+<!-- BUILD: v1342 | 격자 실시간 3탄 — 세로 이동·스왑·빼기·풀 조준까지 중계, 휴면 칩 점선→실선 -->
 <!-- v745 기록은 git 이력(v1302 이전 커밋)에 있다 — 100KB 변경사 주석을 배포에서 제거 -->
 <!-- [v677] a <link href> cannot read a CSS variable, so the favicon carries its own copy.
      64px: a browser tab draws it at 16-32px, so this is 2x-DPR sharp at 11KB. -->
@@ -9415,6 +9415,11 @@ html[data-theme=light] #nav-chg{background:#fff;border-color:rgba(0,0,0,.1);box-
    내가 잡은 막대(.act)는 손가락을 즉시 따라야 하니 전환 없음. */
 #ag-wrap .ag-bar.rt-live{transition:left .16s linear, width .16s linear;will-change:left,width}
 #ag-wrap .ag-bar.act{transition:none !important}
+/* [v1342] 원격 조준 — 상대가 세로로 끌거나 풀에서 겨누는 줄/카드가 그 사람 색으로 빛난다 */
+#ag-wrap .ag-row.rt-tgt .ag-track{box-shadow:inset 0 0 0 1.5px hsl(var(--rth,210) 78% 62% / .85), 0 0 12px hsl(var(--rth,210) 78% 62% / .22);transition:box-shadow .15s}
+.ck-card.rt-tgt,.pc.rt-tgt{box-shadow:0 0 0 2px hsl(var(--rth,210) 78% 62% / .8), 0 0 14px hsl(var(--rth,210) 78% 62% / .3);transition:box-shadow .15s}
+#ag-wrap .ag-bar.rt-swtgt{box-shadow:0 0 0 2px #a98fd6,0 0 12px rgba(169,143,214,.55);z-index:6}
+#ag-wrap .ag-bar.rt-out{opacity:.38;filter:grayscale(.6);transition:opacity .15s,filter .15s}
 /* 잡힌 것은 살짝 숨을 쉰다 — 지금 누가 손대고 있다는 뜻 */
 .pc-held::after{content:"";position:absolute;inset:-2px;border-radius:inherit;pointer-events:none;
   box-shadow:0 0 0 0 hsl(var(--heldh,210) 78% 62% / .45);
@@ -10879,6 +10884,7 @@ body.pcboxes-on .pbox .pool-rolegrid .s-chip,
    칩의 ON/OFF(본인 플레이 중)와는 다른 뜻이라 그쪽 표시는 건드리지 않는다. */
 .c-chip.c-hiatus{
   border-color:var(--re,#c46a6a)!important;
+  border-style:solid!important;   /* [v1342] 휴면+오늘휴무가 겹치면 c-off의 점선이 새어 나왔다(데포요정) — 휴면은 실선이 우선 */
   border-left-color:var(--re,#c46a6a)!important;
   border-left-width:1px!important;
   box-shadow:0 0 0 1px rgba(196,106,106,.32);
@@ -38723,6 +38729,7 @@ function _ckOver(e, pcId){
   const kind = _ckKind(); if(!kind) return;
   e.preventDefault();
   try{ e.dataTransfer.dropEffect = 'move'; }catch(_){}
+  try{ _pcRTAim(_pcHeldMine||'pool', pcId); }catch(_){}   /* [v1342] 시계카드 조준 중계 */
   const c = e.currentTarget;
   if(c){ c.classList.add('ck-drop-on'); c.classList.remove('k-staff','k-client','k-leader'); c.classList.add('k-'+kind); }
 }
@@ -53595,11 +53602,20 @@ function _pcRTJoin(){
       _pcHeld.set(String(p.id), { what:String(p.what||''), by:String(p.by||''), at:Date.now() });
       _pcHeldPaint();
     });
+    _pcRT.on('broadcast', { event:'aim' }, function(m){   /* [v1341] 풀에서 끌며 조준 중인 줄 */
+      var p = m && m.payload;
+      if(!p) return;
+      if(p.tab ? (p.tab === _PC_TAB_ID) : (String(p.id||'') === _pcRTMe())) return;
+      _pcRTHintRows(p.id, p.tgt, null);
+      clearTimeout(window._agRTLiveT);
+      window._agRTLiveT = setTimeout(_pcRTHintClear, 3000);
+    });
     _pcRT.on('broadcast', { event:'free' }, function(m){
       var p = m && m.payload;
       if(!p) return;
       _pcHeld.delete(String(p.id||''));
       _pcHeldPaint();
+      try{ _pcRTHintClear(); }catch(_){}   /* [v1341] 손 놓으면 조준 표시도 함께 거둔다 */
     });
     /* [v1325] 끊기면 버리고 다시 붙는다 — 캔버스 _mtcBusJoin 과 같은 처리.
        이게 없으면 한 번 끊긴 뒤로 영영 죽는다. */
@@ -53793,14 +53809,28 @@ function _pcRTGrab(what, again){
    놓는 순간 순간이동한다. 캔버스가 이미 푼 문제다(v902 _mtcRTMove: 끄는 동안
    100ms 스로틀로 좌표를 중계하고, 놓는 순간 마지막 프레임은 스로틀 무시).
    같은 원리로 격자의 start/len 을 중계한다. 데이터는 안 건드린다 — 그림만. */
-function _pcRTDrag(pc, idx, start, len, force){
+function _pcRTDrag(pc, idx, start, len, ex, force){
   try{
     if(_pcRTOff() || !_pcRT) return;
     var now = Date.now();
     if(!force && now - (window._agRTLast || 0) < 90) return;   /* 초당 ~10프레임 */
     window._agRTLast = now;
-    _pcRT.send({ type:'broadcast', event:'drag', payload:{
-      id:_pcRTMe(), tab:_PC_TAB_ID, pc:pc, idx:idx, start:start, len:len }});
+    var pl = { id:_pcRTMe(), tab:_PC_TAB_ID, pc:pc, idx:idx, start:start, len:len };
+    /* [v1341] 세로 이동·스왑·빼기도 실어 나른다 — 로컬이 보는 것(대상 줄·상대 막대·격자 밖)을 그대로 */
+    if(ex){ if(ex.tgt != null) pl.tgt = ex.tgt; if(ex.swap) pl.swap = ex.swap; if(ex.out) pl.out = 1; }
+    _pcRT.send({ type:'broadcast', event:'drag', payload:pl });
+  }catch(_){ }
+}
+/* [v1341] 풀(직원·클라)에서 끌 때의 조준 중계 — HTML5 드래그라 좌표 대신 "어느 줄을 노리나"만 */
+function _pcRTAim(what, tgtPc, force){
+  try{
+    if(_pcRTOff() || !_pcRT) return;
+    var now = Date.now();
+    if(!force && now - (window._agAimLast || 0) < 120) return;
+    if(!force && window._agAimPrev === (what + ':' + tgtPc)) return;   /* 같은 줄이면 조용 */
+    window._agAimLast = now; window._agAimPrev = what + ':' + tgtPc;
+    _pcRT.send({ type:'broadcast', event:'aim', payload:{
+      id:_pcRTMe(), tab:_PC_TAB_ID, what:what, tgt:tgtPc }});
   }catch(_){ }
 }
 /* 수신: 그 막대(조각 포함)를 부드럽게 따라 그린다 — v1327 조각 규칙 그대로 */
@@ -53814,6 +53844,7 @@ function _pcRTDragPaint(p){
     var segs = _agSegs(Number(p.start)||0, Math.max(1, Number(p.len)||1));
     pieces.forEach(function(el, i){
       el.classList.add('rt-live');
+      el.classList.toggle('rt-out', !!p.out);   /* [v1341] 격자 밖으로 빼는 중 — 반투명 예고 */
       if(segs[i]){
         el.style.display = '';
         el.style.left  = (segs[i][0]/24*100)+'%';
@@ -53821,10 +53852,34 @@ function _pcRTDragPaint(p){
       } else el.style.display = 'none';
       var hh = el.querySelector('.ag-hh'); if(hh) hh.textContent = (Number(p.len)||1)+'h';
     });
+    /* [v1341] 세로 조준 — 대상 줄은 그 사람 색으로 빛나고, 스왑 상대 막대는 테두리 */
+    _pcRTHintRows(p.id, p.tgt, p.swap);
     clearTimeout(window._agRTLiveT);
-    window._agRTLiveT = setTimeout(function(){   /* 3초 소식 없으면 매끈 모드 해제(다음 sync가 진실을 그린다) */
-      try{ document.querySelectorAll('.ag-bar.rt-live').forEach(function(el){ el.classList.remove('rt-live'); }); }catch(_){}
-    }, 3000);
+    window._agRTLiveT = setTimeout(_pcRTHintClear, 3000);   /* 3초 소식 없으면 예고 해제(다음 sync가 진실을 그린다) */
+  }catch(_){ }
+}
+/* [v1341] 원격 조준 표시 — 로컬의 ag-tgt/ag-swtgt 와 같은 문법, 색만 그 사람 것 */
+function _pcRTHintRows(uid, tgt, swap){
+  try{
+    document.querySelectorAll('.rt-tgt').forEach(function(x){ x.classList.remove('rt-tgt'); x.style.removeProperty('--rth'); });
+    document.querySelectorAll('#ag-wrap .ag-bar.rt-swtgt').forEach(function(x){ x.classList.remove('rt-swtgt'); });
+    if(tgt != null){
+      /* 격자 줄·시계 카드·PC 카드 — 지금 떠 있는 판이 어느 쪽이든 그 사람 색으로 빛난다 */
+      ['#ag-wrap .ag-row[data-pc="'+tgt+'"]', '.ck-card[data-pc="'+tgt+'"]', '.pc[data-id="'+tgt+'"]'].forEach(function(s){
+        var el = document.querySelector(s);
+        if(el){ el.classList.add('rt-tgt'); el.style.setProperty('--rth', _pcHeldHue(uid)); }
+      });
+    }
+    if(swap && swap.pc != null){
+      var sb2 = document.querySelector('.ag-bar[data-pc="'+swap.pc+'"][data-idx="'+swap.idx+'"]');
+      if(sb2) sb2.classList.add('rt-swtgt');
+    }
+  }catch(_){ }
+}
+function _pcRTHintClear(){
+  try{
+    document.querySelectorAll('.ag-bar.rt-live, .ag-bar.rt-out').forEach(function(el){ el.classList.remove('rt-live','rt-out'); });
+    _pcRTHintRows('', null, null);
   }catch(_){ }
 }
 function _pcRTFree(){
@@ -58569,7 +58624,7 @@ function _agBind(host){
       });
       const hh = bar.querySelector('.ag-hh'); if(hh) hh.textContent = a.len+'h';
       bar.setAttribute('title', pad2(_tzH(a.start))+'–'+pad2(_tzH((a.start+a.len)%24))+' · '+a.len+'h');
-      try{ _pcRTDrag(pcId, idx, a.start, a.len); }catch(_){}   /* [v1339] 끄는 중 상대 화면에도 흐르게 */
+      try{ _pcRTDrag(pcId, idx, a.start, a.len, { tgt:tgtPc, swap:(tgtSwap?{pc:tgtSwap.pc,idx:tgtSwap.idx}:null), out:dropOut }); }catch(_){}   /* [v1339·v1341] 끄는 중 가로+세로 조준까지 상대 화면에도 흐르게 */
     };
     const mv = e2 => {
       if(e2.pointerId !== ev.pointerId) return;    /* [v1292] 다른 손가락 무시 */
@@ -58588,7 +58643,7 @@ function _agBind(host){
       if(raf){ cancelAnimationFrame(raf); raf = 0; }
       if(moved) paint();
       host.classList.remove('ag-dragging'); bar.classList.remove('act','willdrop');
-      try{ if(moved) _pcRTDrag(pcId, idx, a.start, a.len, true); }catch(_){}   /* [v1339] 마지막 프레임은 스로틀 무시 — 캔버스 v902와 같음 */
+      try{ if(moved) _pcRTDrag(pcId, idx, a.start, a.len, null, true); }catch(_){}   /* [v1339] 마지막 프레임은 스로틀 무시 — 캔버스 v902와 같음 */
       try{ _pcRTFree(); }catch(_){}   /* [v1338] 놓는 순간 상대 화면의 "잡고 있음" 표시를 거둔다 */
       /* [v1103] 끌지 않고 그냥 눌렀다 = 이 배정을 어떻게 할지 묻는 것.
          예전엔 아무 일도 안 일어나서, 해제하려면 우클릭을 알아야 했다. */
@@ -58772,6 +58827,7 @@ function _agOver(e, pcId){
     _agCovClear();
     e.preventDefault();
     try{ e.dataTransfer.dropEffect='move'; }catch(_){}
+    try{ _pcRTAim(_pcHeldMine||'pool', pcId); }catch(_){}   /* [v1342] 조준 중계 */
     if(_cb && !_cb.classList.contains('cover')){ _cb.classList.add('ag-covtgt'); return; }
     var _ctr = e.currentTarget;
     _ctr.classList.add('over');
@@ -58783,6 +58839,7 @@ function _agOver(e, pcId){
   if(!(dragMode==='hours' || dragMode==='pc-staff')) return;
   e.preventDefault();
   try{ e.dataTransfer.dropEffect='move'; }catch(_){}
+  try{ _pcRTAim(_pcHeldMine||'pool', pcId); }catch(_){}   /* [v1342] 풀→격자 조준 중계 */
   const tr = e.currentTarget;
   tr.classList.add('over');
   const hh = _agHourAt(tr, e.clientX);
@@ -61045,6 +61102,7 @@ function dragStartSeg(e, staffId, hours, planned){
 /* [v1122] 커버 끌기 — 시간 배정과 다른 종류다(dragMode='cover') */
 function dragStartCover(e, staffId){
   dragType = 'staff'; dragMode = 'cover'; dragId = staffId; dragHours = 1;
+  try{ _pcRTGrab('staff:'+staffId); }catch(_){}   /* [v1342] Cover 끌기도 잡기 표시 */
   window._dragPlanned = false;
   try{ e.dataTransfer.effectAllowed = 'move'; }catch(_){}
   try{ e.target.classList.add('dragging'); }catch(_){}
@@ -61052,6 +61110,7 @@ function dragStartCover(e, staffId){
 }
 function dragStartLeader(e, staffId){
   dragType = 'staff'; dragMode = 'leader'; dragId = staffId; dragHours = 0;
+  try{ _pcRTGrab('staff:'+staffId); }catch(_){}   /* [v1342] */
   e.dataTransfer.effectAllowed = 'move';
   e.target.classList.add('dragging');
   document.body.classList.add('dragging-leader');
