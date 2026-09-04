@@ -44,7 +44,7 @@ jobs:
         with:
           path: dist
   deploy:
-    if: ${{ false }}   # 1단계: 미리보기 검증 후 true로 바꿔 켠다 (configure-pages가 Pages 소스를 Actions로 전환)
+    # [2단계] 미리보기(하니스) 검증 통과 — 배포 켬. 이 잡의 configure-pages가 Pages 소스를 Actions로 전환한다
     needs: build
     runs-on: ubuntu-latest
     environment:
