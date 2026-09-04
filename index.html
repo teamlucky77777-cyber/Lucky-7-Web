@@ -4,7 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
 <title>ARASAKA Corp</title>
-<!-- BUILD: v1367 | 클라별 드래그 앤 드롭 — 클라·빈 자리 카드는 PC 현황 순서를, 문의 카드는 문의 순서를 옮긴다 -->
+<!-- BUILD: v1368 | 직원별 두 표·클라별 카드 가독성 7종(글자·보조숫자·줄무늬·정렬·알약·바·맵 한국어) -->
 <!-- v745 기록은 git 이력(v1302 이전 커밋)에 있다 — 100KB 변경사 주석을 배포에서 제거 -->
 <!-- [v677] a <link href> cannot read a CSS variable, so the favicon carries its own copy.
      64px: a browser tab draws it at 16-32px, so this is 2x-DPR sharp at 11KB. -->
@@ -9454,6 +9454,70 @@ html[data-theme=light] #nav-chg{background:#fff;border-color:rgba(0,0,0,.1);box-
 #sr-app .sr-clgrid > .sr-dragging{opacity:.35}
 #sr-app .sr-clgrid > .sr-drop-before{box-shadow:-7px 0 0 -2px #c9963a!important}
 #sr-app .sr-clgrid > .sr-drop-after{box-shadow:7px 0 0 -2px #c9963a!important}
+/* ═══ [v1368] boss "직원별 표 7개 다 가고 클라별도 맞춰" — 가독성·시인성. 디자인 뼈대는 그대로, 읽히게만.
+   주입 CSS(#sr-app …)가 문서 뒤에 붙어 같은 specificity 면 지므로 html #sr-app … 로 한 단계 올린다. ═══ */
+/* 1. 글자 크기 · 머리글 */
+html #sr-app .sr-rec-tbl{font-size:13.5px}
+html #sr-app .sr-sl-tbl{font-size:13px}
+html #sr-app .sr-rec-tbl th,html #sr-app .sr-sl-tbl thead th{font-size:11px;letter-spacing:.05em;color:#a8a8a2;font-weight:800;padding:8px 9px 9px;text-transform:none;border-bottom:1px solid #2a2a2e}
+html #sr-app .sr-rec-tbl td{padding:11px 9px;color:#dad9d4;line-height:1.35}
+html #sr-app .sr-sl-tbl td{padding:10px 9px;color:#dad9d4;line-height:1.35}
+html #sr-app .sr-rec-nm,html #sr-app .sr-sl-nm{font-size:13.5px;font-weight:700}
+/* 2. 보조 숫자(→누적 %, /h, 시간대) */
+html #sr-app .sr-ade-h{font-size:11px;color:#9c9c96;margin-top:3px}
+html #sr-app .sr-ade-h .sr-ade{color:#9c9c96}
+html #sr-app .sr-rec-tbl td > div[style]{font-size:11px!important;color:#9c9c96!important;margin-top:3px!important}
+html #sr-app .sr-sl-cum{font-size:11px;color:#9c9c96;font-weight:600}
+html #sr-app .sr-mut{color:#73736e}
+/* 3. 줄무늬 · 호버 · 행 구분 */
+html #sr-app .sr-rec-tbl tbody tr:nth-child(even) td,html #sr-app .sr-sl-tbl tbody tr:nth-child(even) td{background:rgba(255,255,255,.028)}
+html #sr-app .sr-rec-tbl tbody tr:hover td,html #sr-app .sr-sl-tbl tbody tr:hover td{background:rgba(201,150,58,.08)}
+html #sr-app .sr-rec-tbl td,html #sr-app .sr-sl-tbl td{border-bottom:1px solid #232326}
+/* 4. 숫자 정렬 */
+html #sr-app .sr-rec-tbl td,html #sr-app .sr-sl-tbl td{font-variant-numeric:tabular-nums}
+html #sr-app .sr-sl-tbl td.sr-num,html #sr-app .sr-sl-tbl th.sr-num{text-align:right}
+html #sr-app .sr-rec-ph{font-size:15px}
+html #sr-app .sr-sl-expi{font-size:13.5px;font-weight:700;color:#e8e7e2}
+/* 5. 알약 — 판정 · 구분 · 성과% */
+html #sr-app .sr-rb{font-size:11.5px;font-weight:800;padding:4px 10px;border-radius:7px;border:1px solid transparent;letter-spacing:.01em}
+html #sr-app .sr-rb-ok{background:rgba(77,154,138,.2);color:#74d4ab;border-color:rgba(77,154,138,.45)}
+html #sr-app .sr-rb-un,html #sr-app .sr-rb-stbl{background:rgba(201,150,58,.2);color:#e6b95e;border-color:rgba(201,150,58,.45)}
+html #sr-app .sr-rb-wu,html #sr-app .sr-rb-cut,html #sr-app .sr-rb-jump{background:rgba(224,80,74,.2);color:#f0837c;border-color:rgba(224,80,74,.45)}
+html #sr-app .sr-rb-goal{background:rgba(77,154,138,.24);color:#83e3ab;border-color:rgba(77,154,138,.5)}
+html #sr-app .sr-rb-st,html #sr-app .sr-rb-no{background:#1f1f22;color:#b4b4ae;border-color:#2f2f34}
+html #sr-app .sr-sb{font-size:11px;font-weight:700;padding:3px 9px;border-radius:7px;color:#c6c6c0;background:#1f1f22}
+html #sr-app .sr-sb-in{background:rgba(77,154,138,.2);color:#74d4ab}
+html #sr-app .sr-sb-out{background:rgba(196,106,106,.2);color:#f0837c}
+html #sr-app .sr-sb-st{background:rgba(126,140,240,.18);color:#b6bef9}
+html #sr-app .sr-pfp{font-size:12px;font-weight:800;padding:3px 9px;border-radius:7px;min-width:48px}
+html #sr-app .sr-pfp.hot{background:rgba(77,154,138,.22);color:#74d4ab}
+html #sr-app .sr-pfp.mid{background:rgba(201,150,58,.22);color:#e6b95e}
+html #sr-app .sr-pfp.low{background:rgba(196,106,106,.22);color:#f0837c}
+/* 6. 달성 바 — 두껍게(색은 이미 뜻대로: 초록 통과·노랑 Stable·빨강 미달) */
+html #sr-app .sr-bar{width:66px;height:9px;border-radius:5px;background:#202024;margin-right:9px}
+html #sr-app .sr-bar i{border-radius:5px}
+/* 세션 표 부속 */
+html #sr-app .sr-sl-day{font-size:14px}
+html #sr-app .sr-sl-dn{font-size:14px}
+html #sr-app .sr-sl-dc{font-size:11px;color:#a8a8a2;border-color:#33333a}
+html #sr-app .sr-sl-x{color:#8f8f8a;font-size:14px}
+html #sr-app .sr-sl-dayign{font-size:11px;color:#9c9c96;border-color:#3a3a40}
+html #sr-app .sr-sl-map{color:#e2e1dc;font-weight:600}
+/* 클라별 카드 — 같은 규칙 */
+html #sr-app .sr-clcard-nm{font-size:15.5px}
+html #sr-app .sr-clcard-pc{font-size:11px;color:#b6b6b0;border-color:#34343a}
+html #sr-app .sr-clcard-big{font-size:30px}
+html #sr-app .sr-clcard-act-l{font-size:10.5px;color:#9c9c96;text-transform:none;letter-spacing:.02em}
+html #sr-app .sr-clcard-act-v{font-size:15px}
+html #sr-app .sr-clcard-act-t{font-size:11px;color:#9c9c96}
+html #sr-app .sr-clcard-side .sr-clcard-meta{font-size:12px;color:#b6b6b0}
+html #sr-app .sr-clcard-maps{font-size:12px;color:#9c9c96}
+html #sr-app .sr-map-main{font-size:12.5px;color:#eae9e4}
+html #sr-app .sr-clcard-warn{font-size:11.5px}
+html #sr-app .sr-clcard-empty::after{font-size:12.5px;color:#6a6a65}
+html #sr-app .sr-clcard-blank-body{font-size:12.5px;color:#5c5c57}
+html #sr-app .sr-fchip .l{font-size:10.5px;color:#9c9c96}
+html #sr-app .sr-fchip .v{font-size:14px}
 /* [v1364] 클라 카드 — 기준 배지 아래 인원, 기록 없는 카드는 한 줄 안내 */
 #sr-app .sr-clcard-hero{align-items:flex-start}
 #sr-app .sr-clcard-side{display:flex;flex-direction:column;align-items:flex-end;gap:6px;flex:0 0 auto}
@@ -38367,7 +38431,7 @@ function _srRecCardHTML(data){
           +'<td class="sr-sl-t">'+(opt.caret||'')+(krMode?'<b>KR</b> ':'')+fmtT(s.ms)+'</td>'
           +'<td>'+tagB(s.tag)+'</td><td>'+esc(s.client)+badge+'</td>'
           +'<td>'+esc(String(s.pc==null?'':s.pc))+'</td><td>'+esc(String(s.lv==null?'':s.lv))+'</td>'
-          +'<td>'+esc(_mapDisp(s.map))+'</td>'
+          +'<td class="sr-sl-map">'+esc((typeof _mapKoNice==='function')?_mapKoNice(s.map):_mapDisp(s.map))+'</td>'   /* [v1368] 층·ATS 까지 한국어 */
           +'<td class="sr-num sr-exp-cell">'+actCell+((s.tag!=='checkin'&&s.expAt!=null)?'<div class="sr-sl-cum">→'+Number(s.expAt).toFixed(2)+'%</div>':'')+'</td>'
           +adeCell
           +'<td class="sr-num">'+tgt+'</td>'
@@ -38503,7 +38567,7 @@ function _srRecCardHTML(data){
         +'</div>'
         +'<div class="sr-sec-h">⏱ '+(_L?'투입 타임라인':'Deployment Timeline')+'<span class="ln"></span><span style="font-weight:700;color:var(--tx3)">'+tord.length+'</span></div>'
         +tlTbl
-        +'<div class="sr-sec-h">🗺 사냥터<span class="ln"></span></div><div class="sr-clmaps">'+(cst.maps.length?cst.maps.map(function(x){return esc(_mapDisp(x));}).join(' · '):'—')+'</div>'
+        +'<div class="sr-sec-h">🗺 사냥터<span class="ln"></span></div><div class="sr-clmaps">'+(cst.maps.length?cst.maps.map(function(x){return esc((typeof _mapKoNice==='function')?_mapKoNice(x):_mapDisp(x));}).join(' · '):'—')+'</div>'
         +'<div class="sr-sec-h">🧾 세션 기록 <span class="sr-sec-hint">· 행을 눌러 수동 조정</span><span class="ln"></span>'+krPill+'</div>'
         +buildSessionTable(crows)
         +'</div>';
