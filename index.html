@@ -4,7 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
 <title>ARASAKA Corp</title>
-<!-- BUILD: v1355 | 클라별·문의 폴리시 — 맵 한국어(층·ATS)+주력 강조, 메타 명만, 문의중 배지 걸침 롤백, 애플풍 호버 -->
+<!-- BUILD: v1356 | 문의 팝업 iOS 그룹목록 스킨·카드 버튼 제거(클릭=세부·더블클릭=단계)·평균EXP 라벨 제거 -->
 <!-- v745 기록은 git 이력(v1302 이전 커밋)에 있다 — 100KB 변경사 주석을 배포에서 제거 -->
 <!-- [v677] a <link href> cannot read a CSS variable, so the favicon carries its own copy.
      64px: a browser tab draws it at 16-32px, so this is 2x-DPR sharp at 11KB. -->
@@ -9466,13 +9466,6 @@ html[data-theme=light] #nav-chg{background:#fff;border-color:rgba(0,0,0,.1);box-
 .sr-iqmini-who{font-size:11px;color:var(--tx2,#989792)}
 .sr-iqmini-note{font-size:11px;color:var(--tx3,#6b6b67);font-style:italic;
   border-top:1px dashed var(--br2,#2c2c2a);padding-top:7px}
-/* 바닥 고정 액션 */
-.sr-iqmini-ft{margin-top:auto;display:flex;gap:7px;padding-top:8px}
-.sr-iqbtn{flex:1 1 0;background:var(--bg-h,#1e1e20);border:1px solid var(--br2,#2f2f2d);color:var(--tx2,#b5b5b0);
-  font:700 11px inherit;padding:7px 0;border-radius:8px;cursor:pointer;transition:background .13s,border-color .13s,color .13s}
-.sr-iqbtn:hover{background:rgba(201,150,58,.13);border-color:rgba(201,150,58,.5);color:#fff}
-.st-ask .sr-iqbtn.go:hover{background:rgba(76,175,110,.14);border-color:rgba(76,175,110,.6)}
-.st-test .sr-iqbtn.go:hover{background:rgba(224,90,77,.14);border-color:rgba(224,90,77,.6)}
 /* [v1353] 세부 팝업 — 배경이 가라앉고 카드가 스프링으로 떠오른다 */
 #sr-iqpop{position:fixed;inset:0;z-index:100000}
 #sr-iqpop .sr-iqpop-bg{position:absolute;inset:0;background:rgba(6,6,8,.55);backdrop-filter:blur(3px);
@@ -9495,6 +9488,74 @@ html[data-theme=light] #nav-chg{background:#fff;border-color:rgba(0,0,0,.1);box-
 #sr-iqpop .sr-iqpop-body{overflow:auto;padding:0 12px 12px;min-height:0}
 #sr-iqpop .pcb-iq{cursor:default}
 @media (prefers-reduced-motion:reduce){#sr-iqpop .sr-iqpop-box{transition:opacity .15s ease}}
+/* ═══ [v1356] 세부 팝업 스킨 — boss "인터페이스 다 뜯어고쳐, 실무적으로, 애플 느낌" ═══
+   마크업은 계정보드와 공유(_pcbIqCardHTML)라 손대지 않고, 팝업 안에서만 먹는 스킨으로 갈아입힌다.
+   iOS 설정 화면 문법: 둥근 인셋 그룹 안에 '라벨 왼쪽 · 값 오른쪽' 줄, 그룹마다 작은 제목, 알약 스테퍼,
+   주 버튼 하나(확정 적용)만 금색. 안쪽 ✕(문의 삭제)와 옛 4단계 줄은 팝업에선 숨긴다 — 위험하고 겹친다. */
+#sr-iqpop .sr-iqpop-box{width:min(470px,94vw);background:#0e0e10;border-radius:20px}
+#sr-iqpop .sr-iqpop-hd{padding:14px 16px 4px}
+#sr-iqpop .sr-iqpop-body{padding:0 14px 14px}
+#sr-iqpop .pcb-iq{background:transparent;border:none;padding:0;cursor:default}
+#sr-iqpop .pcb-iqtag,#sr-iqpop .pcb-pcdel,#sr-iqpop .pcb-steps{display:none}
+#sr-iqpop .pcb-iqtop{margin:2px 2px 14px;display:flex;align-items:center;gap:8px}
+#sr-iqpop .pcb-iqname{font-size:24px;font-weight:800;letter-spacing:-.02em;line-height:1.15;color:#f2f1ee;
+  min-width:0;flex:1;padding:2px 4px;border-radius:8px;outline:none}
+#sr-iqpop .pcb-iqname:focus{background:#18181b}
+#sr-iqpop .pcb-age{font:700 10px inherit;color:#8a8a86;background:#18181b;border:1px solid #26262a;padding:3px 8px;border-radius:7px}
+#sr-iqpop .pcb-stamp{font:700 10px inherit;color:#c9963a;background:rgba(201,150,58,.12);padding:3px 8px;border-radius:7px}
+/* 그룹 = 인셋 목록 */
+#sr-iqpop .pcb-iqgrid{display:flex;flex-direction:column;gap:0;background:#151518;border:1px solid #222226;
+  border-radius:14px;overflow:hidden;margin:0 0 10px;position:relative;padding-top:0}
+#sr-iqpop .pcb-iqgrid::before{display:block;font:800 10px inherit;letter-spacing:.09em;color:#6f6f6b;
+  padding:9px 14px 4px;background:#111114}
+/* 제목은 형제 순서로 — nth-of-type 은 숨긴 div(pcb-steps)까지 세어 두 칸 밀렸다 */
+#sr-iqpop .pcb-iqgrid::before{content:"기본"}
+#sr-iqpop .pcb-iqgrid.g3::before{content:"캐릭터"}
+#sr-iqpop .pcb-iqgrid.g3 ~ .pcb-iqgrid::before{content:"장비"}
+#sr-iqpop .pcb-iqgrid.g3 ~ .pcb-iqgrid ~ .pcb-iqgrid::before{content:"관계"}
+#sr-iqpop .pcb-iqcell{display:flex;align-items:center;justify-content:space-between;gap:12px;min-width:0;
+  background:transparent;border:none;border-top:1px solid #1f1f23;border-radius:0;padding:11px 14px}
+#sr-iqpop .pcb-iqcell:first-of-type{border-top:none}
+#sr-iqpop .pcb-iqcap{display:flex;align-items:center;gap:6px;flex:0 0 auto;margin:0}
+#sr-iqpop .pcb-fkey{font:600 12.5px inherit;color:#a3a39e;letter-spacing:0;text-transform:none}
+#sr-iqpop .pcb-tbd{font:700 9px inherit;padding:2px 6px;border-radius:5px;background:transparent;
+  color:#5e5e5a;border:1px solid #2a2a2e;opacity:1}
+#sr-iqpop .pcb-tbd.on{color:#e0a83a;border-color:rgba(224,168,58,.5);background:rgba(224,168,58,.1)}
+#sr-iqpop .pcb-fval{flex:1 1 auto;min-width:0;text-align:right;font:600 14px inherit;color:#f2f1ee;
+  background:transparent;border:none;padding:2px 0;border-radius:6px;outline:none;white-space:nowrap;
+  overflow:hidden;text-overflow:ellipsis}
+#sr-iqpop .pcb-fval:empty::before{content:attr(data-ph);color:#4f4f4b;font-weight:500}
+#sr-iqpop .pcb-fval:focus{background:#1c1c20;padding:2px 8px}
+#sr-iqpop .pcb-fval.tbd{color:#e0a83a;font-style:normal}
+#sr-iqpop .pcb-fval.warn{color:#e0716a}
+#sr-iqpop .pcb-pickv{cursor:pointer}
+#sr-iqpop .pcb-pickv::after{content:"›";margin-left:6px;color:#5e5e5a;font-weight:700}
+/* 스테퍼 — 알약 */
+#sr-iqpop .pcb-numv{display:inline-flex;align-items:center;gap:0;background:#1c1c20;border-radius:999px;padding:2px;flex:0 0 auto}
+#sr-iqpop .pcb-nbtn{width:28px;height:28px;border-radius:50%;border:none;background:transparent;color:#c9c9c4;font:700 16px inherit;cursor:pointer}
+#sr-iqpop .pcb-nbtn:hover{background:#2a2a2f;color:#fff}
+#sr-iqpop .pcb-nval{min-width:34px;text-align:center;font:800 14px inherit;color:#f2f1ee;padding:0 4px;outline:none;font-variant-numeric:tabular-nums}
+#sr-iqpop .pcb-nval.tbd{color:#e0a83a;font-size:11px}
+/* 연결 · 사람 */
+#sr-iqpop .pcb-iqlink{display:flex;gap:8px;margin:0 0 10px}
+#sr-iqpop .pcb-iqsel{flex:1;background:#151518;border:1px solid #222226;color:#f2f1ee;border-radius:12px;padding:10px 12px;font:600 13px inherit}
+#sr-iqpop .pcb-chip{border-radius:12px;padding:9px 12px;font:700 13px inherit}
+#sr-iqpop .pcb-mini{background:#151518;border:1px solid #222226;color:#c9c9c4;border-radius:12px;padding:9px 12px;font:700 12.5px inherit}
+#sr-iqpop .pcb-iqzone{display:flex;align-items:center;gap:10px;background:#151518;border:1px solid #222226;
+  border-radius:14px;padding:11px 14px;margin:0 0 8px;min-height:44px}
+#sr-iqpop .pcb-iqzone.armed{border-color:#c9963a}
+#sr-iqpop .pcb-zcap{font:600 12.5px inherit;color:#a3a39e;letter-spacing:0;flex:0 0 52px}
+#sr-iqpop .pcb-slotempty{color:#4f4f4b;font-size:12.5px;margin-left:auto}
+#sr-iqpop .pcb-person{border-radius:999px;padding:5px 10px;font:700 12px inherit}
+/* 메모 · 첨부 · 액션 */
+#sr-iqpop .pcb-fval.note{display:block;text-align:left;white-space:pre-wrap;min-height:66px;background:#151518;
+  border:1px solid #222226;border-radius:14px;padding:11px 14px;font:500 13px/1.5 inherit;margin:2px 0 10px;overflow:visible}
+#sr-iqpop .pcb-iqfiles{margin:0 0 10px}
+#sr-iqpop .pcb-iqfoot{display:flex;gap:8px;align-items:center;padding-top:4px}
+#sr-iqpop .pcb-iqfoot .pcb-mini{flex:1;text-align:center;padding:12px 10px;font-size:13.5px}
+#sr-iqpop .pcb-iqfoot .pcb-mini.act.go{background:#c9963a;border-color:#c9963a;color:#1a1408;flex:1.4}
+#sr-iqpop .pcb-iqfoot .pcb-mini.act.go:hover{filter:brightness(1.08)}
+#sr-iqpop .pcb-iqfoot .pcb-mini[style*="margin-left"]{flex:0 0 44px;padding:12px 0}
 .sr-iqadd{border:1.5px dashed rgba(76,175,110,.5);background:transparent;color:#4caf6e;border-radius:14px;
   min-height:64px;font:800 14px inherit;cursor:pointer;transition:background .14s,border-color .14s}
 .sr-iqadd:hover{background:rgba(76,175,110,.09);border-color:rgba(76,175,110,.9)}
@@ -38520,7 +38581,7 @@ function _srRecCardHTML(data){
       +'<div class="sr-clflip">'
       +'<div class="sr-clface sr-clfront">'
       +'<div class="sr-clcard-top"><span class="sr-clcard-nm">'+esc(o.client||c)+'</span>'+((o.pc!=null&&String(o.pc)!=='')?'<span class="sr-clcard-pc">PC'+esc(String(o.pc))+'</span>':'')+'</div>'
-      +'<div class="sr-clcard-hero"><div class="sr-clcard-bigwrap"><span class="sr-clcard-big">'+(st.actualH!=null?st.actualH.toFixed(2)+'%':'—')+'</span><span class="sr-clcard-l">'+(_kl?'평균 EXP%/h':'Avg EXP%/h')+'</span></div>'+(pf!=null?'<span class="sr-pfp '+pfCls(pf)+'">'+(_kl?'기준 ':'vs Std ')+Math.round(pf)+'%</span>':'')+'</div>'
+      +'<div class="sr-clcard-hero"><div class="sr-clcard-bigwrap"><span class="sr-clcard-big">'+(st.actualH!=null?st.actualH.toFixed(2)+'%':'—')+'</span></div>'+/* [v1356] boss "평균 EXP%/H 라벨은 없애자 — 크게 돼 있어 누가 봐도 안다" */''+(pf!=null?'<span class="sr-pfp '+pfCls(pf)+'">'+(_kl?'기준 ':'vs Std ')+Math.round(pf)+'%</span>':'')+'</div>'
       +(st.targetH!=null?'<div class="sr-clcard-act"><span class="sr-clcard-act-l">'+(_kl?'기준/h':'Std/h')+'</span><span class="sr-clcard-act-v">'+st.targetH.toFixed(2)+'%</span></div>':'')
       +((o.adeN>0)?(function(){ /* [v1348] 툴팁은 민글자만 — _srAdeFmt 는 HTML(따옴표 포함)을 돌려줘 title 이 중간에 닫히며 '+…건">' 이 화면에 샜다 */
           var _ap=function(v){ var n=Math.round(Number(v)||0); return (n<0?'-':'+')+Math.abs(n).toLocaleString('en-US'); };
@@ -38697,10 +38758,6 @@ function _srRecCardHTML(data){
           +   '<div class="sr-iqsteps">'+stepStrip+'</div>'
           +   (whoBits.length ? '<div class="sr-iqmini-who">'+whoBits.join('&nbsp;&nbsp;')+'</div>' : '')
           +   (iq.note && !_pcbIsTbd(iq.note) ? '<div class="sr-iqmini-note">'+_pcbEsc(String(iq.note).slice(0,56))+(String(iq.note).length>56?'…':'')+'</div>' : '')
-          +   '<div class="sr-iqmini-ft">'
-          +     '<button class="sr-iqbtn" onclick="event.stopPropagation();_srIqPop(null,\''+iq.id+'\')">✎ 세부</button>'
-          +     '<button class="sr-iqbtn go" onclick="event.stopPropagation();_srIqCycle(null,\''+iq.id+'\')">단계 ⇄</button>'
-          +   '</div>'
           + '</div></div>';
       }).join('');
     }catch(e){ console.warn('iq cards:', e); return ''; }
