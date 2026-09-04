@@ -4,7 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
 <title>ARASAKA Corp</title>
-<!-- BUILD: v1349 | 아데나 순수 벌이 — 소모품 지출 반영·창고/본주급 낙차와 가짜 급증 ±30만 컷(실측 근거) -->
+<!-- BUILD: v1350 | 아데나 확인 문구 — 세션 로그에 ⚡에이스(6만+ 진짜 벌이)·제외(±30만 컷) 표시 -->
 <!-- v745 기록은 git 이력(v1302 이전 커밋)에 있다 — 100KB 변경사 주석을 배포에서 제거 -->
 <!-- [v677] a <link href> cannot read a CSS variable, so the favicon carries its own copy.
      64px: a browser tab draws it at 16-32px, so this is 2x-DPR sharp at 11KB. -->
@@ -37770,7 +37770,7 @@ function _srRecCompute(reports, clients){
        두 화면이 다른 셈을 하면 ‘정산엔 3억 기록엔 2.8억’ 이 되고, 그때 어느 쪽을 믿을지
        알 수 없다. 증가분만 센다(음수 = 아이템 구매)— 쓴 돈은 번 돈에서 빼지 않는다,
        그건 별개의 이야기이고 여기서 섞으면 ‘오늘 얼마 벌었나’ 를 못 읽는다. */
-    var segGain={}, segAde={}; (function(){ var prev=null; allRs.forEach(function(r){
+    var segGain={}, segAde={}, segAdeCut={};   /* [v1350] 창고/본주 컷에 걸린 리포트 표시용 */ (function(){ var prev=null; allRs.forEach(function(r){
       if(isDup[r.id]){segGain[r.id]=0; segAde[r.id]=0; return;}
       if(isTestMap(r)){segGain[r.id]=gainedPct(r); segAde[r.id]=0; return;}
       if(prev&&prev.client!==r.client){prev=null;}
@@ -37787,7 +37787,7 @@ function _srRecCompute(reports, clients){
          컷 ±30만: 정상 벌이 상위 10%가 +6만이라(제프·클라우스의 '가끔 7만' 포함) 4배 여유로
          통과하고, 창고/본주급 낙차와 '본주가 돈 넣고 간' 가짜 급증만 양방향으로 걸러진다. */
       if(!isFinite(_ag)) _ag = 0;
-      if(Math.abs(_ag) > 300000) _ag = 0;   /* 창고·본주·거래 — 사냥의 이야기가 아니다 */
+      if(Math.abs(_ag) > 300000){ segAdeCut[r.id] = true; _ag = 0; }   /* 창고·본주·거래 — 사냥의 이야기가 아니다. [v1350] 표시용 낙인 */
       /* ìë°ëë ì ìë¤. ìì  ê¸°ë¡ ì´ ê¼­ì '1.806' ê°ì ììì  ìë ¥ì´ ë°í ìì´
          í©ê³ê° '78,128,247.108' ì²ë£¨ ëìë¤ â ëì ë°ë¡ âê³ ì¥ì´ë ì«ìâ ë¡ ì½íë¤. */
       segAde[r.id]=Math.round(_ag);
@@ -37841,7 +37841,7 @@ function _srRecCompute(reports, clients){
       var _rms=reportMs(r);
       var _ignored=!!r.ignored;   // [v447] 미반영 — excluded from performance calc/averages/stats, but still shown (greyed) in the session log
       var _isBreak=isBreakMap(r) && !(_tgt!=null && _tgt>0 && _atsMan[normName(r.booster)+'|'+_rd+'|'+String(r.client||'').trim()]);   // [v588] ATS scores ONLY when it has a real standard AND the session was flagged hand-played (2h+ submit prompt); otherwise excluded (auto/rest-time). Race engine follows via sess.brk.
-      sessions.push({ id:r.id, name:g.name, key:normName(g.name), date:_rd, ms:_rms, tag:_tag, client:r.client||'', pc:r.pc, lv:(r.lvAfter!=null?r.lvAfter:r.lv), map:r.map||'', gain:_gain, ade:_ade, expAt:(Number(r.expAfter)||0), target:_tgt, sh:_sh, sl:_sl, dup:_dup, flag:_flag, ignored:_ignored, brk:_isBreak });
+      sessions.push({ id:r.id, name:g.name, key:normName(g.name), date:_rd, ms:_rms, tag:_tag, client:r.client||'', pc:r.pc, lv:(r.lvAfter!=null?r.lvAfter:r.lv), map:r.map||'', gain:_gain, ade:_ade, adeCut:(!!segAdeCut[r.id]), expAt:(Number(r.expAfter)||0), target:_tgt, sh:_sh, sl:_sl, dup:_dup, flag:_flag, ignored:_ignored, brk:_isBreak });
       if(_rd){
         if(!recAgg[g.name]) recAgg[g.name]={};
         if(!recAgg[g.name][_rd]) recAgg[g.name][_rd]={hours:0,gain:0,ade:0,quota:0,flags:0,cleanGain:0,scored:0,scoredClean:0,minMs:null,maxMs:null,hb:{}};
@@ -38091,7 +38091,11 @@ function _srRecCardHTML(data){
         var actCell;
         if(_expEditable){ var _rawn=(s.tag==='checkin')?Number(s.expAt||0).toFixed(2):Number(s.gain||0).toFixed(2); var _extra=opt.merged?(','+Number(s.gain||0)+','+Number(s._lastGain||0)):''; actCell='<input class="sr-sl-expi'+(s.flag?' sr-jump':'')+'" value="'+_rawn+'" inputmode="decimal" onclick="event.stopPropagation()" onkeydown="if(event.key===&#39;Enter&#39;){event.preventDefault();this.blur();}" onchange="_srSlSaveExp(&#39;'+rid+'&#39;,this.value,'+(s.tag==='checkin'?'1':'0')+_extra+')">'; }
         else { actCell=(s.flag?'<span class="sr-jump">⚠ '+act+'</span>':act); }
-        var adeCell='<td class="sr-ade-td">'+((s.tag==='checkin')?'<span class="sr-mut">—</span>':_srAdeFmt(s.ade))+'</td>';   /* [v1176] 체크인은 시작점이라 번 것이 없다 */
+        /* [v1350] boss "에이스가 6~8만 벌 때는 확인 문구 하나 더" — ⚡=진짜 상위 벌이(컷 아님을 눈으로 확인),
+           컷에 걸린 건 조용한 0 대신 '제외'로 투명하게 */
+        var adeCell='<td class="sr-ade-td">'+((s.tag==='checkin')?'<span class="sr-mut">—</span>'
+          :(s.adeCut?'<span class="sr-mut" title="±30만 컷 — 창고 입금·본주 이동으로 판단해 집계에서 제외했습니다">'+(((typeof _uiLang!=='function')||_uiLang()==='ko')?'제외':'cut')+'</span>'
+          :(_srAdeFmt(s.ade)+((Number(s.ade)>=60000)?' <span title="'+(((typeof _uiLang!=='function')||_uiLang()==='ko')?'에이스 구간 — 시간당 6만+ 실제 벌이 (컷 30만 이내, 정상 집계됨)':'ace hour — 60K+ real earnings, counted')+'">⚡</span>':''))))+'</td>';
         if(_isDeathRow) actCell='<span title="사망 — EXP 손실" style="color:var(--re,#c46a6a);font-weight:800">💀</span> '+actCell;   // [v440] mark deaths in the session log
         var badge=opt.badge?(' <span style="display:inline-block;margin-left:6px;padding:1px 6px;border-radius:6px;background:rgba(201,150,58,.16);color:var(--ac,#c9963a);font-size:.68rem;font-weight:800;vertical-align:middle">'+opt.badge+'</span>'):'';
         return '<tr'+(cls.length?' class="'+cls.join(' ')+'"':'')+(opt.data||'')+(onclk?' '+onclk:'')+'>'
