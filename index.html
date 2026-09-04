@@ -4,7 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
 <title>ARASAKA Corp</title>
-<!-- BUILD: v1331 | 클라 카드 뒷면을 기준 EXP 화면의 카드와 같은 코드로 -->
+<!-- BUILD: v1332 | PC 현황 배정 격자 — Player 는 보기만 (컨트롤 잠금) -->
 <!-- v745 기록은 git 이력(v1302 이전 커밋)에 있다 — 100KB 변경사 주석을 배포에서 제거 -->
 <!-- [v677] a <link href> cannot read a CSS variable, so the favicon carries its own copy.
      64px: a browser tab draws it at 16-32px, so this is 2x-DPR sharp at 11KB. -->
@@ -6998,6 +6998,25 @@ html[data-theme=light] .pcv2-legend i{background:rgba(255,255,255,.75);border-co
 }
 .readonly-mode .toolbar .pill{cursor:pointer !important}
 .readonly-mode .toolbar #q{cursor:text !important}
+/* [v1332] 배정 격자(.ag-*) — 예전 보드만 잠그고 이쪽은 비어 있었다.
+   실제 차단은 JS(_pcGuardEdit)가 한다. 여기서는 '잡을 수 있는 것처럼' 보이지
+   않게만 한다 — 끌리는 줄 알고 끌었다가 안 되는 것이 제일 나쁘다. */
+.readonly-mode .ag-bar,
+.readonly-mode .ag-bar *,
+.readonly-mode .ag-track,
+.readonly-mode .ag-lab,
+.readonly-mode .ag-lab *{
+  cursor:default !important;
+}
+.readonly-mode .ag-rz,
+.readonly-mode .ag-vz,
+.readonly-mode .ag-b,
+.readonly-mode .ag-btns{
+  display:none !important;
+}
+.readonly-mode .ag-bar:hover{transform:none !important}
+.readonly-mode .ag-bar[draggable],
+.readonly-mode .ag-lab[draggable]{-webkit-user-drag:none}
 /* 24h/48h 등 시간 토글 유지 */
 .readonly-mode .anchor-toggle,
 .readonly-mode .span-toggle,
@@ -57336,6 +57355,31 @@ function _ckRefreshSoon(){
    끌면 길이 조절 · 위아래로 크게 빼면 해제.
    ═══════════════════════════════════════════════════════════════════════════ */
 const AG_SNAP = 1;                       // 1시간 단위 (0.5 로 바꾸면 30분)
+/* ═══ [v1332] PC 현황 — 직원은 보되 바꾸지는 못한다 ═══════════════════════════
+   boss "저거 직원들한테도 공개되지? 대신 컨트롤은 안되게 해야돼"
+
+   공개는 원래부터 맞다(ROLE_PERMS 'pc-status' 는 staff:true). 문제는 잠금이었다.
+   .readonly-mode CSS 는 예전 보드(.pc / .tl-bar / .toolbar)만 덮고 있었고, 지금
+   쓰는 배정 격자(.ag-*)는 한 줄도 안 덮여 있었다. Player 로 들어가도 막대를 끌고,
+   빈 칸을 눌러 사람을 꽂고, 우클릭으로 PC 를 끌 수 있었다.
+
+   규칙은 새로 만들지 않는다 — PC 시계 보드가 이미 쓰는 것(_ckCanEdit: admin·op)과
+   같은 줄이다. 그리고 화면에서 감추는 것만으로는 부족하다. 이 손잡이들은 window 에
+   붙어 있어서 콘솔이나 낡은 화면에서 그냥 부를 수 있다(기준 EXP 의 expGuardEdit 이
+   v647 에 같은 이유로 붙었다). 그래서 값이 바뀌는 입구마다 검사한다. */
+function _pcCanEdit(){
+  try{ return typeof currentUserRole !== 'undefined' && (currentUserRole === 'admin' || currentUserRole === 'op'); }
+  catch(_){ return false; }
+}
+function _pcGuardEdit(quiet){
+  if(_pcCanEdit()) return true;
+  if(!quiet){
+    var _kl = (typeof _uiLang !== 'function') || _uiLang() === 'ko';
+    try{ toast(_kl ? '보기 전용 — 배정은 OP·대표만 바꿀 수 있어요'
+                   : 'View only — only OP/CEO can change assignments', true); }catch(_){}
+  }
+  return false;
+}
 function _agHost(){ return document.getElementById('ag-wrap'); }
 function _agHourAt(track, clientX){
   const r = track.getBoundingClientRect();
@@ -57767,7 +57811,10 @@ function _agRender(){
          직원을 끌어오면 백업으로, 👑 을 끌어오면 리더가 된다(_agLabKind 가 가른다). */
       + '<div class="ag-lab" data-pc="'+p.id+'"'
       +   ' ondragover="_agLabOver(event,'+p.id+')" ondragleave="_agLabLeave(event)" ondrop="_agLabDrop(event,'+p.id+')"'
-      +   ' title="'+(kl?'클라이언트·직원·리더를 여기로 끌어다 놓으세요 · 우클릭 — 백업 · 클라이언트 · 리더 · PC OFF · 숨김':'drop a client / staff / leader here · right-click for more')+'">'
+      /* [v1332] 못 하는 사람에게 하는 법을 알려 주지 않는다 */
+      +   ' title="'+(_pcCanEdit()
+            ? (kl?'클라이언트·직원·리더를 여기로 끌어다 놓으세요 · 우클릭 — 백업 · 클라이언트 · 리더 · PC OFF · 숨김':'drop a client / staff / leader here · right-click for more')
+            : (kl?'보기 전용 — 배정은 OP·대표가 바꿉니다':'View only — assignments are managed by OP/CEO'))+'">'
       +   '<b>PC-'+pad2(p.id)+'</b>'
       +   (_pcBrk?('<i class="ag-lbrk" data-no-i18n title="'+(kl?'지금 중단 중 — 인터넷·정전 등 (재개를 안 눌렀습니다)':'downtime open — not resumed yet')+'">'+(kl?'중단':'PAUSE')+'</i>'):'')
       +   (led?('<i class="ag-led" title="'+(kl?'리더 — 누르면 해제':'leader')+'" onclick="event.stopPropagation();_agDelLeader('+p.id+')">👑'+_mtcEsc(String(led.name||'').slice(0,4))+'</i>'):'')
@@ -57901,6 +57948,7 @@ function _agFreeRun(sid, hour, cap){
 }
 /* 빈 자리를 눌렀을 때 — 그 시각에 넣을 수 있는 사람만, 여유 많은 순으로 */
 function _agFillAt(pcId, hour, x, y){
+  if(!_pcGuardEdit()) return;   /* [v1332] */
   const p = (typeof PCS!=='undefined'?PCS:[]).find(v=>v.id===pcId); if(!p) return;
   const rows = _agStaffRows(function(s2){
     if(_agBusyAt(s2.id, hour)) return false;                       /* 그 시각에 이미 근무 중 */
@@ -57922,6 +57970,7 @@ function _agFillAt(pcId, hour, x, y){
 }
 function _agCtx(e){
   const wrap = _agHost(); if(!wrap) return;
+  if(!_pcCanEdit()) return;   /* [v1332] 메뉴 자체를 안 연다 — 못 할 일만 늘어놔 봐야 헷갈린다 */
   const row = e.target.closest ? e.target.closest('.ag-row') : null;
   if(!row || row.classList.contains('ag-head')) return;
   e.preventDefault(); e.stopPropagation();
@@ -58098,6 +58147,7 @@ function _agLabKind(){
   return null;
 }
 function _agLabOver(e, pcId){
+  if(!_pcCanEdit()) return;   /* [v1332] */
   if(typeof dragType==='undefined' || !dragType) return;
   const k = _agLabKind(); if(!k) return;
   e.preventDefault();
@@ -58111,6 +58161,7 @@ function _agLabLeave(e){
 }
 function _agLabDrop(e, pcId){
   const el = e.currentTarget; if(el) el.classList.remove('lab-over','k-backup','k-client','k-leader');
+  if(!_pcGuardEdit()){ try{ e.preventDefault(); e.stopPropagation(); }catch(_){} return; }   /* [v1332] */
   try{ e.preventDefault(); e.stopPropagation(); }catch(_){}
   const k = _agLabKind(); if(!k) return;
   const p = PCS.find(x=>x.id===pcId); if(!p) return;
@@ -58128,6 +58179,7 @@ function _agLabDrop(e, pcId){
   try{ dropOnPC(e, pcId, k, -1); }catch(err){ console.warn('ag lab drop:', err); }
 }
 function _agDelBackup(pcId, sid){
+  if(!_pcGuardEdit()) return;   /* [v1332] */
   const p = PCS.find(x=>x.id===pcId); if(!p || !Array.isArray(p.backups)) return;
   _agLog('백업에서 뺌 · PC-' + pad2(pcId), _agWho(sid));
   p.backups = p.backups.filter(b => String(b) !== String(sid));
@@ -58135,10 +58187,12 @@ function _agDelBackup(pcId, sid){
   try{ render(); }catch(_){ _agRender(); }
 }
 function _agDelLeader(pcId){
+  if(!_pcGuardEdit()) return;   /* [v1332] */
   try{ unassignLeader(pcId); }
   catch(err){ const p=PCS.find(x=>x.id===pcId); if(p){ p.leader=null; try{ render(); }catch(_){ _agRender(); } } }
 }
 function _agDelClient(pcId, cid){
+  if(!_pcGuardEdit()) return;   /* [v1332] */
   try{ unassignClient(pcId, cid); }catch(err){ console.warn('ag del client:', err); }
 }
 /* [v1156] PC 를 끄거나 숨기는 것은 그 PC 의 배정·보고가 화면에서 사라지는 일이다.
@@ -58146,6 +58200,7 @@ function _agDelClient(pcId, cid){
    되돌리는 쪽(이미 꺼진 것을 켜기 · 숨긴 것을 보이기)은 안 물어본다 —
    그건 화면을 되살리는 일이라 잘못 눌러도 잃는 게 없다. */
 async function _agOff(pcId){
+  if(!_pcGuardEdit()) return;   /* [v1332] */
   try{
     var p = (typeof PCS!=='undefined') ? PCS.find(function(x){ return x.id===pcId; }) : null;
     var nm = 'PC-' + String(pcId).padStart(2,'0');
@@ -58160,6 +58215,7 @@ async function _agOff(pcId){
   }catch(err){ console.warn('ag off:', err); }
 }
 async function _agHide(pcId){
+  if(!_pcGuardEdit()) return;   /* [v1332] */
   try{
     var _p2 = (typeof PCS!=='undefined') ? PCS.find(function(x){ return x.id===pcId; }) : null;
     var hidden = (typeof pcHidden==='function') ? pcHidden(_p2) : !!(_p2 && _p2.hidden);
@@ -58191,6 +58247,7 @@ function _agCommit(snap, label){
   }catch(_){}
 }
 function agUndoLast(){
+  if(!_pcGuardEdit()) return;   /* [v1332] */
   var kl2 = (typeof _uiLang!=='function') || _uiLang()==='ko';
   if(!_agUndo){ try{ toast(kl2?'되돌릴 배정 변경이 없습니다':'Nothing to undo', true); }catch(_){} return; }
   try{
@@ -58249,12 +58306,14 @@ function _agBind(host){
     const row = track.closest('.ag-row'); if(!row || row.classList.contains('ag-head')) return;
     const pcId = Number(row.dataset.pc); if(!pcId) return;
     ev.preventDefault(); ev.stopPropagation();
+    if(!_pcGuardEdit()) return;                    /* [v1332] 빈 칸을 눌러 사람을 꽂는 길 */
     _agFillAt(pcId, _agHourAt(track, ev.clientX), ev.clientX, ev.clientY);
   });
   host.addEventListener('pointerdown', ev => {
     if(ev.button !== 0) return;
     if(host._agDrag) return;                       /* [v1292] 두 손가락이 두 막대를 잡으면 서로의 좌표를 밀던 것 — 한 번에 하나 */
     const bar = ev.target.closest('.ag-bar'); if(!bar) return;
+    if(!_pcGuardEdit()){ ev.preventDefault(); return; }   /* [v1332] 막대를 끌고 늘리는 길 */
     const track = bar.parentElement; if(!track) return;
     host._agDrag = 1;
     try{ bar.setPointerCapture && bar.setPointerCapture(ev.pointerId); }catch(_){}
@@ -58470,6 +58529,7 @@ function _agBind(host){
 }
 /* ── 직원 풀에서 끌어다 놓기 — 놓은 x 가 곧 시작 시각 ── */
 function _agOver(e, pcId){
+  if(!_pcCanEdit()) return;   /* [v1332] 받을 수 없으면 자리도 안 비춘다 */
   if(typeof dragType==='undefined' || !dragType) return;
   if(!(dragMode==='hours' || dragMode==='pc-staff')) return;
   e.preventDefault();
@@ -58501,6 +58561,7 @@ function _agWhen(start, len){
 }
 function _agDrop(e, pcId){
   const tr = e.currentTarget; if(tr) tr.classList.remove('over');
+  if(!_pcGuardEdit()){ try{ e.preventDefault(); e.stopPropagation(); }catch(_){} return; }   /* [v1332] */
   try{ e.preventDefault(); e.stopPropagation(); }catch(_){}
   if(!(dragMode==='hours' || dragMode==='pc-staff')) return;
   /* [v1285] 되돌리기 — 이 함수의 어느 갈래가 바꾸든, 다 끝난 직후(마이크로태스크) 비교해 남긴다 */
@@ -60460,6 +60521,7 @@ function _pcExpTileHasData(r){
   return !!(s(r.clientId) || s(r.lv) || s(r.map) || (Number(r.target)||0) > 0);
 }
 function addPC(){
+  if(!_pcGuardEdit()) return;   /* [v1332] 버튼은 숨겨져 있지만 함수는 window 에 있다 */
   /* [v154] collision-free id (max+1, not length+1 — length+1 duplicates after a delete)
      [v761] Dencho 8/18: "PC 20이 나와야 하는데 26으로 튐". 원인은 여기서 STANDARD_EXP의 최댓값까지
      같이 보는데, reconcilePcExp(v486)가 삭제된 PC의 EXP 타일을 지우지 않고 _orphan 으로만 표시해
