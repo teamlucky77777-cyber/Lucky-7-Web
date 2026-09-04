@@ -1,0 +1,58 @@
+# [v1303·감사 LATER-D] 스트립 배포 — push하면 주석을 벗긴 사본만 Pages로 나간다.
+# 원본(main)은 그대로. 스트립이 실패하면 원본을 그대로 배포한다(사이트가 깨질 길이 없음).
+# backups/·.claude/ 는 배포본에서 제외된다(트러스트 백업 JSON이 공개 서빙되던 것 차단).
+name: deploy
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+permissions:
+  contents: write
+  pages: write
+  id-token: write
+concurrency:
+  group: pages
+  cancel-in-progress: true
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+      - name: strip comments (fallback = raw copy)
+        run: |
+          mkdir -p dist
+          cp .nojekyll dist/ 2>/dev/null || true
+          if npm install --no-save --no-audit --no-fund html-minifier-terser@7.2.0 && node .github/strip.mjs; then
+            echo "stripped ok"
+          else
+            echo "::warning::strip FAILED — deploying raw copy"
+            cp index.html dist/index.html
+          fi
+      - name: push preview branch (deploy-preview — 로컬 검증용)
+        run: |
+          cd dist
+          git init -q -b deploy-preview
+          git config user.email "actions@github.com"
+          git config user.name "pages-bot"
+          git add -A
+          git commit -qm "preview ${GITHUB_SHA}"
+          git push -f "https://x-access-token:${{ github.token }}@github.com/${{ github.repository }}.git" deploy-preview
+      - uses: actions/upload-pages-artifact@v3
+        with:
+          path: dist
+  deploy:
+    if: ${{ false }}   # 1단계: 미리보기 검증 후 true로 바꿔 켠다 (configure-pages가 Pages 소스를 Actions로 전환)
+    needs: build
+    runs-on: ubuntu-latest
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - uses: actions/configure-pages@v5
+        with:
+          enablement: true
+      - id: deployment
+        uses: actions/deploy-pages@v4
