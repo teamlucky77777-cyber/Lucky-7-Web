@@ -4,7 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
 <title>ARASAKA Corp</title>
-<!-- BUILD: v1347 | 기록·통계 클라 카드 — 전체 기준 뒤집기 버튼·평균EXP 확대·아데나 평균 표기·맵 한국어 -->
+<!-- BUILD: v1348 | 전체 기준 뒤집기 수리 — 기준 선확보+강제 재채움(첫 장만 나오던 것), 아데나 툴팁 HTML 누출 수정 -->
 <!-- v745 기록은 git 이력(v1302 이전 커밋)에 있다 — 100KB 변경사 주석을 배포에서 제거 -->
 <!-- [v677] a <link href> cannot read a CSS variable, so the favicon carries its own copy.
      64px: a browser tab draws it at 16-32px, so this is 2x-DPR sharp at 11KB. -->
@@ -38397,7 +38397,10 @@ function _srRecCardHTML(data){
       +'<div class="sr-clcard-top"><span class="sr-clcard-nm">'+esc(o.client||c)+'</span>'+((o.pc!=null&&String(o.pc)!=='')?'<span class="sr-clcard-pc">PC'+esc(String(o.pc))+'</span>':'')+'</div>'
       +'<div class="sr-clcard-hero"><div class="sr-clcard-bigwrap"><span class="sr-clcard-big">'+(st.actualH!=null?st.actualH.toFixed(2)+'%':'—')+'</span><span class="sr-clcard-l">'+(_kl?'평균 EXP%/h':'Avg EXP%/h')+'</span></div>'+(pf!=null?'<span class="sr-pfp '+pfCls(pf)+'">'+(_kl?'기준 ':'vs Std ')+Math.round(pf)+'%</span>':'')+'</div>'
       +(st.targetH!=null?'<div class="sr-clcard-act"><span class="sr-clcard-act-l">'+(_kl?'기준/h':'Std/h')+'</span><span class="sr-clcard-act-v">'+st.targetH.toFixed(2)+'%</span></div>':'')
-      +((o.adeN>0)?('<div class="sr-clcard-act sr-clcard-ade" title="'+(_kl?('합계 '+_srAdeFmt(o.ade)+' · '+o.adeN+'건'):('total '+_srAdeFmt(o.ade)+' · '+o.adeN))+'"><span class="sr-clcard-act-l">💰 '+(_kl?'아데나 평균':'Avg adena')+'</span><span class="sr-clcard-act-v">'+_srAdeFmt(Math.round(o.ade/o.adeN))+'</span></div>'):'')   /* [v1347] boss "수파베이스에 들어오는 아데나 평균값" — 값 실린 리포트당 평균(합계·건수는 툴팁에). 음수(v1282)도 그대로 보인다 */
+      +((o.adeN>0)?(function(){ /* [v1348] 툴팁은 민글자만 — _srAdeFmt 는 HTML(따옴표 포함)을 돌려줘 title 이 중간에 닫히며 '+…건">' 이 화면에 샜다 */
+          var _ap=function(v){ var n=Math.round(Number(v)||0); return (n<0?'-':'+')+Math.abs(n).toLocaleString('en-US'); };
+          return '<div class="sr-clcard-act sr-clcard-ade" title="'+(_kl?('합계 '+_ap(o.ade)+' · '+o.adeN+'건 평균'):('total '+_ap(o.ade)+' · avg of '+o.adeN))+'"><span class="sr-clcard-act-l">💰 '+(_kl?'아데나 평균':'Avg adena')+'</span><span class="sr-clcard-act-v">'+_srAdeFmt(Math.round(o.ade/o.adeN))+'</span></div>';
+        })():'')   /* [v1347] 값 실린 리포트당 평균, 음수(v1282) 포함 */
       +'<div class="sr-clcard-meta"><b>👥 '+st.nStaff+(_kl?'명':'')+'</b><b>🧾 '+o.reps+(_kl?'건':'')+'</b><b>🗺 '+(st.maps.length||0)+(_kl?'맵':'')+'</b></div>'
       +'<div class="sr-clcard-maps">'+(st.maps.length?st.maps.map(function(m){ /* [v1347] boss "맵 한국어로" — 기준표와 같은 사전(_mapToKo) */ if(_kl&&typeof _mapToKo==='function'){ try{ m=_mapToKo(m); }catch(_){} } return esc(m); }).join(' · '):'—')+'</div>'
       /* [v1284] 기준이 없어 채점이 안 되는 시간이 있으면 그 카드에만 한 줄 붙는다.
@@ -38455,16 +38458,25 @@ function _srRecCardHTML(data){
       card.classList.toggle("flipped");
     }catch(e){ console.warn("cl flip:", e); }
   };
-  /* [v1347] boss "전체를 전부 바꾸는 버튼도 하나" — 반 넘게 앞면이면 전부 뒷면(기준)으로, 아니면 전부 앞면으로 */
-  window._srClFlipAll = function(){
+  /* [v1347] boss "전체를 전부 바꾸는 버튼도 하나" — 반 넘게 앞면이면 전부 뒷면(기준)으로, 아니면 전부 앞면으로.
+     [v1348] 수십 장을 한 틱에 뒤집으면 기준을 아직 안 받아 첫 장만 채워졌다 —
+     기준부터 확보한 뒤 전부 강제 재채움(force)으로 뒤집는다. */
+  window._srClFlipAll = async function(){
     try{
       var cards = document.querySelectorAll('.sr-clcard');
       if(!cards.length){ try{ toast((typeof _uiLang!=='function'||_uiLang()==='ko')?'클라별 화면에서 쓰는 단추예요':'Switch to client view first'); }catch(_){} return; }
       var flipped = document.querySelectorAll('.sr-clcard.flipped').length;
       var toBack = flipped < cards.length / 2;
+      if(toBack && !(Array.isArray(_csRows) && _csRows.length)){
+        try{
+          var arr = (Array.isArray(_csClients) && _csClients.length) ? _csClients : await _srGetCalc('clients');
+          _csBuildRows(Array.isArray(arr) ? arr : []);
+        }catch(e){ try{ toast('기준을 못 불러왔어요 — 잠시 후 다시', true); }catch(_){} return; }
+      }
       cards.forEach(function(card){
         if(toBack){
-          if(!card.classList.contains('flipped')){ try{ _srClBackFill(card); }catch(_){} card.classList.add('flipped'); }
+          try{ _srClBackFill(card, true); }catch(_){}   /* force — 예전에 '없음' 도장이 찍힌 카드도 다시 채운다 */
+          card.classList.add('flipped');
         } else card.classList.remove('flipped');
       });
     }catch(e){ console.warn('cl flip all:', e); }
@@ -38510,6 +38522,12 @@ function _srRecCardHTML(data){
           try{ _csBuildRows(Array.isArray(arr) ? arr : []); }catch(_){}
           _srClBackRefillOpen();
         }).catch(function(){ window._srClCsPend = 0; _srClBackRefillOpen(); });
+        return;
+      }
+      /* [v1348] 불러오는 중에 온 다른 카드들 — '없음' 도장을 찍지 말고 대기(도착하면 RefillOpen이 채운다).
+         전체 뒤집기(v1347)가 수십 장을 한 틱에 밀어 넣으며 드러난 구멍: 첫 장만 채워지고 나머지가 전부 '없음'으로 굳었다 */
+      if(window._srClCsPend){
+        put("<div class='sr-clback-msg'>" + (kl ? "기준 불러오는 중…" : "Loading…") + "</div>", true);
         return;
       }
       put("<div class='sr-clback-msg'>" + (kl ? "이 고객의 기준이 아직 없습니다" : "No standard yet") + "</div>");
