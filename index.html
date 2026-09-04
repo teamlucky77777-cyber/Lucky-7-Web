@@ -4,7 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
 <title>ARASAKA Corp</title>
-<!-- BUILD: v1354 | 문의 카드 전면 재설계 — 영웅 이름·스펙 알약·3단계 스트립·바닥 고정 액션 -->
+<!-- BUILD: v1355 | 클라별·문의 폴리시 — 맵 한국어(층·ATS)+주력 강조, 메타 명만, 문의중 배지 걸침 롤백, 애플풍 호버 -->
 <!-- v745 기록은 git 이력(v1302 이전 커밋)에 있다 — 100KB 변경사 주석을 배포에서 제거 -->
 <!-- [v677] a <link href> cannot read a CSS variable, so the favicon carries its own copy.
      64px: a browser tab draws it at 16-32px, so this is 2x-DPR sharp at 11KB. -->
@@ -9438,14 +9438,10 @@ html[data-theme=light] #nav-chg{background:#fff;border-color:rgba(0,0,0,.1);box-
    이름이 영웅(클라 카드의 큰 %가 서는 자리), 스펙은 알약, 3단계 진행 스트립이
    빈 공간을 구조로 바꾸고, 액션은 바닥에 고정된다(높이가 늘어나도 안 뜬다). */
 .sr-iqwrap{cursor:pointer}
-.sr-iqmini{height:100%;background:var(--bg-c,#161616);border:1px solid var(--br,#232322);border-radius:12px;
-  padding:13px 14px;display:flex;flex-direction:column;gap:8px;transition:border-color .14s,transform .14s}
-.sr-iqwrap:hover .sr-iqmini{border-color:var(--ac-bord,rgba(194,160,74,.4));transform:translateY(-1px)}
-.sr-iqmini-top{display:flex;align-items:center;gap:6px}
-.sr-iqpill{font:800 10px inherit;letter-spacing:.03em;color:#fff;padding:3px 9px;border-radius:7px}
-.st-ask .sr-iqpill{background:#3d8f5c}
-.st-test .sr-iqpill{background:#c24d42;animation:iqTestPulse 1.8s ease-in-out infinite}
-.st-done .sr-iqpill{background:#a87f2e}
+.sr-iqmini{position:relative;height:100%;background:var(--bg-c,#161616);border:1px solid var(--br,#232322);border-radius:14px;
+  padding:15px 15px 13px;display:flex;flex-direction:column;gap:9px;transition:border-color .16s,transform .16s,box-shadow .16s}
+.sr-iqwrap:hover .sr-iqmini{border-color:var(--ac-bord,rgba(194,160,74,.4));transform:translateY(-2px);box-shadow:0 10px 26px rgba(0,0,0,.32)}
+.sr-iqmini-top{display:flex;align-items:center;gap:6px;justify-content:flex-end;min-height:18px}   /* [v1355] 걸치는 배지 자리 비우고 칩은 오른쪽 */
 .sr-iqage{font:700 9.5px inherit;color:var(--tx3,#8a8a86);background:var(--bg-i,#1a1a1a);
   border:1px solid var(--br2,#2f2f2d);padding:2px 6px;border-radius:6px;font-variant-numeric:tabular-nums}
 .sr-iqage.warn{color:#e0a83a;border-color:rgba(224,168,58,.4)}
@@ -34538,6 +34534,27 @@ function _mapToKo(name){if(!name)return name;var s=String(name).trim();if(/[\uAC
 var _MAP_KO2EN=(function(){var m={};for(var g in MAP_GROUPS){MAP_GROUPS[g].forEach(function(e){if(e.en&&e.full)m[String(e.full).toLowerCase()]=e.en;});}var ex={'드림 아일랜드':'Dream Island','오렌 설원':'Oren Snowfield','토템 필드':'Totem Field','드래곤 밸리 던전 1층':'Dragon Valley Dungeon 1F','상아탑':'Ivory Tower','불의 계곡':'Fire Valley','데스나이트 던전':'Death Knight Dungeon','잊혀진 섬':'Forgotten Island','윈다우드':'Windawood','용의 계곡 동굴':'Dragon Valley Cave','축복의 땅 (ats zone)':'Blessed Lands (ATS Zone)','축복의 땅':'Blessed Lands','글루디오 던전':'Gludio Dungeon','오크발 토템':'Orc Barracks Totem'};for(var k in ex){var kk=k.toLowerCase();if(!m[kk])m[kk]=ex[k];}return m;})();
 function _mapToEn(name){if(!name)return name;var s=String(name).trim();if(!/[\uAC00-\uD7AF\u3131-\u3163]/.test(s))return s;var hit=_MAP_KO2EN[s.toLowerCase()];return hit||s;}
 function _mapDisp(name){try{return (typeof _uiLang==='function'&&_uiLang()==='ko')?_mapToKo(name):_mapToEn(name);}catch(_){return _mapToKo(name);}}
+/* [v1355] boss "사냥터 이름 영어로 나오는거 한국어로 · 어떤 맵에서 뛰는지 바로" —
+   리포트 맵은 'Ivory Tower F6-7'·'Oren -3 Hour Map'처럼 층/접미어가 붙어 사전 정확일치가 안 됐다.
+   기본 이름을 부분매칭(긴 것 먼저)하고 층(F6-7→6~7층)·ATS 를 붙여 재조립한다. 못 맞추면 기존 사전. */
+var _MAP_BASE_KO=[['dragon valley dungeon','드래곤 밸리 던전'],['dragon valley cave','용의 계곡 동굴'],['dragon valley','드래곤 밸리'],['dream island','드림 아일랜드'],['blessed lands','축복의 땅'],['ivory tower','상아탑'],['oren snow field','오렌 설원'],['oren snowfield','오렌 설원'],['snow field','설원'],['orc forest','오크 숲'],['orc barracks','오크 주둔지'],['desert dungeon','사막 던전'],['gludio dungeon','굴디오 던전'],['gludin','글루딘'],['totem field','토템 필드'],['death knight dungeon','데스나이트 던전'],['fire valley','불의 계곡'],['windawood','윈다우드'],['forgotten island','잊혀진 섬'],['cruma tower','크루마 탑'],['oren','오렌'],['giran','기란']];
+function _mapKoNice(name){
+  try{
+    if(name==null||name==='') return '—';
+    var s=String(name).trim(); if(!s) return '—';
+    var low=s.toLowerCase();
+    if(/^oren\s*-?\s*3\s*hours?\s*map$/.test(low)) return '오렌 3시간 사냥터';
+    if(/[가-힯ㄱ-ㅣ]/.test(s)) return s;   /* 이미 한국어 */
+    var ats=/ats/.test(low);
+    var lv='', m=low.match(/f\s*(\d+)\s*[-~]\s*(\d+)/);
+    if(m){ lv=m[1]+'~'+m[2]+'층'; }
+    else { m=low.match(/f\s*(\d+)/); if(m){ lv=m[1]+'층'; } }
+    var ko=null;
+    for(var i=0;i<_MAP_BASE_KO.length;i++){ if(low.indexOf(_MAP_BASE_KO[i][0])>=0){ ko=_MAP_BASE_KO[i][1]; break; } }
+    if(!ko){ var t=(typeof _mapToKo==='function')?_mapToKo(s):s; return t; }
+    return ko + (lv?(' '+lv):'') + (ats?' ATS':'');
+  }catch(_){ return String(name||'—'); }
+}
 const CLASS_KO={knight:'기사',mage:'법사',fairy:'요정',elf:'요정',darkelf:'다크엘프',prince:'군주',royal:'군주',warrior:'전사',illusionist:'환술사',dragonknight:'용기사'};
 function entrySpec(r){
   // [v296] Client comes LIVE from the PC's PC Status assignment (PC Status = source of truth),
@@ -36409,7 +36426,11 @@ function _srInjectCSS(){
 "#sr-app .sr-clcard-l{font-size:9.5px;font-weight:700;text-transform:uppercase;letter-spacing:.06em;color:var(--tx3,#5f5e5a);margin-top:3px;}",
 "#sr-app .sr-clcard-meta{display:flex;flex-wrap:wrap;gap:2px 9px;font-size:11.5px;color:var(--tx2,#989792);margin-bottom:5px;}",
     "#sr-app .sr-clcard-meta b{white-space:nowrap;font-weight:inherit;}",
-"#sr-app .sr-clcard-maps{font-size:11px;color:var(--tx3,#5f5e5a);overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}",
+"#sr-app .sr-clcard-maps{display:flex;align-items:center;gap:6px;font-size:12px;color:var(--tx2,#989792);overflow:hidden;white-space:nowrap;margin-top:2px;}",
+"#sr-app .sr-clcard-maps .sr-map-ico{flex:0 0 auto;opacity:.8}",
+"#sr-app .sr-clcard-maps .sr-map-main{flex:0 0 auto;font-weight:800;font-size:12.5px;color:var(--tx,#e6e5e2);letter-spacing:-.01em;}",
+"#sr-app .sr-clcard-maps .sr-map-rest{min-width:0;overflow:hidden;text-overflow:ellipsis;color:var(--tx3,#6b6b67);font-size:11px;}",
+"#sr-app .sr-clcard-maps .sr-map-rest::before{content:'·';margin:0 6px;opacity:.5}",
 "#sr-app .sr-kr{appearance:none;border:1px solid var(--br2,#2f2f2d);background:var(--bg-i,#1a1a1a);color:var(--tx2,#989792);font:inherit;font-size:11.5px;font-weight:700;padding:6px 12px;border-radius:9px;cursor:pointer;text-transform:none;letter-spacing:0;}",
 "#sr-app .sr-kr b{color:var(--tx3,#5f5e5a);font-weight:800;margin-right:2px;}",
 "#sr-app .sr-kr.on{color:var(--ac,#c2a04a);border-color:var(--ac-bord,rgba(194,160,74,.4));background:var(--ac-bg,rgba(194,160,74,.13));}",
@@ -38257,7 +38278,7 @@ function _srRecCardHTML(data){
         o.noStdMaps[_nm] = (o.noStdMaps[_nm]||0) + 1;
       }
     }
-    if(s.key)o.staff[s.key]=(o.staff[s.key]||0)+1; if(s.map)o.maps[s.map]=1; if(s.ms){ if(o.minMs==null||s.ms<o.minMs)o.minMs=s.ms; if(o.maxMs==null||s.ms>o.maxMs)o.maxMs=s.ms; } });
+    if(s.key)o.staff[s.key]=(o.staff[s.key]||0)+1; if(s.map)o.maps[s.map]=(o.maps[s.map]||0)+1;   /* [v1355] 개수 집계 — 주력 맵 정렬용 */ if(s.ms){ if(o.minMs==null||s.ms<o.minMs)o.minMs=s.ms; if(o.maxMs==null||s.ms>o.maxMs)o.maxMs=s.ms; } });
   Object.keys(byClient).forEach(function(c){ if(_clName[c]) byClient[c].client=_clName[c]; });
   try{ if(byClient['남강']) byClient['남강'].client='남강쌤'; }catch(_){}   /* [v1351] 병합 카드의 얼굴은 한글로 */
   // [v400] surface clients ASSIGNED on the PC Status board even with no reports this period (e.g. PC9 with no logs shows as an empty card)
@@ -38271,7 +38292,7 @@ function _srRecCardHTML(data){
     var _hrs=Object.keys(_bk).length, _quota=0, _hg=0;
     Object.keys(_bk).forEach(function(k){ _quota+=_bk[k].tgt; _hg+=_bk[k].gain; });
     var actualH=_hrs>0?(_hg/_hrs):null; var perf=_quota>0?(_hg/_quota*100):null; var targetH=(_hrs>0&&_quota>0)?(_quota/_hrs):null;
-    return {avg:avg,perf:perf,actualH:actualH,targetH:targetH,hours:_hrs,nStaff:Object.keys(o.staff).length,maps:Object.keys(o.maps)}; };
+    return {avg:avg,perf:perf,actualH:actualH,targetH:targetH,hours:_hrs,nStaff:Object.keys(o.staff).length,maps:Object.keys(o.maps).sort(function(a,b){return (o.maps[b]||0)-(o.maps[a]||0);})};   /* [v1355] 많이 뛴 맵 먼저 */ };
   // [v390] Sort client cards by PC number (matching the PC Status board order) instead of alphabetically —
   // alphabetical order scattered PCs in a seemingly random sequence ("messy"). Clients without a PC number
   // (e.g. training accounts not yet assigned) sort after numbered ones, alphabetically among themselves.
@@ -38505,8 +38526,13 @@ function _srRecCardHTML(data){
           var _ap=function(v){ var n=Math.round(Number(v)||0); return (n<0?'-':'+')+Math.abs(n).toLocaleString('en-US'); };
           return '<div class="sr-clcard-act sr-clcard-ade" title="'+(_kl?('합계 '+_ap(o.ade)+' · '+o.adeN+'건 평균'):('total '+_ap(o.ade)+' · avg of '+o.adeN))+'"><span class="sr-clcard-act-l">💰 '+(_kl?'아데나 평균':'Avg adena')+'</span><span class="sr-clcard-act-v">'+_srAdeFmt(Math.round(o.ade/o.adeN))+'</span></div>';
         })():'')   /* [v1347] 값 실린 리포트당 평균, 음수(v1282) 포함 */
-      +'<div class="sr-clcard-meta"><b>👥 '+st.nStaff+(_kl?'명':'')+'</b><b>🧾 '+o.reps+(_kl?'건':'')+'</b><b>🗺 '+(st.maps.length||0)+(_kl?'맵':'')+'</b></div>'
-      +'<div class="sr-clcard-maps">'+(st.maps.length?st.maps.map(function(m){ /* [v1347] boss "맵 한국어로" — 기준표와 같은 사전(_mapToKo) */ if(_kl&&typeof _mapToKo==='function'){ try{ m=_mapToKo(m); }catch(_){} } return esc(m); }).join(' · '):'—')+'</div>'
+      +'<div class="sr-clcard-meta"><b>👥 '+st.nStaff+(_kl?'명':'')+'</b></div>'   /* [v1355] boss "몇 건 몇 맵은 빼고 명만" */
+      +(function(){ /* [v1355] 사냥터 — 한국어·주력 맵을 크게, 나머지는 흐리게 */
+         if(!st.maps.length) return '';
+         var ko=st.maps.map(function(m){ return esc(_mapKoNice(m)); });
+         return '<div class="sr-clcard-maps"><span class="sr-map-ico">🗺</span><b class="sr-map-main">'+ko[0]+'</b>'
+           +(ko.length>1?'<span class="sr-map-rest">'+ko.slice(1,4).join(' · ')+(ko.length>4?' 외 '+(ko.length-4):'')+'</span>':'')+'</div>';
+       })()
       /* [v1284] 기준이 없어 채점이 안 되는 시간이 있으면 그 카드에만 한 줄 붙는다.
          없는 카드에는 아무것도 안 붙으므로 화면은 그대로 깨끗하다. */
       +(function(){
@@ -38659,8 +38685,8 @@ function _srRecCardHTML(data){
           + ' onclick="_srIqPop(event,\''+iq.id+'\')" ondblclick="_srIqCycle(event,\''+iq.id+'\')"'
           + ' title="클릭 — 세부 정보 · 더블클릭 — 단계 전환">'
           + '<div class="sr-iqmini">'
+          +   '<div class="sr-iqstage">'+L[0]+' '+L[1]+'</div>'   /* [v1355] boss "문의중은 전 디자인 — 카드에 걸치게" 롤백 */
           +   '<div class="sr-iqmini-top">'
-          +     '<span class="sr-iqpill">'+L[0]+' '+L[1]+'</span>'
           +     (age >= 2 ? '<span class="sr-iqage'+(age>=7?' warn':'')+'">D+'+age+'</span>' : '')
           +     (pcIt ? '<span class="sr-clcard-pc">PC'+_pcbEsc(String(pcIt.pc))+'</span>'
                       : '<span class="sr-clcard-pc sr-iqmini-nopc">PC 미정</span>')
