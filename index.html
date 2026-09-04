@@ -4,7 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
 <title>ARASAKA Corp</title>
-<!-- BUILD: v1346 | 절단 금지 클라 칩까지 확장 · 시간칸 끌기에 잡기 신호 · 풀 칩 링 안쪽 고정 -->
+<!-- BUILD: v1347 | 기록·통계 클라 카드 — 전체 기준 뒤집기 버튼·평균EXP 확대·아데나 평균 표기·맵 한국어 -->
 <!-- v745 기록은 git 이력(v1302 이전 커밋)에 있다 — 100KB 변경사 주석을 배포에서 제거 -->
 <!-- [v677] a <link href> cannot read a CSS variable, so the favicon carries its own copy.
      64px: a browser tab draws it at 16-32px, so this is 2x-DPR sharp at 11KB. -->
@@ -36317,7 +36317,7 @@ function _srInjectCSS(){
 "#sr-app .sr-clcard-warn span{color:var(--tx2,#bdbcb8);font-weight:700;font-variant-numeric:tabular-nums;}",
 "#sr-app .sr-clcard-warn em{color:var(--tx3,#6c6b66);font-style:normal;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;min-width:0;flex:1 1 100%;}",
 "#sr-app .sr-clcard-hero .sr-pfp{flex:none;align-self:center;}",
-"#sr-app .sr-clcard-big{font-size:22px;font-weight:800;font-variant-numeric:tabular-nums;color:var(--ac,#c2a04a);}",
+"#sr-app .sr-clcard-big{font-size:28px;font-weight:800;font-variant-numeric:tabular-nums;color:var(--ac,#c2a04a);}",
 "#sr-app .sr-clcard-l{font-size:9.5px;font-weight:700;text-transform:uppercase;letter-spacing:.06em;color:var(--tx3,#5f5e5a);margin-top:3px;}",
 "#sr-app .sr-clcard-meta{display:flex;flex-wrap:wrap;gap:2px 9px;font-size:11.5px;color:var(--tx2,#989792);margin-bottom:5px;}",
     "#sr-app .sr-clcard-meta b{white-space:nowrap;font-weight:inherit;}",
@@ -37396,8 +37396,10 @@ function _srRecToolsHTML(){
     var ko = (typeof _uiLang==="function") && _uiLang()==="ko";
     var admin = (typeof currentUserRole!=="undefined") && currentUserRole==="admin";
     var csv = '<button class="sr-rec-csv" onclick="_srRecCSV()" title="'+(ko?"표로 내려받기":"Download CSV")+'">\u2193 CSV</button>';
-    if(!admin) return '<span class="sr-rec-tools">'+csv+'</span>';
-    return '<span class="sr-rec-tools">'+csv
+    /* [v1347] 클라별 카드 전체를 기준(뒷면)으로 한 번에 */
+    var flipAll = '<button class="sr-rec-csv" onclick="_srClFlipAll()" title="'+(ko?'클라별 카드 전체를 기준 화면으로 뒤집기 / 되돌리기':'Flip all client cards to standards')+'">⇄ '+(ko?'기준':'Std')+'</button>';
+    if(!admin) return '<span class="sr-rec-tools">'+flipAll+csv+'</span>';
+    return '<span class="sr-rec-tools">'+flipAll+csv
       + '<button class="sr-rec-more" onclick="_srRecToolsOpen(this)" title="'+(ko?"기록 지우기":"Delete records")+'">\u22ef</button>'
       + '<span class="sr-rec-dang">'
       + '<button class="sr-rec-csv sr-rec-danger" onclick="_srRecKeepToday()">'+(ko?"오늘만 남기기":"Keep today only")+'</button>'
@@ -38136,7 +38138,7 @@ function _srRecCardHTML(data){
   var byClient={}, _clName={}, _clCnt={};
   sessions.forEach(function(s){ var raw=String(s.client||'').trim(); if(!raw) return; var c=clNorm(raw); if(!c) return;
     if(!byClient[c])byClient[c]={key:c,client:raw,pc:s.pc,reps:0,statuses:0,mgain:0,ade:0,tgtSum:0,clean:0,cleanN:0,staff:{},maps:{},minMs:null,maxMs:null,_reps:[]};
-    var o=byClient[c]; o.reps++; o.ade=(o.ade||0)+(s.ade||0);   /* [v1176] 이 클라에서 나온 아데나 */
+    var o=byClient[c]; o.reps++; o.ade=(o.ade||0)+(s.ade||0); if(Number(s.ade)) o.adeN=(o.adeN||0)+1;   /* [v1347] 아데나 평균용 — 값이 실린 리포트 수 */   /* [v1176] 이 클라에서 나온 아데나 */
     _clCnt[c]=_clCnt[c]||{}; _clCnt[c][raw]=(_clCnt[c][raw]||0)+1; if(!_clName[c]||_clCnt[c][raw]>_clCnt[c][_clName[c]]) _clName[c]=raw;
     if(s.pc!=null&&String(s.pc)!=='')o.pc=s.pc;
     if(s.tag!=='checkin' && !s.ignored && !s.brk){ o.statuses++; o._reps.push({ms:s.ms,target:s.target,gain:s.gain,flag:!!s.flag}); if(!s.flag){ o.clean+=(s.gain||0); o.cleanN++; if(s.target!=null){ o.mgain+=(s.gain||0); o.tgtSum+=s.target; } }
@@ -38395,9 +38397,9 @@ function _srRecCardHTML(data){
       +'<div class="sr-clcard-top"><span class="sr-clcard-nm">'+esc(o.client||c)+'</span>'+((o.pc!=null&&String(o.pc)!=='')?'<span class="sr-clcard-pc">PC'+esc(String(o.pc))+'</span>':'')+'</div>'
       +'<div class="sr-clcard-hero"><div class="sr-clcard-bigwrap"><span class="sr-clcard-big">'+(st.actualH!=null?st.actualH.toFixed(2)+'%':'—')+'</span><span class="sr-clcard-l">'+(_kl?'평균 EXP%/h':'Avg EXP%/h')+'</span></div>'+(pf!=null?'<span class="sr-pfp '+pfCls(pf)+'">'+(_kl?'기준 ':'vs Std ')+Math.round(pf)+'%</span>':'')+'</div>'
       +(st.targetH!=null?'<div class="sr-clcard-act"><span class="sr-clcard-act-l">'+(_kl?'기준/h':'Std/h')+'</span><span class="sr-clcard-act-v">'+st.targetH.toFixed(2)+'%</span></div>':'')
-      +((o.ade)?('<div class="sr-clcard-act sr-clcard-ade"><span class="sr-clcard-act-l">💰 '+(_kl?'아데나':'Adena')+'</span><span class="sr-clcard-act-v">'+_srAdeFmt(o.ade)+'</span></div>'):'')   /* [v1282] 음수(잃은 아데나)도 보인다 */
+      +((o.adeN>0)?('<div class="sr-clcard-act sr-clcard-ade" title="'+(_kl?('합계 '+_srAdeFmt(o.ade)+' · '+o.adeN+'건'):('total '+_srAdeFmt(o.ade)+' · '+o.adeN))+'"><span class="sr-clcard-act-l">💰 '+(_kl?'아데나 평균':'Avg adena')+'</span><span class="sr-clcard-act-v">'+_srAdeFmt(Math.round(o.ade/o.adeN))+'</span></div>'):'')   /* [v1347] boss "수파베이스에 들어오는 아데나 평균값" — 값 실린 리포트당 평균(합계·건수는 툴팁에). 음수(v1282)도 그대로 보인다 */
       +'<div class="sr-clcard-meta"><b>👥 '+st.nStaff+(_kl?'명':'')+'</b><b>🧾 '+o.reps+(_kl?'건':'')+'</b><b>🗺 '+(st.maps.length||0)+(_kl?'맵':'')+'</b></div>'
-      +'<div class="sr-clcard-maps">'+(st.maps.length?st.maps.map(esc).join(' · '):'—')+'</div>'
+      +'<div class="sr-clcard-maps">'+(st.maps.length?st.maps.map(function(m){ /* [v1347] boss "맵 한국어로" — 기준표와 같은 사전(_mapToKo) */ if(_kl&&typeof _mapToKo==='function'){ try{ m=_mapToKo(m); }catch(_){} } return esc(m); }).join(' · '):'—')+'</div>'
       /* [v1284] 기준이 없어 채점이 안 되는 시간이 있으면 그 카드에만 한 줄 붙는다.
          없는 카드에는 아무것도 안 붙으므로 화면은 그대로 깨끗하다. */
       +(function(){
@@ -38452,6 +38454,20 @@ function _srRecCardHTML(data){
       if(!card.classList.contains("flipped")){ try{ _srClBackFill(card); }catch(_){} }
       card.classList.toggle("flipped");
     }catch(e){ console.warn("cl flip:", e); }
+  };
+  /* [v1347] boss "전체를 전부 바꾸는 버튼도 하나" — 반 넘게 앞면이면 전부 뒷면(기준)으로, 아니면 전부 앞면으로 */
+  window._srClFlipAll = function(){
+    try{
+      var cards = document.querySelectorAll('.sr-clcard');
+      if(!cards.length){ try{ toast((typeof _uiLang!=='function'||_uiLang()==='ko')?'클라별 화면에서 쓰는 단추예요':'Switch to client view first'); }catch(_){} return; }
+      var flipped = document.querySelectorAll('.sr-clcard.flipped').length;
+      var toBack = flipped < cards.length / 2;
+      cards.forEach(function(card){
+        if(toBack){
+          if(!card.classList.contains('flipped')){ try{ _srClBackFill(card); }catch(_){} card.classList.add('flipped'); }
+        } else card.classList.remove('flipped');
+      });
+    }catch(e){ console.warn('cl flip all:', e); }
   };
   /* ═══ [v1331] 뒷면은 기준 EXP 화면의 그 카드 그대로 ═══════════════════════
      v1330 은 PC 시계 보드의 뒷면(_ckStdBack)을 가져왔다. 그건 레벨·사냥터·목표
