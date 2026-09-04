@@ -4,7 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
 <title>ARASAKA Corp</title>
-<!-- BUILD: v1344 | 직원 칩 적응형 개편 — 컨테이너 쿼리로 제 폭 감지, 절단 대신 줄바꿈·라벨 접기(창 크기·배율 무관) -->
+<!-- BUILD: v1345 | 이름은 사람이다 자르지 않는다 — 칩 이름 말줄임 제거(두 줄 흘림), 대롱대롱 구분점 정리 -->
 <!-- v745 기록은 git 이력(v1302 이전 커밋)에 있다 — 100KB 변경사 주석을 배포에서 제거 -->
 <!-- [v677] a <link href> cannot read a CSS variable, so the favicon carries its own copy.
      64px: a browser tab draws it at 16-32px, so this is 2x-DPR sharp at 11KB. -->
@@ -10858,6 +10858,13 @@ body.pcboxes-on .pbox .pool-rolegrid .s-chip,
 .s-chip-info{flex:1 1 130px;min-width:0}
 .s-chip-nm{flex-wrap:wrap;row-gap:2px}
 .s-chip .s-nm-t{flex:1 1 auto;min-width:0;max-width:100%}
+/* [v1345] boss "다 짤리는데 아직도" — v1230 은 '이름을 자르고 배지를 살린다' 였는데
+   방향이 뒤집혔다: 이름은 사람이다, 자르지 않는다. 좁으면 두 줄로 흘리고
+   두 줄을 넘어갈 때만 말줄임(그런 이름은 없다시피 하다). */
+.s-chip .s-nm-t,.s-chip-nm .s-nm-t{
+  white-space:normal;overflow-wrap:anywhere;word-break:keep-all;
+  display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;
+  overflow:hidden;text-overflow:ellipsis}
 .s-chip .dayoff-toggle,.s-chip .s-chip-status,.s-chip .leader-grab{flex:0 0 auto}
 .s-chip .s-chip-meta,.pbox .s-chip .s-chip-meta,.pooldock .s-chip-meta{
   white-space:normal;flex-wrap:wrap;row-gap:2px;overflow:visible}
@@ -59855,7 +59862,7 @@ function staffChipHTML(s){
           <span class="wd-tag" title="${s.work_days===6?'월~토':s.work_days===5?'월~금':s.work_days+'일/주'}">주${s.work_days}일</span>
           ${/* [v1146] 0/12H · 12H — 같은 말을 두 번 하면서 이름 자리를 빼앗고 있었다.
                한 시간도 안 쓴 사람에게 ‘0을 썼다’ 고 적을 이유가 없다. */''}
-          <span class="hrs-used${used > 0 ? '' : ' zero'}">${used}/${s.shiftLen}H · </span><b class="hrs-rem">${isPartOpen?'<i class="hrs-open">OPEN</i> ':''}${Math.max(0,remain)}H<span class="hrs-rem-lbl"> 잔여</span></b>
+          <span class="hrs-used${used > 0 ? '' : ' zero'}">${used}/${s.shiftLen}H</span><b class="hrs-rem">${isPartOpen?'<i class="hrs-open">OPEN</i> ':''}${Math.max(0,remain)}H<span class="hrs-rem-lbl"> 잔여</span></b>${/* [v1345] '· ' 텍스트 구분점 제거 — 줄바꿈되면 점만 대롱대롱 남았다(gap이 간격을 맡는다) */''}
         </div>
       </div>
       ${dayoffBtn}
