@@ -4,7 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
 <title>ARASAKA Corp</title>
-<!-- BUILD: v1366 | 기록·통계 날짜 묶음: 오늘만 펼치고 나머지는 접힘(연/닫은 건 기억) -->
+<!-- BUILD: v1367 | 클라별 드래그 앤 드롭 — 클라·빈 자리 카드는 PC 현황 순서를, 문의 카드는 문의 순서를 옮긴다 -->
 <!-- v745 기록은 git 이력(v1302 이전 커밋)에 있다 — 100KB 변경사 주석을 배포에서 제거 -->
 <!-- [v677] a <link href> cannot read a CSS variable, so the favicon carries its own copy.
      64px: a browser tab draws it at 16-32px, so this is 2x-DPR sharp at 11KB. -->
@@ -9448,6 +9448,12 @@ html[data-theme=light] #nav-chg{background:#fff;border-color:rgba(0,0,0,.1);box-
 .sr-clhid{grid-column:1/-1;justify-self:start;background:transparent;border:1px dashed var(--br2,#2f2f33);color:#7a7a76;border-radius:10px;padding:8px 12px;font-weight:600;font-size:12px;cursor:pointer;transition:color .14s,border-color .14s}   /* [v1358] 숨긴 클라 토글 */
 .sr-clhid:hover{color:#c9c9c4;border-color:#55555a}
 .pcb-iqnewpc{display:flex;gap:6px;flex:1;align-items:center}   /* [v1363] 새 PC 번호 입력 */
+/* [v1367] 클라별 드래그 앤 드롭 */
+#sr-app .sr-clgrid > [draggable="true"]{cursor:grab}
+#sr-app .sr-clgrid > [draggable="true"]:active{cursor:grabbing}
+#sr-app .sr-clgrid > .sr-dragging{opacity:.35}
+#sr-app .sr-clgrid > .sr-drop-before{box-shadow:-7px 0 0 -2px #c9963a!important}
+#sr-app .sr-clgrid > .sr-drop-after{box-shadow:7px 0 0 -2px #c9963a!important}
 /* [v1364] 클라 카드 — 기준 배지 아래 인원, 기록 없는 카드는 한 줄 안내 */
 #sr-app .sr-clcard-hero{align-items:flex-start}
 #sr-app .sr-clcard-side{display:flex;flex-direction:column;align-items:flex-end;gap:6px;flex:0 0 auto}
@@ -37600,6 +37606,69 @@ function _srRecToolsHTML(){
 function _srRecModeBy(m){ window._srRecMode=m||'staff'; window._srRecFilter=''; window._srRecClient=''; _srRecReRender(); }
 function _srRecClientBy(c){ window._srRecClient=c||''; if(c) window._srRecFilter=''; _srRecReRender(); }
 function _srRecClientByIdx(i){ var c=(window._srRecClients||[])[i]; window._srRecClient=c||''; window._srRecFilter=''; _srRecReRender(); }
+/* [v1367] boss "이쪽 화면 전체 드래그 앤 드롭 되게 해줘" — 클라별 카드 순서를 끌어서 바꾼다.
+   클라 카드·빈 자리 카드는 PC 번호로 PCS(PC 현황판 배열) 순서를 옮긴다 → 두 판이 늘 같다(v396 원칙).
+   문의 카드는 PCB_INQ 순서. 저장은 각자의 기존 경로(savePCState / _pcbSave). 같은 종류끼리만 놓인다. */
+window._srClDrag = null;
+function _srClDndBind(g){
+  if(!g || g._srDnd) return; g._srDnd = 1;
+  var pick = function(t){ return (t && t.closest) ? t.closest('.sr-clgrid > [draggable="true"]') : null; };
+  var kindOf = function(el){ return el.hasAttribute('data-iqid') ? 'iq' : (el.hasAttribute('data-pc') ? 'pc' : null); };
+  var clearMarks = function(){ g.querySelectorAll('.sr-drop-before,.sr-drop-after').forEach(function(x){ x.classList.remove('sr-drop-before','sr-drop-after'); }); };
+  g.addEventListener('dragstart', function(e){
+    var el = pick(e.target); if(!el) return;
+    var k = kindOf(el); if(!k) return;
+    if(e.target.closest && e.target.closest('button,input,select,[contenteditable=true]')){ e.preventDefault(); return; }
+    window._srClDrag = { kind:k, pc:el.getAttribute('data-pc'), iqid:el.getAttribute('data-iqid') };
+    el.classList.add('sr-dragging');
+    try{ e.dataTransfer.effectAllowed = 'move'; e.dataTransfer.setData('text/plain', k+':'+(window._srClDrag.pc||window._srClDrag.iqid)); }catch(_){}
+  });
+  g.addEventListener('dragover', function(e){
+    var d = window._srClDrag; if(!d) return;
+    var el = pick(e.target); if(!el || kindOf(el) !== d.kind){ clearMarks(); return; }
+    e.preventDefault(); try{ e.dataTransfer.dropEffect = 'move'; }catch(_){}
+    var r = el.getBoundingClientRect(); var after = (e.clientX - r.left) > r.width/2;
+    clearMarks(); el.classList.add(after ? 'sr-drop-after' : 'sr-drop-before');
+  });
+  g.addEventListener('dragleave', function(e){ if(!g.contains(e.relatedTarget)) clearMarks(); });
+  g.addEventListener('drop', function(e){
+    var d = window._srClDrag; if(!d) return;
+    var el = pick(e.target); if(!el || kindOf(el) !== d.kind){ clearMarks(); return; }
+    e.preventDefault();
+    var after = el.classList.contains('sr-drop-after'); clearMarks();
+    try{
+      if(d.kind === 'pc') _srClMovePc(Number(d.pc), Number(el.getAttribute('data-pc')), after);
+      else _srClMoveIq(d.iqid, el.getAttribute('data-iqid'), after);
+    }catch(err){ console.warn('cl dnd:', err); }
+  });
+  g.addEventListener('dragend', function(){ clearMarks(); g.querySelectorAll('.sr-dragging').forEach(function(x){ x.classList.remove('sr-dragging'); }); window._srClDrag = null; });
+}
+function _srClMovePc(src, dst, after){
+  if(!(src > 0) || !(dst > 0) || src === dst) return;
+  if(typeof PCS === 'undefined' || !Array.isArray(PCS)) return;
+  var from = PCS.findIndex(function(p){ return Number(p && p.id) === src; }); if(from < 0) return;
+  var item = PCS.splice(from, 1)[0];
+  var to = PCS.findIndex(function(p){ return Number(p && p.id) === dst; });
+  if(to < 0){ PCS.splice(from, 0, item); return; }
+  PCS.splice(after ? to + 1 : to, 0, item);
+  try{ logAction('update', 'PC order (클라별 drag)', 'PC-'+pad2(src)+' '+(after ? 'after' : 'before')+' PC-'+pad2(dst)); }catch(_){}
+  try{ if(typeof savePCState === 'function') savePCState(); }catch(_){}
+  try{ if(typeof render === 'function') render(); }catch(_){}
+  try{ renderRecords(true); }catch(_){}
+  try{ toast('PC-'+pad2(src)+' → PC-'+pad2(dst)+(after ? ' 뒤' : ' 앞')); }catch(_){}
+}
+function _srClMoveIq(srcId, dstId, after){
+  if(!srcId || !dstId || srcId === dstId) return;
+  if(typeof PCB_INQ === 'undefined' || !Array.isArray(PCB_INQ)) return;
+  var from = PCB_INQ.findIndex(function(x){ return x && x.id === srcId; }); if(from < 0) return;
+  var item = PCB_INQ.splice(from, 1)[0];
+  var to = PCB_INQ.findIndex(function(x){ return x && x.id === dstId; });
+  if(to < 0){ PCB_INQ.splice(from, 0, item); return; }
+  PCB_INQ.splice(after ? to + 1 : to, 0, item);
+  try{ _pcbSave(); }catch(_){}
+  try{ renderRecords(true); }catch(_){}
+  try{ if(typeof _pcRT !== 'undefined' && _pcRT) _pcRT.send({ type:'broadcast', event:'inq', payload:{ id:_pcRTMe(), tab:_PC_TAB_ID } }); }catch(_){}
+}
 function _srSlToggle(id){ var w=document.getElementById(id); if(!w) return; var c=w.classList.toggle('collapsed'); try{ var _d=w.getAttribute('data-d'); if(_d){ window._srSlOpen=window._srSlOpen||{}; window._srSlOpen[_d]=!c; } }catch(_){}   /* [v1366] 연/닫은 묶음 기억 */ var h=w.previousElementSibling; var a=h&&h.querySelector('.sr-sl-ca'); if(a) a.textContent=c?'▸':'▾'; }
 function _srRecGroupBy(g){ g=g||'all';
   /* [v1039] boss "야간 토글이 안 꺼진다" — 켜져 있는 칩을 다시 누르면 꺼져야 한다.
@@ -38611,7 +38680,7 @@ function _srRecCardHTML(data){
        키보드 접근은 그대로 준다. */
     var _pcNo = (o.pc!=null && String(o.pc)!=='') ? Number(o.pc) : null;
     var _emptyCard = (st.actualH==null && !(o.statuses>0));   /* [v1364] boss "오늘 눌렀을 때 —/0명 카드 왜 이래" — 기간 내 기록이 없는 카드 */
-    return '<div class="sr-clcard'+(o._noData?' sr-clcard-nodata':'')+(_emptyCard?' sr-clcard-empty':'')+'" role="button" tabindex="0"'+(_emptyCard?(' data-empty="'+(_kl?'이 기간 기록 없음':'No records in this period')+'"'):'')
+    return '<div class="sr-clcard'+(o._noData?' sr-clcard-nodata':'')+(_emptyCard?' sr-clcard-empty':'')+'" role="button" tabindex="0"'+(_pcNo!=null?' draggable="true"':'')+(_emptyCard?(' data-empty="'+(_kl?'이 기간 기록 없음':'No records in this period')+'"'):'')
       +' onclick="_srClCardTap(event,'+ci+')"'
       +' ondblclick="_srClFlip(event,'+ci+')"'
       +' onkeydown="if(event.key===\'Enter\'){_srRecClientByIdx('+ci+')}"'
@@ -38735,6 +38804,7 @@ function _srRecCardHTML(data){
   window._srIqSizeSync = function(){
     try{
       var g = document.querySelector('#sr-app .sr-clgrid'); if(!g) return;
+      try{ _srClDndBind(g); }catch(_){}   /* [v1367] 드래그 앤 드롭 위임 핸들러(그리드가 새로 그려질 때마다) */
       var hs = [].map.call(g.querySelectorAll('.sr-clcard:not(.flipped):not(.sr-clcard-nodata):not(.sr-clcard-blank):not(.sr-clcard-empty)'), function(el){ return el.getBoundingClientRect().height; })
         .filter(function(h){ return h > 0; }).sort(function(a,b){ return a-b; });
       if(!hs.length){ g.style.removeProperty('--sr-iqh'); return; }
@@ -38794,7 +38864,7 @@ function _srRecCardHTML(data){
         var whoBits = [];
         if((iq.staff||[]).length) whoBits.push('👥 '+iq.staff.map(function(s){ return _pcbEsc(_pcbStaffName(s)); }).slice(0,3).join(' · ')+(iq.staff.length>3?' 외':''));
         if(iq.tester) whoBits.push('🧪 '+_pcbEsc(_pcbStaffName(iq.tester)));
-        return '<div class="sr-iqwrap st-'+st+'" data-iqid="'+iq.id+'"'
+        return '<div class="sr-iqwrap st-'+st+'" data-iqid="'+iq.id+'" draggable="true"'
           + ' onclick="_srIqPop(event,\''+iq.id+'\')" ondblclick="_srIqCycle(event,\''+iq.id+'\')"'
           + ' title="클릭 — 세부 정보 · 더블클릭 — 단계 전환">'
           + '<div class="sr-iqmini">'
@@ -38954,7 +39024,7 @@ function _srRecCardHTML(data){
   var _boardPcs=[]; try{ var _bp={}; _hidCl.forEach(function(k){ var pn=Number(byClient[k]&&byClient[k].pc); if(isFinite(pn)&&pn>0) _bp[pn]=1; }); _boardPcs=Object.keys(_bp).map(Number); }catch(_){} _boardPcs.sort(function(a,b){ return a-b; });
   var _seenPc={}; clKeys.forEach(function(c){ var pn=Number(byClient[c]&&byClient[c].pc); if(isFinite(pn)&&pn>0) _seenPc[pn]=1; });
   var _blankI=0;
-  var _blankCard=function(pn){ return '<div class="sr-clcard sr-clcard-blank" aria-hidden="true"><div class="sr-clcard-top"><span class="sr-clcard-nm">—</span><span class="sr-clcard-pc">PC'+pn+'</span></div><div class="sr-clcard-blank-body">'+(_uiLang()==='ko'?'비어 있음':'Empty')+'</div></div>'; };
+  var _blankCard=function(pn){ return '<div class="sr-clcard sr-clcard-blank" aria-hidden="true" draggable="true" data-pc="'+pn+'"><div class="sr-clcard-top"><span class="sr-clcard-nm">—</span><span class="sr-clcard-pc">PC'+pn+'</span></div><div class="sr-clcard-blank-body">'+(_uiLang()==='ko'?'비어 있음':'Empty')+'</div></div>'; };
   var _blanksUpTo=function(p){ while(_blankI<_boardPcs.length && _boardPcs[_blankI]<p){ var bn=_boardPcs[_blankI++]; if(!_seenPc[bn]) _realCards+=_blankCard(bn); } };
   clKeys.forEach(function(c,ci){ var h=_clCardOne(c,ci); if(_isTrainClient(byClient[c])){ _trainCards+=h; _trainN++; } else { var pn=Number(byClient[c].pc); if(isFinite(pn)&&pn>0) _blanksUpTo(pn); _realCards+=h; _realN++; } });
   if(_realN) _blanksUpTo(Infinity);
