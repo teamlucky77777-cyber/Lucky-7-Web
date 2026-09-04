@@ -4,7 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
 <title>ARASAKA Corp</title>
-<!-- BUILD: v1330 | 클라 카드 더블클릭 → 360도 뒤집혀 기준 EXP 수정 (시계 보드 방식 재사용) -->
+<!-- BUILD: v1331 | 클라 카드 뒷면을 기준 EXP 화면의 카드와 같은 코드로 -->
 <!-- v745 기록은 git 이력(v1302 이전 커밋)에 있다 — 100KB 변경사 주석을 배포에서 제거 -->
 <!-- [v677] a <link href> cannot read a CSS variable, so the favicon carries its own copy.
      64px: a browser tab draws it at 16-32px, so this is 2x-DPR sharp at 11KB. -->
@@ -36157,6 +36157,33 @@ function _srInjectCSS(){
 "  font:600 12px ui-monospace,monospace;padding:5px 8px;}",
 "#sr-app .sr-clback .ck-bk-row input:focus{outline:none;border-color:var(--ac,#c2a04a);}",
 "@media (prefers-reduced-motion: reduce){#sr-app .sr-clflip{transition:none;}}",
+/* [v1331] 뒷면 = 기준 EXP 화면의 카드 그대로. 카드 안에 카드가 들어가니
+   안쪽 카드의 테두리·배경·여백을 지우고 바깥 카드에 자리를 맞춘다. */
+"#sr-app .sr-clback .cs-card{border:none;background:transparent;border-radius:0;padding:0;}",
+"#sr-app .sr-clback .cs-name{font-size:14px;}",
+"#sr-app .sr-clback .cs-num{font-size:13px;}",
+"#sr-app .sr-clback .cs-pc{margin:3px 0 9px;}",
+"#sr-app .sr-clback .cs-chip{font-size:10.5px;padding:2px 7px;}",
+"#sr-app .sr-clback .cs-map{padding:6px 2px;}",
+"#sr-app .sr-clback .cs-map-n,#sr-app .sr-clback .cs-map-r{font-size:12.5px;}",
+/* 되돌리기 단추는 구석에 붙인다 — 편집 단추와 겹치지 않게 그만큼 밀어 준다 */
+"#sr-app .sr-clback .cs-cgrip{display:none;}",
+"#sr-app .sr-clback .cs-edit{margin-right:31px;}",
+"#sr-app .sr-clback-x{position:absolute;top:0;right:0;z-index:2;width:26px;height:26px;line-height:1;",
+"  background:var(--bg-i,#1a1a1a);border:1px solid var(--br2,#2f2f2d);border-radius:8px;",
+"  color:var(--tx2,#989792);font-size:13px;cursor:pointer;padding:0;}",
+"#sr-app .sr-clback-x:hover{color:var(--tx,#e6e5e2);border-color:var(--ac,#c2a04a);}",
+"#sr-app .sr-clback-msg{padding:26px 4px;text-align:center;color:var(--tx3,#6c6b66);font-size:12px;}",
+/* 맵이 많은 카드도 잘리지 않게 — 뒤집힌 카드만 키운다. 격자라 같은 줄의
+   카드는 원래도 키가 같으므로 이 줄만 함께 자란다. */
+"#sr-app .sr-clcard{transition:border-color .14s ease,transform .14s ease,min-height .28s ease;}",
+"#sr-app .sr-clcard.flipped{min-height:344px;}",
+/* 뒤집기 껍데기가 카드 높이를 다 쓰게 한다 — 안 그러면 뒷면이 앞면 높이에
+   갇혀 맵 줄이 잘린다(앞면은 짧고 뒷면은 길다). */
+"#sr-app .sr-clflip{flex:1 1 auto;min-height:0;}",
+"#sr-app .sr-clback::-webkit-scrollbar{width:5px;}",
+"#sr-app .sr-clback::-webkit-scrollbar-thumb{background:var(--br2,#33332f);border-radius:3px;}",
+
 /* [v1284] 기준 없음 표시 — 카드 안에서만 조용히. 상자를 새로 만들지 않는다. */
 "#sr-app .sr-clcard-warn{display:flex;align-items:baseline;gap:6px;flex-wrap:wrap;margin-top:8px;padding:6px 8px;border-radius:8px;border-left:2px solid #f59e0b;background:rgba(245,158,11,.09);font-size:10px;line-height:1.35;}",
 "#sr-app .sr-clcard-warn b{color:#f59e0b;font-weight:800;letter-spacing:-.01em;}",
@@ -38255,7 +38282,7 @@ function _srRecCardHTML(data){
               + '<em>'+few+'</em></div>';
        })()
       +'</div>'                       /* ← 앞면 끝 */
-      +'<div class="sr-clface sr-clback">'+_srClStdBack(ci, _pcNo, o.client||c)+'</div>'
+      +'<div class="sr-clface sr-clback" data-cl="'+esc(o.client||c)+'"></div>'
       +'</div></div>';                /* ← 뒤집기 껍데기 · 카드 끝 */
   };
   /* ═══ [v1330] 클라 카드 뒤집기 — 앞면은 성적, 뒷면은 기준 ═══════════════════ */
@@ -38275,27 +38302,93 @@ function _srRecCardHTML(data){
       clearTimeout(window._srClTapT);                       /* 한 번 누른 것은 취소 */
       /* 글자를 끌어 고르는 중이면 뒤집지 않는다 — 더블클릭이 선택과 겹친다(ck-flip 과 같은 판단) */
       try{ var sel = window.getSelection && window.getSelection(); if(sel && String(sel).length > 1) return; }catch(_){}
+      /* 뒷면에서 글자를 두 번 눌러 고른 것은 뒤집기가 아니다 */
+      if(ev && ev.type === "dblclick" && ev.target && ev.target.closest && ev.target.closest(".sr-clback")) return;
       var card = document.querySelector(".sr-clcard[data-ci='" + ci + "']");
       if(!card) return;
+      if(!card.classList.contains("flipped")){ try{ _srClBackFill(card); }catch(_){} }
       card.classList.toggle("flipped");
     }catch(e){ console.warn("cl flip:", e); }
   };
-  /* 뒷면 — PC 시계 보드의 _ckStdBack 을 그대로 쓴다. 그 안의 되돌리기 버튼만
-     이 카드용으로 바꿔 끼운다(원래는 시계 카드를 찾는다). */
-  window._srClStdBack = function(ci, pcNo, nm){
-    var kl = (typeof _uiLang!=="function") || _uiLang()==="ko";
-    var back = "<button class='ck-hb sr-clback-x' title='" + (kl?"앞면으로":"Back") + "'" +
-               " onclick='event.stopPropagation();_srClFlip(event," + ci + ")'>↩</button>";
-    if(pcNo == null || typeof _ckStdBack !== "function"){
-      return "<div class='ck-bk-top'><span class='ck-bk-t'>" + (kl?"스탠다드":"Standard") + "</span>" + back + "</div>" +
-             "<div class='ck-bk-empty'>" + (kl?"PC 가 연결되지 않은 고객입니다":"No PC linked") + "</div>";
+  /* ═══ [v1331] 뒷면은 기준 EXP 화면의 그 카드 그대로 ═══════════════════════
+     v1330 은 PC 시계 보드의 뒷면(_ckStdBack)을 가져왔다. 그건 레벨·사냥터·목표
+     세 칸짜리 급한 수정용이라 기준 EXP 화면의 카드와 아예 다르게 생겼다.
+     이제 그 화면이 쓰는 _csCardBody 를 그대로 부른다 — 칩도, 맵 줄도, 편집
+     버튼도 같은 코드에서 나온다.
+
+     카드를 그릴 때 미리 만들지 않고 뒤집는 순간에 채운다. 한 화면에 카드가
+     수십 장인데 아무도 안 볼 뒷면까지 미리 만들면 그리는 값만 두 배가 된다. */
+  window._srClBackFill = function(card, force){
+    if(!card) return;
+    var face = card.querySelector(".sr-clback"); if(!face) return;
+    if(face.getAttribute("data-filled") === "1" && !force) return;
+    var kl = (typeof _uiLang !== "function") || _uiLang() === "ko";
+    var nm = face.getAttribute("data-cl") || "";
+    var ci = Number(card.getAttribute("data-ci"));
+    try{ if(typeof _csInjectCSS === "function") _csInjectCSS(); }catch(_){}
+    var backBtn = "<button class='sr-clback-x' title='" + (kl ? "앞면으로" : "Back") + "'"
+      + " onclick='event.stopPropagation();_srClFlip(event," + ci + ")'>↩</button>";
+    var put = function(html, pending){
+      face.innerHTML = html + backBtn;
+      face.setAttribute("data-filled", pending ? "0" : "1");
+      /* 뒷면에서는 맵을 끌어 옮기지 않는다 — 옮길 곳(기준 EXP 그리드)이 여기엔 없다.
+         data-ci 를 떼면 손잡이도 같이 사라진다(.cs-map[data-ci] 규칙). */
+      try{
+        Array.prototype.forEach.call(face.querySelectorAll("[draggable]"), function(el){
+          el.draggable = false; el.removeAttribute("data-ci"); el.removeAttribute("data-mi");
+        });
+      }catch(_){}
+    };
+    var idx = _srClCsIdx(nm);
+    if(idx < 0){
+      /* 기준표를 아직 안 불러왔다 — 한 번만 가져와서 열려 있는 뒷면을 전부 채운다 */
+      if(!window._srClCsPend && typeof _srGetCalc === "function"
+         && !(Array.isArray(_csRows) && _csRows.length)){
+        window._srClCsPend = 1;
+        put("<div class='sr-clback-msg'>" + (kl ? "기준 불러오는 중…" : "Loading…") + "</div>", true);
+        _srGetCalc("clients").then(function(arr){
+          window._srClCsPend = 0;
+          try{ _csBuildRows(Array.isArray(arr) ? arr : []); }catch(_){}
+          _srClBackRefillOpen();
+        }).catch(function(){ window._srClCsPend = 0; _srClBackRefillOpen(); });
+        return;
+      }
+      put("<div class='sr-clback-msg'>" + (kl ? "이 고객의 기준이 아직 없습니다" : "No standard yet") + "</div>");
+      return;
     }
-    var html = "";
-    try{ html = _ckStdBack(pcNo); }catch(_){ html = ""; }
-    if(!html) return "<div class='ck-bk-empty'>" + (kl?"기준을 불러오지 못했습니다":"Could not load") + "</div>";
-    /* 되돌리기 버튼 갈아 끼우기 — _ckFlip 은 시계 카드를 찾으므로 여기선 안 듣는다 */
-    html = html.replace(/<button class="ck-hb"[^>]*>\u21A9<\/button>/, back);
-    return html;
+    var inner = "";
+    try{ inner = _csCardBody(_csRows[idx], idx); }catch(e){ console.warn("cl back:", e); }
+    if(!inner){ put("<div class='sr-clback-msg'>" + (kl ? "기준을 불러오지 못했습니다" : "Could not load") + "</div>"); return; }
+    put("<div class='cs-card'>" + inner + "</div>");
+  };
+  /* 아직 못 채운 뒷면을 다시 채운다 (기준표가 늦게 도착했거나 방금 저장했을 때) */
+  window._srClBackRefillOpen = function(){
+    try{
+      Array.prototype.forEach.call(document.querySelectorAll(".sr-clcard"), function(el){
+        var f = el.querySelector(".sr-clback");
+        if(f && f.getAttribute("data-filled") !== "1") _srClBackFill(el, true);
+      });
+    }catch(_){}
+  };
+  /* 이름으로 기준표 카드를 찾는다 — 기준표와 같은 정규화(_csNorm)를 쓴다.
+     "Namgang / 남강쌤" 처럼 표기가 갈린 이름이 있어 정확히 같은 규칙이어야 한다. */
+  window._srClCsIdx = function(nm){
+    try{
+      if((!Array.isArray(_csRows) || !_csRows.length) && Array.isArray(_csClients) && _csClients.length){
+        _csBuildRows(_csClients);
+      }
+      if(!Array.isArray(_csRows) || !_csRows.length) return -1;
+      var want = String(nm == null ? "" : nm).trim(); if(!want) return -1;
+      var i;
+      for(i = 0; i < _csRows.length; i++){ if(String(_csRows[i].name || "").trim() === want) return i; }
+      var wn = (typeof _csNorm === "function") ? _csNorm(want) : want.toLowerCase();
+      if(!wn) return -1;
+      for(i = 0; i < _csRows.length; i++){
+        var n = (typeof _csNorm === "function") ? _csNorm(_csRows[i].name) : String(_csRows[i].name || "").toLowerCase();
+        if(n && n === wn) return i;
+      }
+    }catch(_){}
+    return -1;
   };
   var _isTrainClient=function(o){ return /training/i.test(String((o&&o.client)||'')); };   // [v397] training PCs split out of the real-client grid
   var _realCards='', _trainCards='', _realN=0, _trainN=0;
@@ -43543,12 +43636,20 @@ function _csRenderShell(otherView){
     + '</div>';
 }
 
-function _csRenderGrid(calc){
+/* ═══ [v1331] 카드 만드는 일을 셋으로 나눴다 ═══════════════════════════════
+   boss "이거 이렇게 나오게 하지말고 두번째 스크린샷이랑 완전히 같은 인터페이스로"
+
+   기록·통계 클라 카드 뒷면이 기준 EXP 화면의 카드와 생김새가 달랐다. 뒷면을
+   따로 만들었기 때문이다. 이제 카드를 그리는 코드가 하나뿐이라 두 화면이
+   갈라질 수가 없다 — 여기서 칩을 하나 고치면 두 곳이 같이 바뀐다.
+
+     _csBuildRows(calc)  ERP 고객 + 기준표를 합쳐 정렬한 줄 목록 (_csRows)
+     _csCardBody(r,i)    카드 속살 — 이름·PC·칩·맵 줄
+     _csCardHTML(r,i)    기준 EXP 화면용 겉껍데기 (드래그·드롭 손잡이 포함)
+   ═══════════════════════════════════════════════════════════════════════ */
+function _csBuildRows(calc){
   calc=Array.isArray(calc)?calc:[];
   _csClients=calc;
-  /* [v1089] 기준이 새로 들어왔다 — 사이드바 배지를 다시 센다 */
-  try{ if(typeof renderSidebar==='function') renderSidebar(); }catch(_){}
-  var esc=_srEsc;
   var byExact={}, byNorm={};
   calc.forEach(function(e){ var nm=String((e&&e.name)||'').trim(); if(!nm) return; if(!byExact[nm]) byExact[nm]=e; var nn=_csNorm(nm); if(nn&&!byNorm[nn]) byNorm[nn]=e; });
   var matchCalc=function(name){ var nm=String(name||'').trim(); if(byExact[nm]) return byExact[nm]; var nn=_csNorm(nm); return (nn&&byNorm[nn])?byNorm[nn]:null; };
@@ -43559,8 +43660,6 @@ function _csRenderGrid(calc){
   var rows=[];
   erp.forEach(function(c){ rows.push({type:'erp', name:String((c&&c.name)||'').trim()||'\u2014', erp:c, calc:matchCalc(c&&c.name)}); });
   calc.forEach(function(e){ var n=_csNorm(e&&e.name); if(n && !erpNorms[n]) rows.push({type:'calc', name:String((e&&e.name)||'').trim()||'\u2014', erp:null, calc:e}); });
-  var grid=document.getElementById('cs-grid'); if(!grid) return;
-  if(!rows.length){ grid.innerHTML='<div class="cs-empty">No clients yet — add one in the Client tab and it\u2019ll appear here.</div>'; return; }
   rows.forEach(function(r){
     var c=r.erp||{}, mc=r.calc||{};
     var pcs=(r.type==='erp')?(pcsByCid[c.id]||[]):[];
@@ -43581,7 +43680,10 @@ function _csRenderGrid(calc){
     return String(a.name).localeCompare(String(b.name));
   });
   _csRows=rows;
-  var cards=rows.map(function(r,i){
+  return rows;
+}
+function _csCardBody(r,i){
+  var esc=_srEsc;
     var c=r.erp||{}, mc=r.calc||{};
     var nm=r.name;
     var pcs=r._pcs||[];
@@ -43608,8 +43710,19 @@ function _csRenderGrid(calc){
       return '<div class="cs-map"'+dAttr+'><button class="cs-map-grip" onclick="event.stopPropagation();_csPickMap('+i+','+j+')" title="'+_csT('클릭 선택 이동','Click-pick move')+'">\u2630</button><span class="cs-map-n">\uD83D\uDCCD '+mn+'</span><span class="cs-map-r">'+tgs+' <small>%/h</small>'+band+'</span></div>';
     }).join('') : '<div class="cs-nomap">'+_csT('\uc544\uc9c1 \ub9f5\uc774 \uc5c6\uc5b4\uc694. \ud3b8\uc9d1\uc744 \ub20c\ub7ec \ucd94\uac00\ud558\uc138\uc694.','No maps yet. Tap Edit to add.')+'</div>';
     var train=_csIsTraining(nm); var tag=train?'<span class="cs-train-tag">'+_csT('\uad50\uc721','TRAINING')+'</span>':'';
-    return '<div class="cs-card'+(train?' train':'')+'" data-ci="'+i+'" onclick="_csPlaceMap('+i+',event)" ondragover="_csDragOverCard(event,'+i+')" ondragleave="_csDragLeaveCard(event)" ondrop="_csDropMap(event,'+i+')"><div class="cs-card-top"><div class="cs-hd">'+(expCanEdit()?'<span class="cs-cgrip" title="'+_csT('드래그로 카드 순서 변경','Drag to reorder card')+'">⣿</span>':'')+'<span class="cs-num">'+(i+1)+'.</span><span class="cs-name">'+esc(nm)+'</span>'+tag+'</div>'+(expCanEdit()?'<button class="cs-edit" onclick="event.stopPropagation();_csOpenEditor('+i+')">'+_csT('\ud3b8\uc9d1','Edit')+' \u270E</button>':'')+'</div><div class="cs-pc">'+pc+'</div><div class="cs-chips">'+chips+'</div><div class="cs-maps">'+mrows+'</div></div>';
-  }).join('');
+    return '<div class="cs-card-top"><div class="cs-hd">'+(expCanEdit()?'<span class="cs-cgrip" title="'+_csT('드래그로 카드 순서 변경','Drag to reorder card')+'">⣿</span>':'')+'<span class="cs-num">'+(i+1)+'.</span><span class="cs-name">'+esc(nm)+'</span>'+tag+'</div>'+(expCanEdit()?'<button class="cs-edit" onclick="event.stopPropagation();_csOpenEditor('+i+')">'+_csT('\ud3b8\uc9d1','Edit')+' \u270E</button>':'')+'</div><div class="cs-pc">'+pc+'</div><div class="cs-chips">'+chips+'</div><div class="cs-maps">'+mrows+'</div>';
+}
+function _csCardHTML(r,i){
+  var train=_csIsTraining(r.name);
+    return '<div class="cs-card'+(train?' train':'')+'" data-ci="'+i+'" onclick="_csPlaceMap('+i+',event)" ondragover="_csDragOverCard(event,'+i+')" ondragleave="_csDragLeaveCard(event)" ondrop="_csDropMap(event,'+i+')">'+_csCardBody(r,i)+'</div>';
+}
+function _csRenderGrid(calc){
+  /* [v1089] 기준이 새로 들어왔다 — 사이드바 배지를 다시 센다 */
+  try{ if(typeof renderSidebar==='function') renderSidebar(); }catch(_){}
+  var rows=_csBuildRows(calc);
+  var grid=document.getElementById('cs-grid'); if(!grid) return;
+  if(!rows.length){ grid.innerHTML='<div class="cs-empty">No clients yet — add one in the Client tab and it\u2019ll appear here.</div>'; return; }
+  var cards=rows.map(function(r,i){ return _csCardHTML(r,i); }).join('');
   // [v493] Split into two sections — Real clients vs Training (new-staff practice) — like the Client tab.
   // Cards keep their original data-ci index (built above), so drag/edit/delete handlers are unaffected.
   var _wrap=document.createElement('div'); _wrap.innerHTML=cards;
@@ -43911,7 +44024,17 @@ function _csOpenEditor(i){
        지수가 폭주했다(평소 0.5~0.7%/h ÷ 0.12). 급여에 직결되는 값이라 이력 보존이 필수다. */
     maps:(Array.isArray(mc.maps)?mc.maps:[]).map(function(m){ m=m||{}; return {ko:String(m.ko||''), en:String(m.en||''), lv:(m.level!=null?m.level:(m.lv!=null?m.lv:'')), target:(m.target!=null?m.target:''), sh:(m.sh!=null?m.sh:''), sl:(m.sl!=null?m.sl:''), bands:(Array.isArray(m.bands)?m.bands:undefined)}; })
   };
-  var modal=document.getElementById('cs-ed-modal'); var bg=document.getElementById('cs-ed-bg'); if(!modal||!bg) return;
+  var modal=document.getElementById('cs-ed-modal'); var bg=document.getElementById('cs-ed-bg');
+  /* [v1331] 기록·통계 카드 뒷면에서도 편집을 연다 — 그 화면엔 이 상자가 없으니 만들어 둔다 */
+  if(!modal||!bg){
+    try{ if(typeof _csInjectCSS==='function') _csInjectCSS(); }catch(_){}
+    var _host=document.createElement('div');
+    _host.innerHTML='<div class="cs-ed-bg" id="cs-ed-bg" onclick="if(event.target===this)_csEditClose()"><div class="cs-ed-modal" id="cs-ed-modal"></div></div>';
+    document.body.appendChild(_host.firstChild);
+    bg=document.getElementById('cs-ed-bg'); modal=document.getElementById('cs-ed-modal');
+  }
+  if(!modal||!bg) return;
+
   modal.innerHTML=_csEdShell();
   bg.classList.add('show');
 }
@@ -43997,7 +44120,21 @@ function _csEdAddMap(){ if(!expGuardEdit()) return; if(!_csEd) return; _csEd.map
 function _csEdDelMap(j){ if(!expGuardEdit()) return; if(!_csEd) return; _csEd.maps.splice(j,1); var b=document.getElementById('cs-ed-maps'); if(b) b.innerHTML=_csEdMapsHTML(); }
 function _csEditClose(){ var bg=document.getElementById('cs-ed-bg'); if(bg) bg.classList.remove('show'); _csEd=null; }
 
+/* [v1331] 기준을 고친 뒤 — 지금 보고 있는 화면만 다시 그린다.
+   전에는 무조건 renderCalcStandards() 였다. 기록·통계 카드 뒷면에서 고치면
+   화면이 통째로 기준 EXP 로 튀어 버린다(둘 다 ch-other 를 쓴다). */
+function _csAfterStdSave(arr){
+  try{ if(Array.isArray(arr)) _csClients=arr; }catch(_){}
+  if(document.getElementById('cs-grid')){ try{ renderCalcStandards(); }catch(_){} return; }
+  try{ _csBuildRows(Array.isArray(_csClients)?_csClients:[]); }catch(_){}
+  try{
+    Array.prototype.forEach.call(document.querySelectorAll('.sr-clcard.flipped'), function(el){
+      if(typeof _srClBackFill==='function') _srClBackFill(el, true);
+    });
+  }catch(_){}
+}
 async function _csEditSave(){
+
   if(!expGuardEdit()) return;
   var e=_csEd; if(!e) return;
   var name=String(e.name||'').trim(); if(!name){ toast('Client name is required',true); return; }
@@ -44022,7 +44159,7 @@ async function _csEditSave(){
   if(idx>=0){ var keep=arr[idx]||{}; for(var f in rec){ keep[f]=rec[f]; } arr[idx]=keep; }
   else { arr.push(rec); }
   var ok=false; try{ ok=await _srPutCalc('clients',arr); }catch(err){ ok=false; }
-  if(ok){ toast('\u2713 Saved'); _csEditClose(); renderCalcStandards(); }
+  if(ok){ toast('\u2713 Saved'); _csEditClose(); _csAfterStdSave(arr); }
   else { toast('Save failed — try again',true); }
 }
 async function _csEditDelete(){
@@ -44056,7 +44193,7 @@ async function _csEditDelete(){
   }catch(_){}
   _csEditClose();
   try{ _csClients=(await _srGetCalc('clients'))||_csClients; }catch(_){}
-  renderCalcStandards();
+  _csAfterStdSave(_csClients);
   if(!isErp){ try{ toast(ko?'삭제됨':'Deleted'); }catch(_){} }
 }
 
