@@ -4,7 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
 <title>ARASAKA Corp</title>
-<!-- BUILD: v1333 | 🛟 Cover 를 배정 격자 막대에 드롭 — 원래 막대는 백업 막대로 -->
+<!-- BUILD: v1334 | Cover 를 빈 자리에 놓으면 초록 백업 막대로 투입 -->
 <!-- v745 기록은 git 이력(v1302 이전 커밋)에 있다 — 100KB 변경사 주석을 배포에서 제거 -->
 <!-- [v677] a <link href> cannot read a CSS variable, so the favicon carries its own copy.
      64px: a browser tab draws it at 16-32px, so this is 2x-DPR sharp at 11KB. -->
@@ -58552,7 +58552,37 @@ function _agCovClear(){
       .forEach(function(x){ x.classList.remove('ag-covtgt'); });
   }catch(_){}
 }
+/* ═══ [v1334] 빈 자리에 놓으면 그냥 백업으로 들어간다 ═══════════════════════
+   boss "커버 저거 끌어서 shuri 쪽으로 배치하면 백업으로 바뀌게끔 · 초록색막대로"
+
+   v1333 은 막대 위에만 받았다. 그런데 Shuri 는 지금 격자에 막대가 하나도 없다
+   (전체 21개 중 0개) — 대신할 상대가 없으니 계속 거절만 했다. 그게 '안 된다'
+   였다.
+
+   대신할 사람이 없으면 대타가 아니라 그냥 백업으로 들어가는 것이다. 그래서
+   빈 자리에 놓으면 백업 막대(a.bk = true, 초록)로 꽂는다. 새 성질을 만들지
+   않았다 — 막대 우클릭의 '🛟 백업으로 표시' 와 같은 값이다. */
+function _agBackupAt(pcId, hour, staffId){
+  if(!_pcGuardEdit()) return;
+  var kl = (typeof _uiLang!=='function') || _uiLang()==='ko';
+  var p = (typeof PCS!=='undefined'?PCS:[]).find(function(x){ return x.id===pcId; }); if(!p) return;
+  if(!staffId) return;
+  if(p.status === 'offline'){ try{ toast('PC-'+pad2(pcId)+(kl?'는 OFF 상태 — 배정 불가':' is OFF'), true); }catch(_){} return; }
+  p.assignments = Array.isArray(p.assignments) ? p.assignments : [];
+  if(p.assignments.length >= MAX_SLOTS){ try{ toast(kl?('이미 '+MAX_SLOTS+'명 배정됨'):('Already '+MAX_SLOTS+' assigned'), true); }catch(_){} return; }
+  var st = ((Math.floor(Number(hour))||0)%24+24)%24;
+  var ln = Math.max(1, Math.round(Number(typeof dragHours!=='undefined'?dragHours:1) || 1));
+  var snap = (typeof _agTake==='function') ? _agTake() : null;
+  p.assignments.push({ staff:staffId, start:st, len:ln, bk:true });
+  var who = _agWho(staffId);
+  try{ _agLog('백업 투입 · PC-'+pad2(pcId)+' '+_agWhen(st, ln), who); }catch(_){}
+  try{ _agCommit(snap, '백업|backup'); }catch(_){}
+  try{ toast('🛟 '+who+(kl?' 백업 투입 — PC-':' backup — PC-')+pad2(pcId)+' '+_agWhen(st, ln)); }catch(_){}
+  try{ render(); }catch(_){ try{ _agRender(); }catch(_){} }
+  try{ _ckRefreshSoon(); }catch(_){}
+}
 /* 이 막대를 대신 선다 — 원래 막대는 백업 막대가 되고, 커버 막대가 그 위에 앉는다 */
+
 function _agCoverOnBar(pcId, idx, staffId){
   if(!_pcGuardEdit()) return;
   var kl = (typeof _uiLang!=='function') || _uiLang()==='ko';
@@ -58577,13 +58607,17 @@ function _agOver(e, pcId){
   if(!_pcCanEdit()) return;   /* [v1332] 받을 수 없으면 자리도 안 비춘다 */
   if(typeof dragType==='undefined' || !dragType) return;
   if(dragMode==='cover'){
-    /* [v1333] 대신할 상대가 있어야 커버다 — 빈 칸에는 안 떨어진다 */
+    /* [v1334] 막대 위 = 그 사람 대신 · 빈 자리 = 그냥 백업으로 투입 */
     var _cb = e.target && e.target.closest ? e.target.closest('.ag-bar') : null;
     _agCovClear();
-    if(!_cb || _cb.classList.contains('cover')) return;
     e.preventDefault();
     try{ e.dataTransfer.dropEffect='move'; }catch(_){}
-    _cb.classList.add('ag-covtgt');
+    if(_cb && !_cb.classList.contains('cover')){ _cb.classList.add('ag-covtgt'); return; }
+    var _ctr = e.currentTarget;
+    _ctr.classList.add('over');
+    var _chh = _agHourAt(_ctr, e.clientX);
+    _ctr.style.setProperty('--ghost-l', (_chh/24*100)+'%');
+    _ctr.style.setProperty('--ghost-w', ((Number(typeof dragHours!=='undefined'?dragHours:1)||1)/24*100)+'%');
     return;
   }
   if(!(dragMode==='hours' || dragMode==='pc-staff')) return;
@@ -58622,12 +58656,14 @@ function _agDrop(e, pcId){
   if(dragMode === 'cover'){
     var _cbar = e.target && e.target.closest ? e.target.closest('.ag-bar') : null;
     _agCovClear();
-    if(!_cbar || _cbar.classList.contains('cover')){
+    if(_cbar && _cbar.classList.contains('cover')){
       var _kl3 = (typeof _uiLang!=='function') || _uiLang()==='ko';
-      try{ toast(_kl3?'🛟 대신할 직원 막대 위에 놓아주세요':'🛟 Drop it on the bar you are covering', true); }catch(_){}
+      try{ toast(_kl3?'🛟 대타 막대 위에는 또 얹을 수 없어요':'🛟 Cannot cover a cover bar', true); }catch(_){}
       return;
     }
-    _agCoverOnBar(pcId, Number(_cbar.dataset.idx), dragId);
+    if(_cbar){ _agCoverOnBar(pcId, Number(_cbar.dataset.idx), dragId); return; }
+    /* [v1334] 빈 자리 — 대신할 사람이 없다. 그냥 백업(초록 막대)으로 넣는다 */
+    _agBackupAt(pcId, _agHourAt(tr, e.clientX), dragId);
     return;
   }
   if(!(dragMode==='hours' || dragMode==='pc-staff')) return;
@@ -59476,7 +59512,7 @@ function staffChipHTML(s){
      여유 시간이 줄어야 하고, 같은 시각에 다른 PC 후보로 뜨면 안 된다. */
   const coverHandle = `<div class="cover-grab" draggable="true"
       ondragstart="dragStartCover(event,'${s.id}')" ondragend="dragEnd(event)"
-      title="${s.name} — 커버 투입 · 배정 격자의 직원 막대에 놓으면 그 시프트를 대신 서고 원래 막대는 백업이 됩니다 · PC 카드에 놓으면 지금부터 1시간(끝나면 막대를 눌러 종료)">🛟 Cover</div>`;
+      title="${s.name} — 배정 격자의 직원 막대에 놓으면 그 사람 대신 (원래 막대는 백업으로) · 빈 자리에 놓으면 백업으로 투입 · PC 카드에 놓으면 지금부터 1시간">🛟 Cover</div>`;
   const leaderHandle = canLead
     ? (isUnavailable
         /* [v1101] 'Leader' 글자를 <i> 로 감싼다 — 풀 안에서는 접고 👑 만 남긴다.
