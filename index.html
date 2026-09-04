@@ -4,7 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
 <title>ARASAKA Corp</title>
-<!-- BUILD: v1314 | 관계형 1단계 — 그림자 표 5개(트리거 자동 동기화)+지원자 첨부 일괄 이관 버튼(관리자) -->
+<!-- BUILD: v1315 | 관계형 2단계 — 페이슬립 전 역할 RPC 우선(블롭 독립)·감시 루틴 3개 그림자 표 전환 -->
 <!-- v745 기록은 git 이력(v1302 이전 커밋)에 있다 — 100KB 변경사 주석을 배포에서 제거 -->
 <!-- [v677] a <link href> cannot read a CSS variable, so the favicon carries its own copy.
      64px: a browser tab draws it at 16-32px, so this is 2x-DPR sharp at 11KB. -->
@@ -44253,8 +44253,10 @@ async function renderMyPaystub(){
   // resolve this staff's sheet entry for the viewed month
   let _sheetEntry = null;
   /* [v1302·감사 LATER-B] 직원 세션은 서버가 본인 몫만 잘라 주는 my_payslip RPC — 전 직원 급여가
-     브라우저에 내려오지 않는다. 리더 이상은 기존 블롭 경로 그대로. */
-  if(!_payrollCanReadAll() && sb){
+     브라우저에 내려오지 않는다.
+     [v1315·관계형 2단계] 이 화면은 순수 열람이라 모든 역할이 RPC 우선 — 페이슬립이 블롭 독립.
+     RPC가 빈손이면 기존 메모리/블롭 경로로 후퇴(관리자의 저장 전 수정분·서버 장애 대비). */
+  if(sb){
     try{
       const _r = await sb.rpc('my_payslip', { p_ym: _isCurMonth ? null : _viewYM });
       if(_r && !_r.error && _r.data && _r.data.sheet_entry) _sheetEntry = _r.data.sheet_entry;
