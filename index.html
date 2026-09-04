@@ -4,7 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
 <title>ARASAKA Corp</title>
-<!-- BUILD: v1317 | 격자는 배경 격자만 남기고 나머지 다섯은 롤백 -->
+<!-- BUILD: v1318 | 배정 격자 손질 전부 되돌림 — 원래대로 -->
 <!-- v745 기록은 git 이력(v1302 이전 커밋)에 있다 — 100KB 변경사 주석을 배포에서 제거 -->
 <!-- [v677] a <link href> cannot read a CSS variable, so the favicon carries its own copy.
      64px: a browser tab draws it at 16-32px, so this is 2x-DPR sharp at 11KB. -->
@@ -8721,36 +8721,8 @@ html[data-theme=light] #ag-wrap .ag-row.vacant .ag-track{box-shadow:inset 0 0 0 
 /* [v1103] 빈 자리는 눌러서 채운다 — 손이 갈 자리라는 걸 보이게 한다.
    막대 위에서는 커서를 되돌린다(거기는 끄는 자리다). */
 #ag-wrap .ag-track{cursor:copy}
-/* ═══════════════════════════════════════════════════════════════════════════
-   [v1316] 격자 시인성 — 눈이 가로·세로로 길을 잃지 않게
-   boss "이거 숫자랑 격자랑 혹시 좀 더 업그레이드할 방법 있어? 뭔가 시인성이..."
-
-   숫자는 v1160·v1281 에서 이미 두 번 키웠다. 남은 문제는 숫자가 아니라 **길**이다.
-   폭이 1000px 넘는 판에서
-     · 가로로는 "이 막대가 몇 시인가" 를 알려면 눈이 위 눈금까지 올라갔다 와야 하고
-     · 세로로는 "이 막대가 어느 PC 인가" 를 알려면 왼쪽 끝까지 갔다 와야 한다.
-   눈금을 더 키우는 것으로는 안 풀린다. 길을 그어 줘야 한다.
-   ═══════════════════════════════════════════════════════════════════════════ */
-
-/* ── ① 6시간마다 세로선을 판 전체에 관통시킨다 ─────────────────────────────
-   기존 1시간 격자(1/24)는 너무 촘촘해 배경처럼 읽힌다. 그 위에 6시간(00·06·12·18)
-   기둥을 한 겹 더 올린다. 하루를 넷으로 끊어 주면 "저 막대는 오후 쪽" 이 눈에 바로 든다. */
-#ag-wrap .ag-track{
-  background-image:
-    repeating-linear-gradient(90deg,rgba(255,255,255,.16) 0 1px,transparent 1px calc(100%/4)),
-    repeating-linear-gradient(90deg,rgba(255,255,255,.075) 0 1px,transparent 1px calc(100%/8)),
-    repeating-linear-gradient(90deg,transparent 0,transparent calc(100%/24 - 1px),rgba(255,255,255,.045) calc(100%/24 - 1px),rgba(255,255,255,.045) calc(100%/24))}
-html[data-theme=light] #ag-wrap .ag-track{
-  background-image:
-    repeating-linear-gradient(90deg,rgba(0,0,0,.20) 0 1px,transparent 1px calc(100%/4)),
-    repeating-linear-gradient(90deg,rgba(0,0,0,.10) 0 1px,transparent 1px calc(100%/8)),
-    repeating-linear-gradient(90deg,transparent 0,transparent calc(100%/24 - 1px),rgba(0,0,0,.06) calc(100%/24 - 1px),rgba(0,0,0,.06) calc(100%/24))}
-
-/* [v1317] boss "그 숫자 잘보이는거랑 뒷 배경격자 빼고는 다 롤백하자"
-   v1316 에서 여섯 가지를 넣었는데 사장님이 둘만 남기라고 했다 — 숫자(원래부터 있던 것)와
-   위의 배경 격자. 나머지 다섯(줄무늬 · 짚은 줄 강조 · 지금선 삼각표식 · 밤 음영 강화 ·
-   막대 글자 그림자)은 걷었다. 판이 조용한 편이 낫다는 판단이고, 그게 맞다 —
-   길을 그어 주는 일은 배경 격자 하나로 이미 된다. 나머지는 그 위에 얹은 장식이었다. */
+/* [v1318] boss "아니 6시간 기둥 빼" — v1316 격자 손질을 통째로 되돌렸다.
+   원래 1시간 격자(위 .ag-track 규칙)만 남는다. 넣기 전과 똑같은 상태다. */
 #ag-wrap .ag-track:hover{background-color:rgba(255,255,255,.028)}
 #ag-wrap .ag-bar{cursor:grab}
 #ag-wrap.ag-dragging .ag-track{cursor:grabbing}
