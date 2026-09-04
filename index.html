@@ -4,7 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
 <title>ARASAKA Corp</title>
-<!-- BUILD: v1337 | PC 실시간 신선도 수술 4곳 — 첫신호 삼킴·미룬저장 거짓신호·일시정지 증발·재접속 공백 + 증거 계수기 -->
+<!-- BUILD: v1338 | 잡고 있습니다 표시 부활 — 격자 포인터 잡기/놓기에 grab 신호 연결(v1310 UI는 배선만 끊겨 있었다) -->
 <!-- v745 기록은 git 이력(v1302 이전 커밋)에 있다 — 100KB 변경사 주석을 배포에서 제거 -->
 <!-- [v677] a <link href> cannot read a CSS variable, so the favicon carries its own copy.
      64px: a browser tab draws it at 16-32px, so this is 2x-DPR sharp at 11KB. -->
@@ -10866,6 +10866,20 @@ body.pcboxes-on .pbox .pool-rolegrid .s-chip,
 .c-chip.full{opacity:.5;border-style:dashed;cursor:not-allowed}
 .c-chip.c-off{opacity:.55;border-style:dashed;background:linear-gradient(90deg,var(--bg-c),var(--re-bg) 200%)}
 .c-chip.c-off .c-chip-nm{text-decoration:line-through;text-decoration-thickness:1px;color:var(--tx3)}
+/* [v1338] 휴면 클라 — 네 변을 같은 굵기의 빨강으로 감싼다. 왼쪽 3px 게임색 띠도
+   같이 눕힌다(한 변만 두꺼우면 '띠'로 읽히지 '테두리'로 안 읽힌다).
+   칩의 ON/OFF(본인 플레이 중)와는 다른 뜻이라 그쪽 표시는 건드리지 않는다. */
+.c-chip.c-hiatus{
+  border-color:var(--re,#c46a6a)!important;
+  border-left-color:var(--re,#c46a6a)!important;
+  border-left-width:1px!important;
+  box-shadow:0 0 0 1px rgba(196,106,106,.32);
+}
+.c-chip.c-hiatus:hover{
+  border-color:var(--re,#c46a6a)!important;
+  box-shadow:0 0 0 1px rgba(196,106,106,.55);
+}
+
 .c-chip-onoff{
   background:transparent;border:1px solid var(--br);
   color:var(--tx3);font-size:9px;font-weight:700;letter-spacing:.06em;
@@ -53798,7 +53812,7 @@ function _pcHeldPaint(){
       el.style.setProperty('--heldh', _pcHeldHue(uid));
       var tag = document.createElement('span');
       tag.className = 'pc-held-tag';
-      tag.textContent = v.by || '?';
+      tag.textContent = '🖐 ' + (v.by || '?');   /* [v1338] 손 — "지금 잡고 있음"이 글자 없이도 읽힌다 */
       el.appendChild(tag);
     });
   }catch(_){ }
@@ -58385,6 +58399,9 @@ function _agBind(host){
     host._agDrag = 1;
     try{ bar.setPointerCapture && bar.setPointerCapture(ev.pointerId); }catch(_){}
     const pcId = Number(bar.dataset.pc), idx = Number(bar.dataset.idx);
+    /* [v1338] "잡고 있습니다" 신호 — v1310 이 만든 grab 방송이 옛 HTML5 드래그에만 붙어 있었다.
+       v1292부터 격자는 전부 이 포인터 경로라 상대 화면에 한 번도 안 떴던 것. 잡는 즉시 알린다. */
+    try{ _pcRTGrab('asg:'+pcId+':'+idx); }catch(_){}
     const p = PCS.find(x=>x.id===pcId); if(!p) return;
     const a = (p.assignments||[])[idx]; if(!a) return;
     const mode = ev.target.closest('.ag-rz') ? 'size' : ev.target.closest('.ag-vz') ? 'vsize' : 'move';
@@ -58516,6 +58533,7 @@ function _agBind(host){
       if(raf){ cancelAnimationFrame(raf); raf = 0; }
       if(moved) paint();
       host.classList.remove('ag-dragging'); bar.classList.remove('act','willdrop');
+      try{ _pcRTFree(); }catch(_){}   /* [v1338] 놓는 순간 상대 화면의 "잡고 있음" 표시를 거둔다 */
       /* [v1103] 끌지 않고 그냥 눌렀다 = 이 배정을 어떻게 할지 묻는 것.
          예전엔 아무 일도 안 일어나서, 해제하려면 우클릭을 알아야 했다. */
       if(!moved){
@@ -59882,11 +59900,47 @@ function _cliPctHTML(name){
   if(p == null) return '';
   return '<span class="c-chip-pct ' + _pctTone(p) + '" title="최근 ' + CLI_PCT_DAYS + '일 기준 대비 달성률">' + p + '%</span>';
 }
+/* ═══ [v1338] 휴면 클라는 클라이언트 풀에서도 한눈에 ═══════════════════════════
+   boss "불요정쌤이랑 데컨기사쌤 휴면 상태잖아? 근데 휴면 상태면 클라이언트풀에
+         빨간색 테두리 싹 감싸줘야지"
+
+   휴면(장기 휴면)은 계정 쪽에만 적힌다 — CLIENT_ACCOUNTS 의 active:false + hiatus_at.
+   그런데 클라이언트 풀 칩이 들고 있는 것은 그 계정이 아니라 캐릭터(CLIENTS)라,
+   거기엔 active 가 비어 있다. 그래서 풀은 휴면인 줄을 몰랐고 ON 배지를 달고 있었다
+   (칩의 ON/OFF 는 '본인 플레이 중' 이라는 다른 뜻이다 — 그것과 섞지 않는다).
+
+   두 자료를 이름으로 잇는다. 지금 휴면은 데컨 기사쌤(9/1) · 데포요정(9/2) ·
+   불요정쌤(9/4) 셋이다. */
+function _cliHiatusOf(name){
+  try{
+    if(typeof CLIENT_ACCOUNTS === 'undefined' || !Array.isArray(CLIENT_ACCOUNTS)) return null;
+    var nm = String(name == null ? '' : name).trim(); if(!nm) return null;
+    for(var i = 0; i < CLIENT_ACCOUNTS.length; i++){
+      var a = CLIENT_ACCOUNTS[i];
+      if(a && String(a.name || '').trim() === nm) return (a.active === false) ? a : null;
+    }
+  }catch(_){}
+  return null;
+}
+function _cliHiatusTip(a){
+  try{
+    if(!a) return '';
+    var ko = (typeof _uiLang !== 'function') || _uiLang() === 'ko';
+    var d = null;
+    if(a.hiatus_at){
+      var t0 = new Date(String(a.hiatus_at) + 'T00:00:00').getTime();
+      if(isFinite(t0)) d = Math.max(0, Math.round((Date.now() - t0) / 86400000));
+    }
+    return (ko ? ('☾ 장기 휴면' + (d != null ? (' ' + d + '일째') : ''))
+               : ('☾ On hiatus' + (d != null ? (' ' + d + 'd') : ''))) + ' · ';
+  }catch(_){ return ''; }
+}
 function clientChipHTML(c){
   const assigned = !!pcOfClient(c.id);
   const isEditing = editingClient === c.id;
   const isOff = c.active === false;
-  const cls = ['c-chip', c.game||'lineage', assigned?'full':'', isEditing?'editing':'', isOff?'c-off':''].filter(Boolean).join(' ');
+  const _hia = _cliHiatusOf(c.name);                 /* [v1338] 휴면이면 계정 기록이 돌아온다 */
+  const cls = ['c-chip', c.game||'lineage', assigned?'full':'', isEditing?'editing':'', isOff?'c-off':'', _hia?'c-hiatus':''].filter(Boolean).join(' ');
   /* [v1276] boss "클라이언트도 드래그 앤 드롭 되게"
      이미 PC 에 붙은 클라는 끌 수가 없었다(assigned 게이트). 그래서 17명 중 15명이
      꿈쩍도 안 했다 — 옮기려면 먼저 떼고 다시 붙여야 했다.
@@ -59903,7 +59957,7 @@ function clientChipHTML(c){
   const hours = c.hours!=null ? c.hours+'H' : '?H';
   const charLabel = c.label || LINEAGE_CLASSES[c.char_class] || '';
 
-  return `<div class="${cls}" data-cid="${c.id}" ${drag} onclick="poolClientOpen(event,'${c.id}')" title="${_uiLang()==='ko'?'클릭 — 클라이언트 관리 패널 (휴면·캐릭터·소통 기록)':'click — client panel'}">
+  return `<div class="${cls}" data-cid="${c.id}" ${drag} onclick="poolClientOpen(event,'${c.id}')" title="${_cliHiatusTip(_hia)}${_uiLang()==='ko'?'클릭 — 클라이언트 관리 패널 (휴면·캐릭터·소통 기록)':'click — client panel'}">
     <div class="c-chip-r1">
       <span class="c-chip-nm" data-no-i18n>${c.name}</span>${_cliPctHTML(c.name)}
       ${c.caution_note ? `<span data-no-i18n title="${String(c.caution_note).replace(/"/g,'&quot;')}" style="color:var(--ye,#e0a83a);cursor:help">⚠</span>` : ''}
