@@ -4,7 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
 <title>ARASAKA Corp</title>
-<!-- BUILD: v1352 | 문의 카드 자리 — 위가 아니라 기존 카드 다음 칸부터(＋문의 타일이 맨 끝) -->
+<!-- BUILD: v1353 | 문의 카드 2.0 — 압축 요약(이름·핵심 4줄)+클릭 시 세부 팝업(스프링), 더블클릭 단계 전환 유지 -->
 <!-- v745 기록은 git 이력(v1302 이전 커밋)에 있다 — 100KB 변경사 주석을 배포에서 제거 -->
 <!-- [v677] a <link href> cannot read a CSS variable, so the favicon carries its own copy.
      64px: a browser tab draws it at 16-32px, so this is 2x-DPR sharp at 11KB. -->
@@ -9434,6 +9434,39 @@ html[data-theme=light] #nav-chg{background:#fff;border-color:rgba(0,0,0,.1);box-
 .st-done .sr-iqstage{background:#a87f2e}
 @keyframes iqTestPulse{0%,100%{box-shadow:0 2px 8px rgba(0,0,0,.4)}50%{box-shadow:0 2px 8px rgba(0,0,0,.4),0 0 12px rgba(224,90,77,.6)}}
 .sr-iqload{padding:22px;text-align:center;color:var(--tx3,#8a8a86);font-size:12px;border:1px dashed var(--br2,#33332f)}
+/* [v1353] 압축 요약 카드 — 클라 카드와 같은 결 */
+.sr-iqwrap{cursor:pointer}
+.sr-iqmini{background:var(--bg-c,#161616);border:1px solid var(--br,#232322);border-radius:12px;padding:13px 14px;
+  display:flex;flex-direction:column;gap:6px;transition:border-color .14s,transform .14s}
+.sr-iqwrap:hover .sr-iqmini{border-color:var(--ac-bord,rgba(194,160,74,.4));transform:translateY(-1px)}
+.sr-iqmini-top{display:flex;align-items:center;gap:8px}
+.sr-iqmini-nm{font-size:15px;font-weight:800;letter-spacing:-.01em;min-width:0}
+.sr-iqmini-nopc{opacity:.55}
+.sr-iqmini-l{font-size:11px;color:var(--tx2,#989792)}
+.sr-iqmini-l.mut{color:var(--tx3,#6b6b67)}
+.sr-iqmini-note{font-size:11px;color:var(--tx3,#6b6b67);font-style:italic;border-top:1px dashed var(--br2,#2c2c2a);padding-top:6px}
+/* [v1353] 세부 팝업 — 배경이 가라앉고 카드가 스프링으로 떠오른다 */
+#sr-iqpop{position:fixed;inset:0;z-index:100000}
+#sr-iqpop .sr-iqpop-bg{position:absolute;inset:0;background:rgba(6,6,8,.55);backdrop-filter:blur(3px);
+  opacity:0;transition:opacity .22s ease}
+#sr-iqpop .sr-iqpop-box{position:absolute;left:50%;top:50%;width:min(430px,92vw);max-height:88vh;
+  display:flex;flex-direction:column;background:#101012;border:1px solid var(--br2,#33332f);border-radius:16px;
+  box-shadow:0 24px 70px rgba(0,0,0,.6);
+  transform:translate(-50%,-46%) scale(.92);opacity:0;
+  transition:transform .3s cubic-bezier(.3,1.35,.45,1),opacity .2s ease}
+#sr-iqpop.open .sr-iqpop-bg{opacity:1}
+#sr-iqpop.open .sr-iqpop-box{transform:translate(-50%,-50%) scale(1);opacity:1}
+#sr-iqpop .sr-iqpop-box.st-ask{border-color:rgba(76,175,110,.55)}
+#sr-iqpop .sr-iqpop-box.st-test{border-color:rgba(224,90,77,.6)}
+#sr-iqpop .sr-iqpop-box.st-done{border-color:rgba(201,150,58,.55)}
+#sr-iqpop .sr-iqpop-hd{display:flex;align-items:center;gap:8px;padding:12px 14px 8px}
+#sr-iqpop .sr-iqpop-hd .sr-iqstage{cursor:pointer}
+#sr-iqpop .sr-iqpop-x{margin-left:auto;background:transparent;border:none;color:var(--tx3,#8a8a86);
+  font-size:15px;cursor:pointer;padding:4px 8px;border-radius:7px}
+#sr-iqpop .sr-iqpop-x:hover{background:var(--bg-h,#242427);color:#fff}
+#sr-iqpop .sr-iqpop-body{overflow:auto;padding:0 12px 12px;min-height:0}
+#sr-iqpop .pcb-iq{cursor:default}
+@media (prefers-reduced-motion:reduce){#sr-iqpop .sr-iqpop-box{transition:opacity .15s ease}}
 .sr-iqadd{border:1.5px dashed rgba(76,175,110,.5);background:transparent;color:#4caf6e;border-radius:14px;
   min-height:64px;font:800 14px inherit;cursor:pointer;transition:background .14s,border-color .14s}
 .sr-iqadd:hover{background:rgba(76,175,110,.09);border-color:rgba(76,175,110,.9)}
@@ -38554,14 +38587,66 @@ function _srRecCardHTML(data){
         .map(function(it){ return '<option value="'+it.key+'">PC '+it.pc+(it.planned?_iqT(' (계획)',' (plan)'):'')+(it.clientName?' — '+_pcbEsc(it.clientName):'')+'</option>'; }).join('');
       var vet = _pcbVeteranSet();
       var stL = { ask:['📥','문의중'], test:['🧪','테스트중'], done:['✅','배치완료'] };
+      /* [v1353] boss "누가 저걸 다 읽냐 — 압축해서 보여주고 누르면 세부가 팝업으로" */
       return (PCB_INQ||[]).filter(Boolean).map(function(iq){
         var st = _pcbIqStage3(iq); var L = stL[st] || stL.ask;
-        return '<div class="sr-iqwrap st-'+st+'" data-iqid="'+iq.id+'" ondblclick="_srIqCycle(event,\''+iq.id+'\')" title="더블클릭 — 문의→테스트→배치완료 전환">'
+        var pcIt = iq.pcKey ? items.find(function(x){ return x.key === iq.pcKey; }) : null;
+        var bits = [];
+        if(iq.source && !_pcbIsTbd(iq.source)) bits.push(_pcbEsc(iq.source));
+        if(iq.start && !_pcbIsTbd(iq.start)) bits.push('시작 '+_pcbEsc(iq.start));
+        var spec = [];
+        if(iq.lv && !_pcbIsTbd(iq.lv)) spec.push('Lv'+_pcbEsc(String(iq.lv)));
+        if(iq.job && !_pcbIsTbd(iq.job)) spec.push(_pcbEsc(iq.job));
+        if(iq.wep != null && iq.wep !== '') spec.push('검'+_pcbEsc(String(iq.wep)));
+        if(iq.set != null && iq.set !== '') spec.push('셋'+_pcbEsc(String(iq.set)));
+        var who = [];
+        if((iq.staff||[]).length) who.push('담당 '+iq.staff.length+'명');
+        if(iq.tester) who.push('테스터 '+_pcbEsc(_pcbStaffName(iq.tester)));
+        var age = iq.createdAt ? Math.floor((Date.now()-new Date(iq.createdAt).getTime())/86400000) : 0;
+        if(age >= 2) who.push(age+'일째');
+        return '<div class="sr-iqwrap st-'+st+'" data-iqid="'+iq.id+'"'
+          + ' onclick="_srIqPop(event,\''+iq.id+'\')" ondblclick="_srIqCycle(event,\''+iq.id+'\')"'
+          + ' title="클릭 — 세부 정보 · 더블클릭 — 단계 전환">'
           + '<div class="sr-iqstage">'+L[0]+' '+L[1]+'</div>'
-          + _pcbIqCardHTML(iq, items, pcOptions, vet)
-          + '</div>';
+          + '<div class="sr-iqmini">'
+          +   '<div class="sr-iqmini-top"><b class="sr-iqmini-nm">'+_pcbEsc(iq.name||'—')+'</b>'
+          +     (pcIt?'<span class="sr-clcard-pc">PC'+_pcbEsc(String(pcIt.pc))+'</span>':'<span class="sr-clcard-pc sr-iqmini-nopc">PC 미정</span>')+'</div>'
+          +   (bits.length||spec.length?('<div class="sr-iqmini-l">'+bits.concat(spec.length?[spec.join(' ')]:[]).join(' · ')+'</div>'):'')
+          +   (who.length?('<div class="sr-iqmini-l mut">'+who.join(' · ')+'</div>'):'')
+          +   (iq.note&&!_pcbIsTbd(iq.note)?('<div class="sr-iqmini-note">'+_pcbEsc(String(iq.note).slice(0,52))+(String(iq.note).length>52?'…':'')+'</div>'):'')
+          + '</div></div>';
       }).join('');
     }catch(e){ console.warn('iq cards:', e); return ''; }
+  };
+  /* [v1353] 세부 팝업 — 전체 폼(_pcbIqCardHTML)이 스프링으로 떠오른다. 편집은 그 자리에서 저장. */
+  window._srIqPop = function(ev, id){
+    try{
+      if(ev){ if(ev.target && ev.target.closest && ev.target.closest('button,select,[contenteditable=true]')) return; ev.stopPropagation(); }
+      var iq = PCB_INQ.find(function(x){ return x.id === id; }); if(!iq) return;
+      _pcbInjectCSS();
+      var items = _pcbGather();
+      var pcOptions = items.slice().sort(function(a,b){ return Number(a.pc)-Number(b.pc); })
+        .map(function(it){ return '<option value="'+it.key+'">PC '+it.pc+(it.planned?' (계획)':'')+(it.clientName?' — '+_pcbEsc(it.clientName):'')+'</option>'; }).join('');
+      document.getElementById('sr-iqpop')?.remove();
+      var st = _pcbIqStage3(iq); var stL = { ask:'📥 문의중', test:'🧪 테스트중', done:'✅ 배치완료' };
+      var ov = document.createElement('div'); ov.id = 'sr-iqpop';
+      ov.innerHTML = '<div class="sr-iqpop-bg"></div>'
+        + '<div class="sr-iqpop-box st-'+st+'">'
+        +   '<div class="sr-iqpop-hd"><span class="sr-iqstage" style="position:static" onclick="_srIqCycle(null,\''+id+'\');_srIqPopClose();">'+stL[st]+' ⇄</span>'
+        +   '<button class="sr-iqpop-x" onclick="_srIqPopClose()">✕</button></div>'
+        +   '<div class="sr-iqpop-body">'+_pcbIqCardHTML(iq, items, pcOptions, _pcbVeteranSet())+'</div>'
+        + '</div>';
+      ov.querySelector('.sr-iqpop-bg').addEventListener('pointerdown', function(){ _srIqPopClose(); });
+      document.body.appendChild(ov);
+      requestAnimationFrame(function(){ ov.classList.add('open'); });
+      if(!window._srIqPopEsc){ window._srIqPopEsc = 1;
+        document.addEventListener('keydown', function(e){ if(e.key === 'Escape') _srIqPopClose(); }); }
+    }catch(e){ console.warn('iq pop:', e); }
+  };
+  window._srIqPopClose = function(){
+    var ov = document.getElementById('sr-iqpop'); if(!ov) return;
+    ov.classList.remove('open');
+    setTimeout(function(){ try{ ov.remove(); }catch(_){} try{ renderRecords(true); }catch(_){} }, 190);   /* 닫히면 요약 갱신 */
   };
   /* ═══ [v1331] 뒷면은 기준 EXP 화면의 그 카드 그대로 ═══════════════════════
      v1330 은 PC 시계 보드의 뒷면(_ckStdBack)을 가져왔다. 그건 레벨·사냥터·목표
