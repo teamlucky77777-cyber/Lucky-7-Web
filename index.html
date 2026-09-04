@@ -4,7 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
 <title>ARASAKA Corp</title>
-<!-- BUILD: v1329 | '다른 화면이 먼저 저장' 오류 수정 — 버전을 갱신하는 기존 동기화기를 쓰도록 -->
+<!-- BUILD: v1330 | 클라 카드 더블클릭 → 360도 뒤집혀 기준 EXP 수정 (시계 보드 방식 재사용) -->
 <!-- v745 기록은 git 이력(v1302 이전 커밋)에 있다 — 100KB 변경사 주석을 배포에서 제거 -->
 <!-- [v677] a <link href> cannot read a CSS variable, so the favicon carries its own copy.
      64px: a browser tab draws it at 16-32px, so this is 2x-DPR sharp at 11KB. -->
@@ -36131,6 +36131,32 @@ function _srInjectCSS(){
 "#sr-app .sr-clcard-act-v{font-size:14px;font-weight:800;color:var(--tx,#e6e5e2);}",
 "#sr-app .sr-clcard-act-t{font-size:10px;font-weight:600;color:var(--tx3,#5f5e5a);}",
 "#sr-app .sr-clcard-nodata{opacity:.5;}",
+/* ═══ [v1330] 클라 카드 뒤집기 — 앞면 성적 / 뒷면 기준 ═════════════════════
+   PC 시계 보드의 ck-flip 과 같은 방식이다. 두 면이 같은 자리에 겹쳐 있고 통째로
+   Y 축으로 돈다. 뒷면은 미리 180° 돌려 두어야 뒤집었을 때 글자가 바로 선다.
+   .58s cubic-bezier(.22,1,.32,1) — 시계 보드와 같은 곡선을 쓴다. 한 앱 안에서
+   같은 동작이 두 가지 속도로 돌면 그것만으로 싸구려로 보인다. */
+"#sr-app .sr-clcard{perspective:1200px;overflow:visible;}",
+"#sr-app .sr-clflip{position:relative;transform-style:preserve-3d;",
+"  transition:transform .58s cubic-bezier(.22,1,.32,1);}",
+"#sr-app .sr-clcard.flipped .sr-clflip{transform:rotateY(180deg);}",
+"#sr-app .sr-clface{-webkit-backface-visibility:hidden;backface-visibility:hidden;}",
+"#sr-app .sr-clfront{display:flex;flex-direction:column;align-items:stretch;}",
+"#sr-app .sr-clback{position:absolute;inset:0;transform:rotateY(180deg);",
+"  display:flex;flex-direction:column;gap:6px;overflow:auto;}",
+/* 뒤집힌 카드는 테두리로도 말한다 — 지금 고치는 중이라는 표시 */
+"#sr-app .sr-clcard.flipped{border-color:var(--ac-bord,rgba(194,160,74,.55));}",
+"#sr-app .sr-clcard.flipped:hover{transform:none;}",
+/* 뒷면의 되돌리기 버튼 — 오른쪽 위 구석에 조용히 */
+"#sr-app .sr-clback-x{margin-left:auto;}",
+/* 뒷면 입력칸은 카드 폭에 맞춘다(시계 보드는 더 좁다) */
+"#sr-app .sr-clback .ck-bk-row{display:flex;align-items:center;gap:8px;font-size:11px;}",
+"#sr-app .sr-clback .ck-bk-row>span{flex:0 0 52px;color:var(--tx3,#6c6b66);font-weight:700;}",
+"#sr-app .sr-clback .ck-bk-row input{flex:1;min-width:0;background:var(--bg-i,#1a1a1a);",
+"  border:1px solid var(--br2,#2f2f2d);border-radius:7px;color:var(--tx,#e6e5e2);",
+"  font:600 12px ui-monospace,monospace;padding:5px 8px;}",
+"#sr-app .sr-clback .ck-bk-row input:focus{outline:none;border-color:var(--ac,#c2a04a);}",
+"@media (prefers-reduced-motion: reduce){#sr-app .sr-clflip{transition:none;}}",
 /* [v1284] 기준 없음 표시 — 카드 안에서만 조용히. 상자를 새로 만들지 않는다. */
 "#sr-app .sr-clcard-warn{display:flex;align-items:baseline;gap:6px;flex-wrap:wrap;margin-top:8px;padding:6px 8px;border-radius:8px;border-left:2px solid #f59e0b;background:rgba(245,158,11,.09);font-size:10px;line-height:1.35;}",
 "#sr-app .sr-clcard-warn b{color:#f59e0b;font-weight:800;letter-spacing:-.01em;}",
@@ -38192,7 +38218,26 @@ function _srRecCardHTML(data){
     ? _triage()
     : (_bandList.length?_bandList.map(function(g){return bandHTML(g,false);}).join(''):_emptyBand);
   var _clCardOne=function(c,ci){ var o=byClient[c]; var st=clientStat(o); var pf=st.perf; var _kl=_uiLang()==='ko';
-    return '<button class="sr-clcard'+(o._noData?' sr-clcard-nodata':'')+'" onclick="_srRecClientByIdx('+ci+')">'
+    /* ═══ [v1330] 카드를 더블클릭하면 뒤집혀 기준을 고친다 ═══════════════════════
+       boss "클라별로 나오는 저 카드를 더블클릭하면 360도 자연스러운 애니메이션으로
+             회전하면서 스탠다드 수정할수있게"
+
+       새로 만들지 않는다. PC 시계 보드에 이미 같은 것이 있다 — 3D 뒤집기(ck-flip)
+       와 기준 편집 뒷면(_ckStdBack)·저장(_ckSetStd)까지. 그것을 그대로 가져다 쓴다.
+       (오늘 세 번 같은 실수를 했다: 이미 도는 코드 옆에 비슷한 것을 새로 짜면
+        원래 코드가 지키던 규칙을 새 코드가 모른다.)
+
+       바뀐 것 하나 — 겉을 button 에서 div 로 바꿨다. 뒷면에 <input> 이 들어가는데
+       button 안의 input 은 클릭이 버튼에게 먹혀 글자를 못 고친다. 역할(role)과
+       키보드 접근은 그대로 준다. */
+    var _pcNo = (o.pc!=null && String(o.pc)!=='') ? Number(o.pc) : null;
+    return '<div class="sr-clcard'+(o._noData?' sr-clcard-nodata':'')+'" role="button" tabindex="0"'
+      +' onclick="_srClCardTap(event,'+ci+')"'
+      +' ondblclick="_srClFlip(event,'+ci+')"'
+      +' onkeydown="if(event.key===\'Enter\'){_srRecClientByIdx('+ci+')}"'
+      +' data-ci="'+ci+'"'+(_pcNo!=null?(' data-pc="'+_pcNo+'"'):'')+'>'
+      +'<div class="sr-clflip">'
+      +'<div class="sr-clface sr-clfront">'
       +'<div class="sr-clcard-top"><span class="sr-clcard-nm">'+esc(o.client||c)+'</span>'+((o.pc!=null&&String(o.pc)!=='')?'<span class="sr-clcard-pc">PC'+esc(String(o.pc))+'</span>':'')+'</div>'
       +'<div class="sr-clcard-hero"><div class="sr-clcard-bigwrap"><span class="sr-clcard-big">'+(st.actualH!=null?st.actualH.toFixed(2)+'%':'—')+'</span><span class="sr-clcard-l">'+(_kl?'평균 EXP%/h':'Avg EXP%/h')+'</span></div>'+(pf!=null?'<span class="sr-pfp '+pfCls(pf)+'">'+(_kl?'기준 ':'vs Std ')+Math.round(pf)+'%</span>':'')+'</div>'
       +(st.targetH!=null?'<div class="sr-clcard-act"><span class="sr-clcard-act-l">'+(_kl?'기준/h':'Std/h')+'</span><span class="sr-clcard-act-v">'+st.targetH.toFixed(2)+'%</span></div>':'')
@@ -38209,7 +38254,48 @@ function _srRecCardHTML(data){
               + '<b>⚠ 기준 없음</b><span>'+o.noStd+(_kl?'시간 안 세짐':'h unscored')+'</span>'
               + '<em>'+few+'</em></div>';
        })()
-      +'</button>';
+      +'</div>'                       /* ← 앞면 끝 */
+      +'<div class="sr-clface sr-clback">'+_srClStdBack(ci, _pcNo, o.client||c)+'</div>'
+      +'</div></div>';                /* ← 뒤집기 껍데기 · 카드 끝 */
+  };
+  /* ═══ [v1330] 클라 카드 뒤집기 — 앞면은 성적, 뒷면은 기준 ═══════════════════ */
+  /* 한 번 누르면 상세, 두 번 누르면 뒤집기. 두 손짓이 안 싸우게 한 번 누른 것은
+     220ms 기다렸다가 실행한다 — 그 사이에 두 번째가 오면 취소하고 뒤집는다. */
+  window._srClTapT = window._srClTapT || 0;
+  window._srClCardTap = function(ev, ci){
+    try{
+      if(ev && ev.target && ev.target.closest && ev.target.closest(".sr-clback")) return;  /* 뒷면은 상세로 안 간다 */
+      clearTimeout(window._srClTapT);
+      window._srClTapT = setTimeout(function(){ try{ _srRecClientByIdx(ci); }catch(_){} }, 220);
+    }catch(_){ }
+  };
+  window._srClFlip = function(ev, ci){
+    try{
+      if(ev){ ev.preventDefault(); ev.stopPropagation(); }
+      clearTimeout(window._srClTapT);                       /* 한 번 누른 것은 취소 */
+      /* 글자를 끌어 고르는 중이면 뒤집지 않는다 — 더블클릭이 선택과 겹친다(ck-flip 과 같은 판단) */
+      try{ var sel = window.getSelection && window.getSelection(); if(sel && String(sel).length > 1) return; }catch(_){}
+      var card = document.querySelector(".sr-clcard[data-ci='" + ci + "']");
+      if(!card) return;
+      card.classList.toggle("flipped");
+    }catch(e){ console.warn("cl flip:", e); }
+  };
+  /* 뒷면 — PC 시계 보드의 _ckStdBack 을 그대로 쓴다. 그 안의 되돌리기 버튼만
+     이 카드용으로 바꿔 끼운다(원래는 시계 카드를 찾는다). */
+  window._srClStdBack = function(ci, pcNo, nm){
+    var kl = (typeof _uiLang!=="function") || _uiLang()==="ko";
+    var back = "<button class='ck-hb sr-clback-x' title='" + (kl?"앞면으로":"Back") + "'" +
+               " onclick='event.stopPropagation();_srClFlip(event," + ci + ")'>↩</button>";
+    if(pcNo == null || typeof _ckStdBack !== "function"){
+      return "<div class='ck-bk-top'><span class='ck-bk-t'>" + (kl?"스탠다드":"Standard") + "</span>" + back + "</div>" +
+             "<div class='ck-bk-empty'>" + (kl?"PC 가 연결되지 않은 고객입니다":"No PC linked") + "</div>";
+    }
+    var html = "";
+    try{ html = _ckStdBack(pcNo); }catch(_){ html = ""; }
+    if(!html) return "<div class='ck-bk-empty'>" + (kl?"기준을 불러오지 못했습니다":"Could not load") + "</div>";
+    /* 되돌리기 버튼 갈아 끼우기 — _ckFlip 은 시계 카드를 찾으므로 여기선 안 듣는다 */
+    html = html.replace(/<button class="ck-hb"[^>]*>\u21A9<\/button>/, back);
+    return html;
   };
   var _isTrainClient=function(o){ return /training/i.test(String((o&&o.client)||'')); };   // [v397] training PCs split out of the real-client grid
   var _realCards='', _trainCards='', _realN=0, _trainN=0;
