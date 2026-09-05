@@ -4,7 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
 <title>ARASAKA Corp</title>
-<!-- BUILD: v1375 | 문의 팝업 담당·테스터 칸 → 미니 배치 층(인력 서랍 재사용, 드래그/클릭 배치, PC 현황 시프트 칸에도 착석) -->
+<!-- BUILD: v1376 | 고객 편집 창 정돈 — 글자 키우고 묶음 제목, 사냥터 표 정렬, 설명문 제거 -->
 <!-- v745 기록은 git 이력(v1302 이전 커밋)에 있다 — 100KB 변경사 주석을 배포에서 제거 -->
 <!-- [v677] a <link href> cannot read a CSS variable, so the favicon carries its own copy.
      64px: a browser tab draws it at 16-32px, so this is 2x-DPR sharp at 11KB. -->
@@ -9448,6 +9448,48 @@ html[data-theme=light] #nav-chg{background:#fff;border-color:rgba(0,0,0,.1);box-
 .sr-clhid{grid-column:1/-1;justify-self:start;background:transparent;border:1px dashed var(--br2,#2f2f33);color:#7a7a76;border-radius:10px;padding:8px 12px;font-weight:600;font-size:12px;cursor:pointer;transition:color .14s,border-color .14s}   /* [v1358] 숨긴 클라 토글 */
 .sr-clhid:hover{color:#c9c9c4;border-color:#55555a}
 .pcb-iqnewpc{display:flex;gap:6px;flex:1;align-items:center}   /* [v1363] 새 PC 번호 입력 */
+/* ═══ [v1376] boss "고객 편집 창도 시인성·빌드 퀄리티, 쓸데없는 글자 빼고" — 주입 CSS(.cs-ed-*)보다 한 단계 높은 html … 로 덮는다 ═══ */
+html .cs-ed-modal{max-width:600px;background:#0e0e10;border-color:#2a2a2e;border-radius:20px;box-shadow:0 30px 80px rgba(0,0,0,.6)}
+html .cs-ed-hd{padding:18px 20px 12px;border-bottom:none}
+html .cs-ed-title{font-size:20px;font-weight:800;letter-spacing:-.02em;color:#f2f1ee}
+html .cs-ed-x{width:32px;height:32px;border-radius:9px;background:#18181b;border-color:#26262a;color:#b0b0aa}
+html .cs-ed-body{padding:4px 20px 16px;gap:14px}
+html .cs-ed-lbl{font-size:12px;font-weight:700;color:#a8a8a2;margin-bottom:6px;letter-spacing:.01em}
+html .cs-ed-inp,html .cs-ed-sel{font-size:14.5px;font-weight:600;padding:11px 12px;border-radius:11px;background:#151518;border-color:#26262a;color:#f2f1ee}
+html .cs-ed-inp:focus,html .cs-ed-sel:focus{outline:none;border-color:#c9963a;box-shadow:0 0 0 3px rgba(201,150,58,.18)}
+html .cs-ed-g2{gap:12px}
+html .cs-ed-g4{gap:10px}
+html .cs-ed-step{border-radius:11px;background:#151518;border-color:#26262a}
+html .cs-ed-step button{width:34px;font-size:18px;color:#b0b0aa;padding:9px 0}
+html .cs-ed-step input{font-size:15.5px;font-weight:800;color:#f2f1ee;padding:9px 0}
+/* 묶음 제목 */
+html .cs-ed-g2::before,html .cs-ed-g4::before{content:"기본";grid-column:1/-1;font-size:11px;font-weight:800;letter-spacing:.1em;color:#7a7a76;margin:2px 0 -4px}
+html .cs-ed-g4::before{content:"캐릭터"}
+/* 사냥터 목표 표 */
+html .cs-ed-mhd2{margin:6px 0 6px}
+html .cs-ed-mttl{font-size:11px;font-weight:800;letter-spacing:.1em;color:#7a7a76}
+html .cs-ed-mexp{display:none}
+html .cs-ed-mcols,html .cs-ed-mrow{grid-template-columns:minmax(0,1.15fr) minmax(0,1fr) 46px 66px 58px 58px 30px;gap:7px}
+html .cs-ed-mcols{font-size:11px;font-weight:800;color:#a8a8a2;padding:0 2px 6px;text-transform:none;letter-spacing:.02em}
+html .cs-ed-mcols span:nth-child(n+3){text-align:right}
+html .cs-ed-mrow{margin-bottom:7px}
+html .cs-ed-mc{font-size:13.5px;font-weight:600;padding:9px 9px;border-radius:9px;background:#151518;border-color:#26262a;color:#e8e7e2}
+html .cs-ed-mc:focus{outline:none;border-color:#c9963a;box-shadow:0 0 0 3px rgba(201,150,58,.18)}
+html .cs-ed-mc.tgt{color:#7ee0a6;font-weight:800;font-size:14.5px}
+html .cs-ed-mc.sb{color:#d9b46a;font-weight:700;font-size:13px}
+html .cs-ed-mc.sb.ro{background:#121214;border-style:dashed}
+html .cs-ed-mdel{color:#6a6a66;font-size:15px;border-radius:8px;width:28px;height:28px;display:inline-flex;align-items:center;justify-content:center}
+html .cs-ed-mdel:hover{color:#f0837c;background:rgba(224,80,74,.12)}
+html .cs-ed-madd{margin-top:4px;padding:9px 14px;border-radius:11px;font-size:13px;font-weight:700;color:#c9963a;border-color:rgba(201,150,58,.45);background:transparent}
+html .cs-ed-madd:hover{background:rgba(201,150,58,.1)}
+html .cs-nomap{font-size:12.5px;color:#6a6a66}
+/* 바닥 */
+html .cs-ed-ft{padding:12px 20px 18px;border-top:1px solid #1f1f23;gap:10px}
+html .cs-ed-dele{border:none;background:transparent;color:#8a6a66;font-size:12.5px;font-weight:700;padding:9px 6px}
+html .cs-ed-dele:hover{color:#f0837c}
+html .cs-ed-cancel{border-radius:12px;padding:11px 18px;font-size:13.5px;font-weight:700;background:#151518;border-color:#26262a}
+html .cs-ed-save{border-radius:12px;padding:11px 26px;font-size:14px;font-weight:800}
+html .cs-ed-save:hover{filter:brightness(1.08)}
 /* [v1375] 담당·테스터 미니 배치 층 */
 #sr-stpick{position:fixed;inset:0;z-index:1200;opacity:0;transition:opacity .18s ease}
 #sr-stpick.open{opacity:1}
@@ -45088,8 +45130,8 @@ function _csEdShell(){
     +'<div><span class="cs-ed-lbl">'+_csT('게임 닉네임','Game nickname')+'</span><input class="cs-ed-inp" value="'+esc(String(e.nick||''))+'" oninput="_csEdSet(\'nick\',this.value)"></div>'
     +'<div><span class="cs-ed-lbl">'+_csT('직업','Job')+'</span><select class="cs-ed-sel" onchange="_csEdSet(\'job\',this.value)">'+jobOpts+'</select></div>'
     +'<div class="cs-ed-g4">'+step('lv',_csT('레벨','Level'))+step('sword',_csT('무기','Wpn'))+step('armor',_csT('방어구','Armor'))+step('ac','AC')+'</div>'
-    +'<div><div class="cs-ed-mhd2"><span class="cs-ed-mttl">'+_csT('맵별 시간당 목표 (한글 / 영어 + %/h)','Per-map hourly target (Korean / English + %/h)')+'</span><span class="cs-ed-mexp">경험치</span></div>'
-    +'<div class="cs-ed-mcols"><span>'+_csT('한글 이름','Korean name')+'</span><span>'+_csT('영어 이름','English name')+'</span><span>Lv</span><span>'+_csT('목표','Goal')+'</span><span title="'+_csT('목표만 넣으면 자동 계산 (x0.83 / x0.77)','auto from goal')+'">'+_csT('안정 상','Stb hi')+'</span><span>'+_csT('안정 하','Stb lo')+'</span><span></span></div>'
+    +'<div><div class="cs-ed-mhd2"><span class="cs-ed-mttl">'+_csT('사냥터별 목표','Per-map target')+'</span></div>'   /* [v1376] boss "쓸데없는 글자 빼고" — 설명 괄호·'경험치' 링크 제거 */
+    +'<div class="cs-ed-mcols"><span>'+_csT('맵','Map')+'</span><span>'+_csT('영문','EN')+'</span><span>Lv</span><span>'+_csT('목표 %/h','Goal %/h')+'</span><span title="'+_csT('목표만 넣으면 자동 계산 (x0.83 / x0.77)','auto from goal')+'">'+_csT('안정 상','Stb hi')+'</span><span>'+_csT('안정 하','Stb lo')+'</span><span></span></div>'
     +'<div id="cs-ed-maps">'+_csEdMapsHTML()+'</div>'
     +'<button class="cs-ed-madd" onclick="_csEdAddMap()">\uFF0B '+_csT('맵 추가','Add map')+'</button></div>'
     +'</div>'
