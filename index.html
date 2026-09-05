@@ -4,7 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
 <title>ARASAKA Corp</title>
-<!-- BUILD: v1369 | 빈 자리=PC 현황에 보이는 PC(18·19), 배치완료는 클라 카드로 흡수, 단계 전환 즉시 반응 -->
+<!-- BUILD: v1370 | 직원 표 보호 — 직원 계정은 남의 행 삭제 불가(23:08 사고: 49행 삭제→리포트 전원 막힘) -->
 <!-- v745 기록은 git 이력(v1302 이전 커밋)에 있다 — 100KB 변경사 주석을 배포에서 제거 -->
 <!-- [v677] a <link href> cannot read a CSS variable, so the favicon carries its own copy.
      64px: a browser tab draws it at 16-32px, so this is 2x-DPR sharp at 11KB. -->
@@ -47185,6 +47185,17 @@ async function _stfSaveRows(){
     if(ex && !ex.error && Array.isArray(ex.data) && list.length){
       var gone = [];
       ex.data.forEach(function(r){ if(!keep[String(r.staff_key)]) gone.push(String(r.staff_key)); });
+      /* [v1370] 2026-09-05 23:08 사고 — 직원 계정(Gray) 브라우저가 휴식 종료를 저장하면서, 자기 화면에 있던
+         2명만 남기고 서버의 직원 행 49개를 여기서 지웠다. 직원 표가 비자 리포트 제출이 전원 막혔다
+         ("직원 정보를 아직 불러오는 중"). 되돌리기는 새벽 백업으로 했고, DB 에도 대량 삭제 차단을 걸었다.
+         여기서는: 관리자·OP 만 지울 수 있고, 한 번에 3행 넘게 지우지 않으며, 내 화면의 직원 수가 서버의
+         절반도 안 되면(부분 자료) 아예 지우지 않는다. 삭제 안 해도 저장은 정상 — 지우기는 정리일 뿐이다. */
+      var _role = String(typeof currentUserRole!=='undefined' ? currentUserRole : '').toLowerCase();
+      var _mayDel = ['admin','op','ceo','manager','hr','gm'].indexOf(_role) >= 0;
+      if(gone.length && (!_mayDel || gone.length > 3 || list.length < ex.data.length / 2)){
+        console.warn('[staff rows] 삭제 건너뜀 — role='+_role+' gone='+gone.length+' local='+list.length+' server='+ex.data.length);
+        gone = [];
+      }
       if(gone.length){
         var del = await sb.from('rel_staff').delete().in('staff_key', gone);
         if(del && del.error) return del;
