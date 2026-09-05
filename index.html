@@ -4,7 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
 <title>ARASAKA Corp</title>
-<!-- BUILD: v1374 | 클라 카드 신규(30일 🌱 초록 숨쉬는 테두리)·케어(🩺 주황 띠, 자동 기준) 표시 -->
+<!-- BUILD: v1375 | 문의 팝업 담당·테스터 칸 → 미니 배치 층(인력 서랍 재사용, 드래그/클릭 배치, PC 현황 시프트 칸에도 착석) -->
 <!-- v745 기록은 git 이력(v1302 이전 커밋)에 있다 — 100KB 변경사 주석을 배포에서 제거 -->
 <!-- [v677] a <link href> cannot read a CSS variable, so the favicon carries its own copy.
      64px: a browser tab draws it at 16-32px, so this is 2x-DPR sharp at 11KB. -->
@@ -9448,6 +9448,34 @@ html[data-theme=light] #nav-chg{background:#fff;border-color:rgba(0,0,0,.1);box-
 .sr-clhid{grid-column:1/-1;justify-self:start;background:transparent;border:1px dashed var(--br2,#2f2f33);color:#7a7a76;border-radius:10px;padding:8px 12px;font-weight:600;font-size:12px;cursor:pointer;transition:color .14s,border-color .14s}   /* [v1358] 숨긴 클라 토글 */
 .sr-clhid:hover{color:#c9c9c4;border-color:#55555a}
 .pcb-iqnewpc{display:flex;gap:6px;flex:1;align-items:center}   /* [v1363] 새 PC 번호 입력 */
+/* [v1375] 담당·테스터 미니 배치 층 */
+#sr-stpick{position:fixed;inset:0;z-index:1200;opacity:0;transition:opacity .18s ease}
+#sr-stpick.open{opacity:1}
+#sr-stpick .sr-stp-bg{position:absolute;inset:0;background:rgba(0,0,0,.55);backdrop-filter:blur(3px)}
+#sr-stpick .sr-stp-box{position:absolute;left:50%;top:50%;width:min(900px,96vw);max-height:88vh;display:flex;flex-direction:column;background:#0e0e10;border:1px solid #2a2a2e;border-radius:20px;box-shadow:0 30px 80px rgba(0,0,0,.6);transform:translate(-50%,-50%) scale(.94) translateY(12px);opacity:0;transition:transform .34s cubic-bezier(.2,1.25,.3,1),opacity .2s ease}
+#sr-stpick.open .sr-stp-box{transform:translate(-50%,-50%) scale(1) translateY(0);opacity:1}
+#sr-stpick .sr-stp-hd{display:flex;align-items:center;justify-content:space-between;padding:16px 18px 10px}
+#sr-stpick .sr-stp-title b{font-size:20px;font-weight:800;letter-spacing:-.02em;color:#f2f1ee}
+#sr-stpick .sr-stp-sub{margin-left:10px;font-size:12px;font-weight:600;color:#8a8a86}
+#sr-stpick .sr-stp-x{background:#18181b;border:1px solid #26262a;color:#b0b0aa;border-radius:9px;width:32px;height:32px;cursor:pointer;font-size:14px}
+#sr-stpick .sr-stp-x:hover{color:#fff;border-color:#3a3a40}
+#sr-stpick .sr-stp-body{display:grid;grid-template-columns:1.25fr 1fr;gap:14px;padding:0 18px;min-height:0;flex:1 1 auto}
+#sr-stpick .sr-stp-left{display:flex;flex-direction:column;min-height:0;background:#131316;border:1px solid #222226;border-radius:14px;padding:10px}
+#sr-stpick .sr-stp-left .pcb-dbody{overflow:auto;min-height:0;max-height:56vh;padding-right:4px}
+#sr-stpick .sr-stp-right{display:flex;flex-direction:column;gap:12px;min-height:0}
+#sr-stpick .sr-stp-zcap{font-size:11px;font-weight:800;letter-spacing:.08em;color:#8a8a86;margin:2px 4px 6px;display:flex;align-items:center;gap:6px}
+#sr-stpick .sr-stp-zcap i{font-style:normal;font-weight:800;font-size:10px;color:#c9963a;background:rgba(201,150,58,.14);padding:1px 6px;border-radius:6px}
+#sr-stpick .sr-stp-zone{min-height:64px;display:flex;flex-wrap:wrap;gap:6px;align-items:center;background:#151518;border:1px dashed #2f2f34;border-radius:14px;padding:12px;transition:border-color .16s,background .16s,box-shadow .16s}
+#sr-stpick .sr-stp-zone.armed{border-color:#c9963a;border-style:solid}
+#sr-stpick .sr-stp-zone.over{border-color:#4caf6e;border-style:solid;background:rgba(76,175,110,.08);box-shadow:0 0 0 4px rgba(76,175,110,.18)}
+#sr-stpick .sr-stp-zone .pcb-slotempty{color:#5a5a56;font-size:12.5px}
+#sr-stpick .sr-stp-zone .pcb-person{font-size:13px;font-weight:700;padding:6px 10px;border-radius:999px}
+#sr-stpick .sr-stp-note{font-size:11.5px;color:#7a7a76;padding:4px 6px;line-height:1.45}
+#sr-stpick .sr-stp-ft{display:flex;align-items:center;justify-content:space-between;gap:12px;padding:12px 18px 16px}
+#sr-stpick .sr-stp-hint{font-size:12px;color:#8a8a86}
+#sr-stpick .sr-stp-ft .pcb-mini.act.go{background:#c9963a;border-color:#c9963a;color:#1a1408;padding:10px 18px;border-radius:12px;font-weight:800;font-size:13.5px}
+@media (max-width:760px){#sr-stpick .sr-stp-body{grid-template-columns:1fr}}
+@media (prefers-reduced-motion:reduce){#sr-stpick .sr-stp-box{transition:opacity .15s ease}}
 /* [v1374] 신규(30일)·케어 표시 — 은은하게 */
 #sr-app .sr-clcard-tag{font-weight:800;font-size:10.5px;padding:2px 8px;border-radius:7px;white-space:nowrap;border:1px solid transparent}
 #sr-app .sr-clcard-tag.new{color:#74d4ab;background:rgba(77,154,138,.16);border-color:rgba(77,154,138,.4)}
@@ -43028,9 +43056,109 @@ function _pcbInqDropStaff(e, id, role){
   if(!d || !d.staffId) return;
   _pcbInqAssign(id, role, d.staffId);   // 시프트 칸에서 끌어와도 그 칸은 유지 — 담당/테스터는 별개 표시다
 }
+/* ═══ [v1375] boss "담당·테스터도 드래그 앤 드롭으로 — 눌렀을 때 빌드 퀄리티 좋은 애니메이션으로 PC 현황 미니버전이
+   딱 떠서 배치, PC 현황에도 연동" ═══
+   클라별 팝업(#sr-iqpop) 안에서 담당/테스터 칸을 누르면 팝업 위로 배치 층(#sr-stpick)이 스프링으로 뜬다.
+   왼쪽은 인력 서랍 본문 그대로(검색·근무중/시프트/배치가능·남은 시간 칸·드래그), 오른쪽은 담당/테스터 칸.
+   끌어 놓거나(드래그) 사람을 누른 뒤 칸을 누르면 배치. 담당은 PC 가 연결돼 있으면 PC 현황판 시프트 칸에도 앉힌다. */
+window._srStp = null;
+function _srStpOpen(id, role){
+  var iq = (PCB_INQ||[]).find(function(x){ return x && x.id === id; }); if(!iq) return;
+  var old = document.getElementById('sr-stpick'); if(old) old.remove();
+  window._srStp = { id:id, role:(role || 'staff') };
+  try{ _pcbInjectCSS(); }catch(_){}
+  var pcLabel = iq.pcKey ? ('PC ' + String(iq.pcKey).replace(/^x/, '')) : _iqT('PC 미정', 'No PC');
+  var ov = document.createElement('div'); ov.id = 'sr-stpick';
+  ov.innerHTML = '<div class="sr-stp-bg" onclick="_srStpClose()"></div>'
+    + '<div class="sr-stp-box">'
+    +   '<div class="sr-stp-hd"><div class="sr-stp-title"><b>' + _pcbEsc(iq.name || '') + '</b><span class="sr-stp-sub">' + pcLabel + ' · ' + _iqT('담당·테스터 배치', 'Staffing') + '</span></div>'
+    +   '<button class="sr-stp-x" onclick="_srStpClose()" title="' + _iqT('닫기', 'Close') + '">✕</button></div>'
+    +   '<div class="sr-stp-body">'
+    +     '<div class="sr-stp-left"><div class="pcb-dsrch"><input class="pcb-dsearch" placeholder="' + _iqT('이름 검색…', 'Search a name…') + '" oninput="_pcbDrawerQ=this.value;_pcbDrawerBody()"></div>'
+    +       '<div id="pcb-drawer-body" class="pcb-dbody">' + _pcbDrawerBodyHTML() + '</div></div>'
+    +     '<div class="sr-stp-right" id="sr-stp-zones"></div>'
+    +   '</div>'
+    +   '<div class="sr-stp-ft"><span class="sr-stp-hint">' + _iqT('사람을 오른쪽 칸으로 끌어다 놓거나, 사람을 누른 뒤 칸을 누르세요', 'Drag a person into a slot, or click a person then a slot') + '</span>'
+    +     '<button class="pcb-mini act go" onclick="_srStpClose()">' + _iqT('완료', 'Done') + '</button></div>'
+    + '</div>';
+  document.body.appendChild(ov);
+  _srStpZones();
+  requestAnimationFrame(function(){ requestAnimationFrame(function(){ ov.classList.add('open'); }); });
+  if(!window._srStpEsc){ window._srStpEsc = 1; document.addEventListener('keydown', function(e){ if(e.key === 'Escape' && document.getElementById('sr-stpick')) _srStpClose(); }); }
+}
+function _srStpClose(){
+  var ov = document.getElementById('sr-stpick');
+  if(ov){ ov.classList.remove('open'); setTimeout(function(){ try{ ov.remove(); }catch(_){} }, 200); }
+  window._srStp = null; try{ _pcbSel = null; }catch(_){}
+}
+function _srStpZones(){
+  var st = window._srStp; if(!st) return;
+  var iq = (PCB_INQ||[]).find(function(x){ return x && x.id === st.id; });
+  var host = document.getElementById('sr-stp-zones'); if(!iq || !host) return;
+  var chip = function(sid, role){ return '<span class="pcb-person tag">' + _pcbEsc(_pcbStaffName(sid)) + '<button class="pcb-x sr-stp-rm" data-role="' + role + '" data-sid="' + sid + '" title="' + _iqT('빼기', 'Remove') + '">✕</button></span>'; };
+  var pcNo = iq.pcKey ? String(iq.pcKey).replace(/^x/, '') : '';
+  host.innerHTML = '<div class="sr-stp-zwrap"><div class="sr-stp-zcap">' + _iqT('담당', 'Staff') + '<i>' + (iq.staff || []).length + '</i></div>'
+    +   '<div class="pcb-iqzone sr-stp-zone' + (st.role === 'staff' ? ' armed' : '') + '" data-role="staff">' + (((iq.staff || []).map(function(s){ return chip(s, 'staff'); }).join('')) || ('<span class="pcb-slotempty">' + _iqT('여기로 끌어다 놓기', 'drop here') + '</span>')) + '</div></div>'
+    + '<div class="sr-stp-zwrap"><div class="sr-stp-zcap">' + _iqT('테스터', 'Tester') + '<i>' + (iq.tester ? 1 : 0) + '</i></div>'
+    +   '<div class="pcb-iqzone sr-stp-zone' + (st.role === 'tester' ? ' armed' : '') + '" data-role="tester">' + (iq.tester ? chip(iq.tester, 'tester') : ('<span class="pcb-slotempty">' + _iqT('여기로 끌어다 놓기', 'drop here') + '</span>')) + '</div></div>'
+    + '<div class="sr-stp-note">' + (pcNo ? _iqT('담당은 PC ' + pcNo + ' 현황판의 시프트 칸에도 같이 들어갑니다', 'Staff are also seated on PC ' + pcNo + ' on the status board') : _iqT('PC 를 연결하면 현황판에도 같이 앉힙니다', 'Link a PC to seat them on the board too')) + '</div>';
+  if(!host._srBound){ host._srBound = 1;
+    host.addEventListener('dragover', function(e){ var z = e.target.closest('.sr-stp-zone'); if(!z) return; e.preventDefault(); try{ e.dataTransfer.dropEffect = 'move'; }catch(_){} z.classList.add('over'); });
+    host.addEventListener('dragleave', function(e){ var z = e.target.closest('.sr-stp-zone'); if(z && !z.contains(e.relatedTarget)) z.classList.remove('over'); });
+    host.addEventListener('drop', function(e){ var z = e.target.closest('.sr-stp-zone'); if(!z) return; e.preventDefault(); e.stopPropagation(); z.classList.remove('over'); var d = _pcbDrag; _pcbDrag = null; if(d && d.staffId) _srStpAssign(z.getAttribute('data-role'), d.staffId); });
+    host.addEventListener('click', function(e){
+      var rm = e.target.closest('.sr-stp-rm'); if(rm){ e.stopPropagation(); _srStpRemove(rm.getAttribute('data-role'), rm.getAttribute('data-sid')); return; }
+      var z = e.target.closest('.sr-stp-zone'); if(!z) return;
+      if(_pcbSel){ var sid = _pcbSel; _pcbSel = null; _srStpAssign(z.getAttribute('data-role'), sid); }
+      else { window._srStp.role = z.getAttribute('data-role'); _srStpZones(); }
+    });
+  }
+}
+function _srStpAssign(role, sid){
+  var st = window._srStp; if(!st || !sid) return;
+  var iq = (PCB_INQ||[]).find(function(x){ return x && x.id === st.id; }); if(!iq) return;
+  if(role === 'tester' && iq.tester === sid) return;
+  if(role !== 'tester' && (iq.staff || []).indexOf(sid) >= 0){ try{ toast(_pcbStaffName(sid) + _iqT(' — 이미 담당이에요', ' is already assigned')); }catch(_){} return; }
+  _pcbInqAssign(st.id, role === 'tester' ? 'tester' : 'staff', sid);
+  var seated = (role !== 'tester') ? _srIqSeatOnPc(iq, sid) : false;
+  if(seated){ try{ toast('🖥 ' + _pcbStaffName(sid) + _iqT(' → PC 현황판에도 앉혔어요', ' seated on the PC board too')); }catch(_){} }
+  _srStpZones(); try{ _pcbDrawerBody(); }catch(_){}
+  try{ _srIqRefresh(st.id); }catch(_){}
+}
+function _srStpRemove(role, sid){
+  var st = window._srStp; if(!st) return;
+  if(role === 'tester') _pcbInqSetTester(st.id, null); else _pcbInqRmStaff(st.id, sid);
+  _srStpZones(); try{ _pcbDrawerBody(); }catch(_){}
+  try{ _srIqRefresh(st.id); }catch(_){}
+}
+/* 담당을 PC 현황판 시프트 칸에도 — 그 PC 의 시프트 세트에서 비어 있는 칸 하나를 골라 앉힌다(이미 있으면 그대로) */
+function _srIqSeatOnPc(iq, sid){
+  try{
+    if(!iq || !iq.pcKey || typeof PCS === 'undefined' || !Array.isArray(PCS)) return false;
+    var pcNo = Number(String(iq.pcKey).replace(/^x/, '')); if(!(pcNo > 0)) return false;
+    var p = null; for(var i=0;i<PCS.length;i++){ if(PCS[i] && Number(PCS[i].id) === pcNo){ p = PCS[i]; break; } }
+    if(!p) return false;
+    p.assignments = Array.isArray(p.assignments) ? p.assignments : [];
+    if(p.assignments.some(function(a){ return a && a.staff === sid; })) return false;
+    var cap = (typeof MAX_SLOTS !== 'undefined') ? MAX_SLOTS : 8;
+    if(p.assignments.length >= cap){ try{ toast(_iqT('PC 현황판 시프트 칸이 꽉 차 있어요', 'PC board shift slots are full'), true); }catch(_){} return false; }
+    var sk = (typeof _pcbShiftOf === 'function') ? _pcbShiftOf(iq.pcKey) : '3';
+    var slots = (typeof _pcbSlotsFor === 'function') ? (_pcbSlotsFor(iq.pcKey) || []) : [];
+    var usedStart = {}; p.assignments.forEach(function(a){ if(a) usedStart[Number(a.start)] = 1; });
+    var pick = null;
+    for(var j=0;j<slots.length;j++){ var h = _pcbSlotHours(sk, slots[j].id); if(!usedStart[Number(h.start)]){ pick = h; break; } }
+    if(!pick) pick = _pcbSlotHours(sk, slots.length ? slots[0].id : 1);
+    p.assignments.push({ staff:sid, start:pick.start, len:pick.len });
+    try{ logAction('update', 'seat via inquiry', _pcbStaffName(sid) + ' -> PC-' + pad2(pcNo)); }catch(_){}
+    try{ if(typeof savePCState === 'function') savePCState(); }catch(_){}
+    try{ if(typeof render === 'function' && document.querySelector('.pc-grid')) render(); }catch(_){}
+    return true;
+  }catch(e){ console.warn('seat on pc:', e); return false; }
+}
 function _pcbInqZoneClick(e, id, role){
   e.preventDefault(); e.stopPropagation();
   if(_pcbSel){ const sid = _pcbSel; _pcbSel = null; _pcbInqAssign(id, role, sid); return; }
+  if(document.getElementById('sr-iqpop')){ _srStpOpen(id, role); return; }   /* [v1375] 클라별 팝업에선 미니 배치 층 */
   /* [v1247] boss "담당 끌어서 배치 저건 어디서 끌어온다는거지" — 끌어올 곳이 화면에 없으면
      안내가 아니라 수수께끼다. 빈 칸을 누르면 그 서랍이 열린다.
      서랍은 z-index 60, 카드 팝업은 990 — 팝업이 떠 있으면 서랍이 그 뒤에 깔리므로
