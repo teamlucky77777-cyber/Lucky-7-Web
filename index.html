@@ -4,7 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
 <title>ARASAKA Corp</title>
-<!-- BUILD: v1379 | 배치 층을 팝업 위로(z 100100), 신규·케어 물리 표현 2판(곱게 말린 모서리·잔불 온기) -->
+<!-- BUILD: v1380 | 기록·통계 기본 탭 = 클라별 -->
 <!-- v745 기록은 git 이력(v1302 이전 커밋)에 있다 — 100KB 변경사 주석을 배포에서 제거 -->
 <!-- [v677] a <link href> cannot read a CSS variable, so the favicon carries its own copy.
      64px: a browser tab draws it at 16-32px, so this is 2x-DPR sharp at 11KB. -->
@@ -38468,7 +38468,7 @@ function _srRecCardHTML(data){
   var curG=window._srRecGroup||'all';
   /* [v1302] 시계 탭이 없어졌으므로 예전에 시계를 보던 상태로 들어오면 갈 곳이 없다.
      직원별로 되돌린다 — 빈 화면을 보여 주는 것보다 낫다. */
-  var mode=window._srRecMode||'staff'; if(mode==='clock'){ mode='staff'; try{ window._srRecMode='staff'; }catch(_){} }
+  var mode=window._srRecMode||'client'; /* [v1380] boss "기록·통계 기본값은 클라별" */ if(mode==='clock'){ mode='staff'; try{ window._srRecMode='staff'; }catch(_){} }
   var curC=window._srRecClient||'';
   var krMode=!!window._srRecKR;
   var dcls=function(v){ return v>0?'sr-ok':(v<0?'sr-re':''); };
