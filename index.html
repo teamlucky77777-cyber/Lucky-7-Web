@@ -4,7 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
 <title>ARASAKA Corp</title>
-<!-- BUILD: v1383 | 세션 기록 최신 묶음 기본 펼침 · 신규 모서리 진짜 말림 · 배치 착지 장면 -->
+<!-- BUILD: v1384 | 붙는 날(30일째 모서리 탁) + 오늘의 카드(단골×열 하나가 튀어나와 누르면 앉음) -->
 <!-- v745 기록은 git 이력(v1302 이전 커밋)에 있다 — 100KB 변경사 주석을 배포에서 제거 -->
 <!-- [v677] a <link href> cannot read a CSS variable, so the favicon carries its own copy.
      64px: a browser tab draws it at 16-32px, so this is 2x-DPR sharp at 11KB. -->
@@ -9561,6 +9561,17 @@ html .cs-ed-dialnum.bump-up .h.up,html .cs-ed-dialnum.bump-dn .h.dn{opacity:1}
 /* 착지 — 문의 카드가 PC 자리에 놓이는 그 한 번: 위에서 내려앉아 살짝 눌렸다 튀어 오른다 */
 @keyframes srLand{0%{transform:translateY(-26px) scale(1.04);opacity:0}55%{transform:translateY(3px) scale(.995);opacity:1}78%{transform:translateY(-2px) scale(1.005)}100%{transform:translateY(0) scale(1)}}
 #sr-app .sr-clcard.sr-clcard-land{animation:srLand .62s cubic-bezier(.2,.9,.3,1.1) both}
+/* 붙는 날 — 30일을 채운 첫 렌더: 모서리 말림이 줄어들며 카드가 살짝 눌려 딱 붙는다 */
+@keyframes srStick{0%{transform:translate(0,0)}55%{transform:translate(1.5px,1.5px)}100%{transform:translate(0,0)}}
+@keyframes srStickCurl{0%{width:14px;height:14px;opacity:.9}100%{width:0;height:0;opacity:0}}
+#sr-app .sr-clcard.sr-clcard-stick{position:relative;animation:srStick .5s cubic-bezier(.2,.9,.3,1.1) .25s both}
+#sr-app .sr-clcard.sr-clcard-stick::before{content:"";position:absolute;right:-1px;bottom:-1px;z-index:4;pointer-events:none;width:14px;height:14px;
+  background:linear-gradient(315deg,var(--bg,#0e0e10) 0 46%,#4a4a52 47%,#34343a 70%,#26262b 100%);border-top-left-radius:100%;border-bottom-right-radius:14px;
+  box-shadow:-5px -5px 10px rgba(0,0,0,.5);animation:srStickCurl .45s ease-in .3s both}
+/* 오늘의 카드 — 그리드 위로 살짝 튀어나와 있다. 누르면 내려앉는다 */
+#sr-app .sr-clcard.sr-clcard-today{transform:translateY(-10px);box-shadow:0 16px 34px rgba(0,0,0,.55),0 0 0 1px rgba(255,255,255,.06);z-index:2;transition:transform .42s cubic-bezier(.2,.9,.3,1.1),box-shadow .42s ease}
+#sr-app .sr-clcard.sr-clcard-today.sr-clcard-today-settle{transform:translateY(0);box-shadow:none}
+@media (prefers-reduced-motion:reduce){#sr-app .sr-clcard.sr-clcard-stick,#sr-app .sr-clcard.sr-clcard-stick::before{animation:none}#sr-app .sr-clcard.sr-clcard-today{transform:none}}
 @media (prefers-reduced-motion:reduce){#sr-app .sr-clcard.sr-clcard-land{animation:none}}
 #sr-app .sr-clcard-warn.soft{border-color:#2c2c31;background:#141417;color:#9a9a95}
 #sr-app .sr-clcard-warn.soft b{color:#a8a8a2}
@@ -37807,6 +37818,22 @@ function _srRecClientByIdx(i){ var c=(window._srRecClients||[])[i]; window._srRe
 /* [v1367] boss "이쪽 화면 전체 드래그 앤 드롭 되게 해줘" — 클라별 카드 순서를 끌어서 바꾼다.
    클라 카드·빈 자리 카드는 PC 번호로 PCS(PC 현황판 배열) 순서를 옮긴다 → 두 판이 늘 같다(v396 원칙).
    문의 카드는 PCB_INQ 순서. 저장은 각자의 기존 경로(savePCState / _pcbSave). 같은 종류끼리만 놓인다. */
+/* [v1384] 오늘의 카드 — 아침에 '제일 오래된 단골 중 제일 뜨거운' 카드 하나가 그리드 위로 살짝 튀어나와 있다.
+   누르면 자리로 내려앉고(확인), 그 날은 다시 안 올라온다(localStorage). 규칙은 안 보이고 카드만 움직인다. */
+function _srTodayPick(g){
+  if(!g) return;
+  var dayKey = new Date(Date.now() + 7*3600*1000).toISOString().slice(0,10);
+  var cards = g.querySelectorAll('.sr-clcard[data-heat]'); if(!cards.length) return;
+  var best = null, bestScore = 0;
+  for(var i=0;i<cards.length;i++){ var el = cards[i]; var heat = Number(el.getAttribute('data-heat'))||0; if(heat <= 0) continue;
+    var days = Number(el.getAttribute('data-days'))||0; var score = heat * (1 + Math.min(days,180)/60);
+    if(score > bestScore){ bestScore = score; best = el; } }
+  if(!best) return;
+  var ck = best.getAttribute('data-ck') || ''; var seenKey = 'sr_today_' + dayKey + '_' + ck;
+  try{ if(localStorage.getItem(seenKey)) return; }catch(_){}
+  best.classList.add('sr-clcard-today');
+  best.addEventListener('click', function(){ try{ localStorage.setItem(seenKey, '1'); }catch(_){} best.classList.add('sr-clcard-today-settle'); setTimeout(function(){ best.classList.remove('sr-clcard-today','sr-clcard-today-settle'); }, 420); }, { once:true });
+}
 window._srClDrag = null;
 function _srClDndBind(g){
   if(!g || g._srDnd) return; g._srDnd = 1;
@@ -38903,7 +38930,7 @@ function _srRecCardHTML(data){
     /* [v1374] boss "온 지 얼마 안 된 선생님은 한 달쯤 뭔가 붙여 놓고, 케어 들어가야 하는 선생님도 화면에 표시" —
        신규: 시작일(문의 카드 start → 배치 시각 → 로스터 start/created_at)로부터 30일 안이면 🌱 D+N + 초록 숨쉬는 테두리.
        케어(자동): 기준 대비 85% 미만 · 아데나 평균 마이너스 · 기준 없는 세션 3회 이상 중 하나면 🩺 + 주황 띠. */
-    var _newDays=null, _care=false, _careWhy=[], _heat=0;   /* [v1377] boss "물리적으로" — 칩 대신 카드가 몸으로: 신규=들뜸·기울기·귀접힘(30일간 가라앉음), 케어=속에서 배어나는 열(심할수록 붉고 숨이 빠름) */
+    var _newDays=null, _care=false, _careWhy=[], _heat=0, _stickNow=false, _wdAll=0;   /* [v1377] boss "물리적으로" — 칩 대신 카드가 몸으로: 신규=들뜸·기울기·귀접힘(30일간 가라앉음), 케어=속에서 배어나는 열(심할수록 붉고 숨이 빠름) */
     try{
       var _pd=function(v){ if(v==null) return null; if(typeof v==='number') return isFinite(v)&&v>0?v:null; var s=String(v).trim(); if(!s) return null;
         var m=s.match(/^(\d{4})[-./](\d{1,2})[-./](\d{1,2})/); if(m) return new Date(Number(m[1]),Number(m[2])-1,Number(m[3])).getTime();
@@ -38928,7 +38955,14 @@ function _srRecCardHTML(data){
           var _dm=window._srWdCache.map[c]; if(_dm){ var _sd=new Date(_startMs); var _sk=_sd.getFullYear()+'-'+String(_sd.getMonth()+1).padStart(2,'0')+'-'+String(_sd.getDate()).padStart(2,'0'); for(var _dk in _dm){ if(_dk>=_sk) _wd++; } }
         }catch(_){ _wd=0; }
         if(_wd<30) _newDays=_wd;
+        /* [v1384] 붙는 날 — 30일을 채운 뒤 처음 그리는 순간 한 번, 모서리가 '탁' 붙는다(이 기기 기준, localStorage) */
+        try{ var _kNew='sr_newseen_'+c, _kStk='sr_stuck_'+c;
+          if(_wd<30){ localStorage.setItem(_kNew,'1'); }
+          else if(localStorage.getItem(_kNew)==='1' && !localStorage.getItem(_kStk)){ _stickNow=true; localStorage.setItem(_kStk, String(Date.now())); }
+        }catch(_){}
       }
+      /* [v1384] 함께한 날 전체(관계 길이) — 오늘의 카드 고를 때 단골 가중치 */
+      try{ var _dmAll=(window._srWdCache&&window._srWdCache.map&&window._srWdCache.map[c])||null; if(_dmAll) _wdAll=Object.keys(_dmAll).length; }catch(_){}
       var _careTh=(_newDays!=null)?60:85;   /* [v1382] 신규 30일은 봐준다 — 첫 주 미달은 정상 */
       if(pf!=null && pf<_careTh){ _care=true; _careWhy.push(_kl?('기준 대비 '+Math.round(pf)+'%'):('vs std '+Math.round(pf)+'%')); }
       if(o.adeN>0 && (o.ade/o.adeN)<0){ _care=true; _careWhy.push(_kl?'아데나 평균 마이너스':'negative adena'); }
@@ -38949,7 +38983,7 @@ function _srRecCardHTML(data){
        키보드 접근은 그대로 준다. */
     var _pcNo = (o.pc!=null && String(o.pc)!=='') ? Number(o.pc) : null;
     var _emptyCard = (st.actualH==null && !(o.statuses>0));   /* [v1364] boss "오늘 눌렀을 때 —/0명 카드 왜 이래" — 기간 내 기록이 없는 카드 */
-    return '<div class="sr-clcard'+(o._noData?' sr-clcard-nodata':'')+(_emptyCard?' sr-clcard-empty':'')+(_newDays!=null?' sr-clcard-new':'')+(_care?' sr-clcard-care':'')+'" role="button" tabindex="0"'
+    return '<div class="sr-clcard'+(o._noData?' sr-clcard-nodata':'')+(_emptyCard?' sr-clcard-empty':'')+(_newDays!=null?' sr-clcard-new':'')+(_care?' sr-clcard-care':'')+(_stickNow?' sr-clcard-stick':'')+'" role="button" tabindex="0"'+' data-heat="'+(_care?_heat.toFixed(2):'0')+'" data-days="'+_wdAll+'" data-ck="'+esc(c)+'"'
       +((_newDays!=null||_care)?(' style="'+(_newDays!=null?('--newness:'+(1-_newDays/30).toFixed(3)+';'):'')+(_care?('--heat:'+_heat.toFixed(2)+';'):'')+'"'):'')
       +(_care?(' title="'+esc((_kl?'케어 필요 — ':'Needs care — ')+_careWhy.join(' · '))+'"'):(_newDays!=null?(' title="'+esc(_kl?('함께한 지 '+_newDays+'일'+(_newDays===29?' — 내일부터 다른 카드처럼 봅니다':'')):('day '+_newDays+' together'))+'"'):''))+(_pcNo!=null?' draggable="true"':'')+(_emptyCard?(' data-empty="'+(_kl?'이 기간 기록 없음':'No records in this period')+'"'):'')
       +' onclick="_srClCardTap(event,'+ci+')"'
@@ -39108,6 +39142,7 @@ function _srRecCardHTML(data){
     try{
       var g = document.querySelector('#sr-app .sr-clgrid'); if(!g) return;
       try{ _srClDndBind(g); }catch(_){}   /* [v1367] 드래그 앤 드롭 위임 핸들러(그리드가 새로 그려질 때마다) */
+      try{ _srTodayPick(g); }catch(_){}   /* [v1384] 오늘의 카드 */
       var hs = [].map.call(g.querySelectorAll('.sr-clcard:not(.flipped):not(.sr-clcard-nodata):not(.sr-clcard-blank):not(.sr-clcard-empty)'), function(el){ return el.getBoundingClientRect().height; })
         .filter(function(h){ return h > 0; }).sort(function(a,b){ return a-b; });
       if(!hs.length){ g.style.removeProperty('--sr-iqh'); return; }
