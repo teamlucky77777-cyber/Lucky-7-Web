@@ -4,7 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
 <title>ARASAKA Corp</title>
-<!-- BUILD: v1378 | 신규·케어 물리 표현(칩 제거) + 뒷면은 카드 자체가 편집 진입(편집 버튼 제거) -->
+<!-- BUILD: v1379 | 배치 층을 팝업 위로(z 100100), 신규·케어 물리 표현 2판(곱게 말린 모서리·잔불 온기) -->
 <!-- v745 기록은 git 이력(v1302 이전 커밋)에 있다 — 100KB 변경사 주석을 배포에서 제거 -->
 <!-- [v677] a <link href> cannot read a CSS variable, so the favicon carries its own copy.
      64px: a browser tab draws it at 16-32px, so this is 2x-DPR sharp at 11KB. -->
@@ -9495,7 +9495,7 @@ html .cs-ed-cancel{border-radius:12px;padding:11px 18px;font-size:13.5px;font-we
 html .cs-ed-save{border-radius:12px;padding:11px 26px;font-size:14px;font-weight:800}
 html .cs-ed-save:hover{filter:brightness(1.08)}
 /* [v1375] 담당·테스터 미니 배치 층 */
-#sr-stpick{position:fixed;inset:0;z-index:1200;opacity:0;transition:opacity .18s ease}
+#sr-stpick{position:fixed;inset:0;z-index:100100;opacity:0;transition:opacity .18s ease}
 #sr-stpick.open{opacity:1}
 #sr-stpick .sr-stp-bg{position:absolute;inset:0;background:rgba(0,0,0,.55);backdrop-filter:blur(3px)}
 #sr-stpick .sr-stp-box{position:absolute;left:50%;top:50%;width:min(900px,96vw);max-height:88vh;display:flex;flex-direction:column;background:#0e0e10;border:1px solid #2a2a2e;border-radius:20px;box-shadow:0 30px 80px rgba(0,0,0,.6);transform:translate(-50%,-50%) scale(.94) translateY(12px);opacity:0;transition:transform .34s cubic-bezier(.2,1.25,.3,1),opacity .2s ease}
@@ -9522,27 +9522,35 @@ html .cs-ed-save:hover{filter:brightness(1.08)}
 #sr-stpick .sr-stp-ft .pcb-mini.act.go{background:#c9963a;border-color:#c9963a;color:#1a1408;padding:10px 18px;border-radius:12px;font-weight:800;font-size:13.5px}
 @media (max-width:760px){#sr-stpick .sr-stp-body{grid-template-columns:1fr}}
 @media (prefers-reduced-motion:reduce){#sr-stpick .sr-stp-box{transition:opacity .15s ease}}
-/* ═══ [v1377] boss "물리적으로" — 칩·테두리 대신 카드가 물건처럼 상태를 드러낸다 ═══
-   신규: 막 놓인 물건은 아직 자리를 못 잡았다 — 살짝 들떠 있고(그림자 크고, 위로 3px, 1.6도 기울고) 모서리가
-         종이처럼 귀접혀 있다. --newness(1→0)가 30일에 걸쳐 줄며 매일 조금씩 가라앉아 평평해진다.
-   케어: 아픈 물건은 열이 난다 — 속에서 붉은 온기가 배어 나오고(--heat 0.35에서 1), 심할수록 붉고 숨이 빠르다.
-         이유는 손을 올리면(title)만. 회복되면 식어서 원래 색으로. */
+/* ═══ [v1379] boss "물리로 한 거 좋은데 좀 더 세련되게" — 신규·케어 물리 표현 2판 ═══
+   신규 = 막 놓인 물건: 아주 살짝 들떠(2px) 0.9도만 기울고, 오른쪽 위 모서리가 종이처럼 곱게 말려 있다(작고 이중톤,
+          곡선 그림자). 윗면에 새 물건 특유의 옅은 광택 한 줄. --newness(1→0)로 30일에 걸쳐 가라앉는다.
+   케어 = 열 나는 물건: 얼룩이 아니라 카드 아랫자락 밑에서 잔불처럼 올라오는 온기 — 안쪽은 아래에서 위로 옅게 번지고,
+          바깥으로는 따뜻한 그림자가 바닥에 깔린다. --heat(0.35에서 1)가 셀수록 붉고 숨이 빠르다. */
 #sr-app .sr-clcard.sr-clcard-new{--newness:1;position:relative;overflow:visible;
-  transform:translateY(calc(-3px * var(--newness))) rotate(calc(-1.6deg * var(--newness)));
-  box-shadow:0 calc(10px * var(--newness)) calc(28px * var(--newness)) rgba(0,0,0,calc(.45 * var(--newness))),0 0 0 1px rgba(255,255,255,calc(.04 * var(--newness)));
-  transition:transform .4s cubic-bezier(.2,1.1,.3,1),box-shadow .4s ease}
-#sr-app .sr-clcard.sr-clcard-new:hover{transform:translateY(calc(-3px * var(--newness) - 2px)) rotate(0deg)}
-#sr-app .sr-clcard.sr-clcard-new::before{content:"";position:absolute;top:-1px;right:-1px;
-  width:calc(10px + 16px * var(--newness));height:calc(10px + 16px * var(--newness));
-  background:linear-gradient(225deg,var(--bg,#0f0f0f) 0 50%,#2c2c30 50%,#3a3a3f 100%);
-  border-bottom-left-radius:6px;box-shadow:-2px 2px 5px rgba(0,0,0,.45);z-index:3;pointer-events:none;
-  opacity:calc(.35 + .65 * var(--newness))}
-#sr-app .sr-clcard.sr-clcard-care{--heat:.5;position:relative;overflow:hidden;box-shadow:inset 0 0 0 1px rgba(226,86,58,calc(.35 * var(--heat)))}
+  transform:translateY(calc(-2px * var(--newness))) rotate(calc(-0.9deg * var(--newness)));
+  box-shadow:0 calc(8px * var(--newness)) calc(22px * var(--newness)) rgba(0,0,0,calc(.42 * var(--newness))),
+             inset 0 1px 0 rgba(255,255,255,calc(.07 * var(--newness)));
+  transition:transform .45s cubic-bezier(.2,1.1,.3,1),box-shadow .45s ease}
+#sr-app .sr-clcard.sr-clcard-new:hover{transform:translateY(calc(-2px * var(--newness) - 2px)) rotate(0deg)}
+#sr-app .sr-clcard.sr-clcard-new::before{content:"";position:absolute;top:0;right:0;z-index:3;pointer-events:none;
+  width:calc(9px + 9px * var(--newness));height:calc(9px + 9px * var(--newness));
+  background:
+    linear-gradient(225deg,transparent 0 49%,rgba(0,0,0,.55) 50%,transparent 51%) ,
+    linear-gradient(225deg,var(--bg,#0f0f0f) 0 50%,#34343a 50%,#4a4a52 78%,#2a2a2f 100%);
+  border-top-right-radius:14px;border-bottom-left-radius:5px;
+  box-shadow:-3px 3px 6px rgba(0,0,0,.42);
+  opacity:calc(.3 + .7 * var(--newness))}
+#sr-app .sr-clcard.sr-clcard-care{--heat:.5;position:relative;overflow:hidden;
+  box-shadow:0 8px 26px rgba(236,110,70,calc(.28 * var(--heat)));
+  transition:box-shadow .5s ease}
 #sr-app .sr-clcard.sr-clcard-care::after{content:"";position:absolute;inset:0;pointer-events:none;z-index:0;border-radius:inherit;
-  background:radial-gradient(120% 90% at 50% 62%,rgba(226,86,58,calc(.22 * var(--heat))) 0%,rgba(226,86,58,calc(.08 * var(--heat))) 42%,transparent 70%);
-  animation:srHeatBreath calc(4s - 1.8s * var(--heat)) ease-in-out infinite}
+  background:
+    radial-gradient(75% 48% at 50% 108%,rgba(236,110,70,calc(.34 * var(--heat))) 0%,rgba(236,110,70,calc(.12 * var(--heat))) 45%,transparent 72%),
+    linear-gradient(180deg,transparent 55%,rgba(236,110,70,calc(.05 * var(--heat))) 100%);
+  animation:srEmber calc(4.2s - 2s * var(--heat)) ease-in-out infinite}
 #sr-app .sr-clcard.sr-clcard-care > *{position:relative;z-index:1}
-@keyframes srHeatBreath{0%,100%{opacity:.55}50%{opacity:1}}
+@keyframes srEmber{0%,100%{opacity:.5;transform:translateY(2px)}50%{opacity:1;transform:translateY(0)}}
 #sr-app .sr-clcard.sr-clcard-new.sr-clcard-care{overflow:visible}
 #sr-app .sr-clcard.sr-clcard-new.sr-clcard-care::after{border-radius:14px}
 @media (prefers-reduced-motion:reduce){#sr-app .sr-clcard.sr-clcard-care::after{animation:none;opacity:.8}}
