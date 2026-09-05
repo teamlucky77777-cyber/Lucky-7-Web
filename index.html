@@ -4,7 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
 <title>ARASAKA Corp</title>
-<!-- BUILD: v1380 | 기록·통계 기본 탭 = 클라별 -->
+<!-- BUILD: v1381 | 고객 편집 스테퍼 → 다이얼(라벨 위·큰 숫자·위쪽 +1/아래쪽 −1·휠) -->
 <!-- v745 기록은 git 이력(v1302 이전 커밋)에 있다 — 100KB 변경사 주석을 배포에서 제거 -->
 <!-- [v677] a <link href> cannot read a CSS variable, so the favicon carries its own copy.
      64px: a browser tab draws it at 16-32px, so this is 2x-DPR sharp at 11KB. -->
@@ -9494,6 +9494,21 @@ html .cs-ed-dele:hover{color:#f0837c}
 html .cs-ed-cancel{border-radius:12px;padding:11px 18px;font-size:13.5px;font-weight:700;background:#151518;border-color:#26262a}
 html .cs-ed-save{border-radius:12px;padding:11px 26px;font-size:14px;font-weight:800}
 html .cs-ed-save:hover{filter:brightness(1.08)}
+/* [v1381] 고객 편집 다이얼 — 라벨 위, 큰 숫자 아래. 숫자 위쪽 절반 = +1, 아래쪽 절반 = −1 (버튼 없음) */
+html .cs-ed-dial{display:flex;flex-direction:column;min-width:0}
+html .cs-ed-dialnum{position:relative;height:66px;display:flex;align-items:center;justify-content:center;background:#151518;border:1px solid #26262a;border-radius:14px;cursor:ns-resize;user-select:none;overflow:hidden;transition:border-color .16s,box-shadow .16s}
+html .cs-ed-dialnum:hover{border-color:#3a3a40}
+html .cs-ed-dialnum b{font-size:32px;font-weight:800;letter-spacing:-.02em;line-height:1;color:#f2f1ee;font-variant-numeric:tabular-nums;transition:transform .14s cubic-bezier(.2,1.2,.3,1),color .14s}
+html .cs-ed-dialnum .h{position:absolute;left:0;right:0;height:50%;opacity:0;transition:opacity .14s;pointer-events:none}
+html .cs-ed-dialnum .h.up{top:0;background:linear-gradient(180deg,rgba(116,212,171,.16),transparent)}
+html .cs-ed-dialnum .h.dn{bottom:0;background:linear-gradient(0deg,rgba(240,131,124,.16),transparent)}
+html .cs-ed-dialnum i{position:absolute;left:0;right:0;text-align:center;font-style:normal;font-size:8px;color:#5a5a56;opacity:0;transition:opacity .14s;pointer-events:none}
+html .cs-ed-dialnum i.up{top:5px}
+html .cs-ed-dialnum i.dn{bottom:4px}
+html .cs-ed-dialnum:hover i{opacity:.8}
+html .cs-ed-dialnum.bump-up b{transform:translateY(-5px);color:#9de3c2}
+html .cs-ed-dialnum.bump-dn b{transform:translateY(5px);color:#f5a39d}
+html .cs-ed-dialnum.bump-up .h.up,html .cs-ed-dialnum.bump-dn .h.dn{opacity:1}
 /* [v1375] 담당·테스터 미니 배치 층 */
 #sr-stpick{position:fixed;inset:0;z-index:100100;opacity:0;transition:opacity .18s ease}
 #sr-stpick.open{opacity:1}
@@ -45157,7 +45172,8 @@ function _csEdShell(){
   var e=_csEd||{}; var esc=_srEsc;
   var jobOpts=_CS_JOBS.map(function(j){ return '<option value="'+esc(j)+'"'+(String(e.job||'')===j?' selected':'')+'>'+esc(j)+'</option>'; }).join('');
   if(e.job && _CS_JOBS.indexOf(String(e.job))<0) jobOpts='<option value="'+esc(String(e.job))+'" selected>'+esc(String(e.job))+'</option>'+jobOpts;
-  function step(field,label){ return '<div><span class="cs-ed-lbl">'+label+'</span><div class="cs-ed-step"><button onclick="_csEdStep(\''+field+'\',-1)">\u2212</button><input id="cs-ed-'+field+'" value="'+esc(String(e[field]!=null?e[field]:''))+'" inputmode="numeric" oninput="_csEdSet(\''+field+'\',this.value)"><button onclick="_csEdStep(\''+field+'\',1)">\uFF0B</button></div></div>'; }
+  /* [v1381] boss "\uB808\uBCA8\u00B7\uBB34\uAE30\u00B7\uBC29\uC5B4\uAD6C\u00B7AC \uB97C \uC704\uC5D0 \uC4F0\uACE0 \uBC11\uC5D0\uB294 \uC22B\uC790\uB9CC \uD06C\uAC8C \u2014 \uC22B\uC790 \uC704\uCABD\uC744 \uB204\uB974\uBA74 UP, \uC544\uB798\uCABD\uC744 \uB204\uB974\uBA74 DOWN" \u2014 \uBC84\uD2BC \uC5C6\uB294 \uB2E4\uC774\uC5BC */
+  function step(field,label){ return '<div class="cs-ed-dial"><span class="cs-ed-lbl">'+label+'</span><div class="cs-ed-dialnum" onclick="_csEdDial(event,\''+field+'\')" onwheel="_csEdWheel(event,\''+field+'\')" title="'+_csT('\uC704\uCABD\uC744 \uB204\uB974\uBA74 +1 \u00B7 \uC544\uB798\uCABD\uC744 \uB204\uB974\uBA74 \u22121 \u00B7 \uD720\uB85C\uB3C4 \uB429\uB2C8\uB2E4','Tap upper half +1 \u00B7 lower half \u22121 \u00B7 wheel works')+'"><span class="h up"></span><span class="h dn"></span><i class="up">\u25B2</i><b id="cs-ed-'+field+'">'+esc(String(e[field]!=null?e[field]:'0'))+'</b><i class="dn">\u25BC</i></div></div>'; }
   return '<div class="cs-ed-hd"><div class="cs-ed-title">'+_csT('고객 편집','Edit client')+'</div><button class="cs-ed-x" onclick="_csEditClose()">\u2715</button></div>'
     +'<div class="cs-ed-body">'
     +'<div class="cs-ed-g2"><div><span class="cs-ed-lbl">'+_csT('번호 (고객)','No. (client)')+'</span><input class="cs-ed-inp" value="'+esc(String(e.no||''))+'" inputmode="numeric" oninput="_csEdSet(\'no\',this.value)"></div>'
@@ -45188,7 +45204,23 @@ function _csEdMapsHTML(){
   }).join('');
 }
 function _csEdSet(f,v){ if(!expGuardEdit()) return; if(_csEd) _csEd[f]=v; }
-function _csEdStep(f,d){ if(!_csEd) return; var n=parseFloat(_csEd[f]); if(!isFinite(n)) n=0; n=Math.round((n+d)*100)/100; _csEd[f]=String(n); var el=document.getElementById('cs-ed-'+f); if(el) el.value=_csEd[f]; }
+function _csEdStep(f,d){ if(!_csEd) return; var n=parseFloat(_csEd[f]); if(!isFinite(n)) n=0; n=Math.round((n+d)*100)/100; _csEd[f]=String(n); var el=document.getElementById('cs-ed-'+f); if(el){ if(el.tagName==='INPUT') el.value=_csEd[f]; else el.textContent=_csEd[f]; } }
+/* [v1381] 다이얼 — 숫자의 위쪽 절반을 누르면 +1, 아래쪽 절반은 −1. 휠도 같은 뜻. 누른 방향으로 숫자가 살짝 튄다 */
+function _csEdDial(e,f){
+  try{ e.preventDefault(); e.stopPropagation(); }catch(_){}
+  if(!expGuardEdit()) return;
+  var box=e.currentTarget, r=box.getBoundingClientRect(), up=(e.clientY-r.top) < r.height/2;
+  _csEdStep(f, up?1:-1);
+  box.classList.remove('bump-up','bump-dn'); void box.offsetWidth; box.classList.add(up?'bump-up':'bump-dn');
+  setTimeout(function(){ box.classList.remove('bump-up','bump-dn'); }, 160);
+}
+function _csEdWheel(e,f){
+  try{ e.preventDefault(); e.stopPropagation(); }catch(_){}
+  if(!expGuardEdit()) return;
+  var up=e.deltaY<0; _csEdStep(f, up?1:-1);
+  var box=e.currentTarget; box.classList.remove('bump-up','bump-dn'); void box.offsetWidth; box.classList.add(up?'bump-up':'bump-dn');
+  setTimeout(function(){ box.classList.remove('bump-up','bump-dn'); }, 160);
+}
 /* ═══ [v1087] 목표만 넣으면 안정 상·하가 따라 채워진다 ═══
    boss "목표 골만 입력하면 다른건 자연스럽게 계산되서 입력되게 해줘 스테이블이랑 컷"
 
