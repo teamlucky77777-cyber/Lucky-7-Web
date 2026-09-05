@@ -4,7 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
 <title>ARASAKA Corp</title>
-<!-- BUILD: v1370 | 직원 표 보호 — 직원 계정은 남의 행 삭제 불가(23:08 사고: 49행 삭제→리포트 전원 막힘) -->
+<!-- BUILD: v1371 | 배치완료 흡수가 '사라짐'으로 보이지 않게 — 행선지 토스트·스크롤·깜빡임·🆕 칩(7일) -->
 <!-- v745 기록은 git 이력(v1302 이전 커밋)에 있다 — 100KB 변경사 주석을 배포에서 제거 -->
 <!-- [v677] a <link href> cannot read a CSS variable, so the favicon carries its own copy.
      64px: a browser tab draws it at 16-32px, so this is 2x-DPR sharp at 11KB. -->
@@ -9448,6 +9448,9 @@ html[data-theme=light] #nav-chg{background:#fff;border-color:rgba(0,0,0,.1);box-
 .sr-clhid{grid-column:1/-1;justify-self:start;background:transparent;border:1px dashed var(--br2,#2f2f33);color:#7a7a76;border-radius:10px;padding:8px 12px;font-weight:600;font-size:12px;cursor:pointer;transition:color .14s,border-color .14s}   /* [v1358] 숨긴 클라 토글 */
 .sr-clhid:hover{color:#c9c9c4;border-color:#55555a}
 .pcb-iqnewpc{display:flex;gap:6px;flex:1;align-items:center}   /* [v1363] 새 PC 번호 입력 */
+/* [v1371] 흡수 행선지 표시 */
+#sr-app .sr-clcard-newchip{font-weight:800;font-size:10.5px;color:#1a1408;background:#c9963a;padding:2px 7px;border-radius:6px;margin-left:6px;white-space:nowrap}
+#sr-app .sr-clcard.sr-clcard-flash{outline:2px solid #c9963a;box-shadow:0 0 0 6px rgba(201,150,58,.28)!important;transition:box-shadow .3s,outline-color .3s}
 /* [v1367] 클라별 드래그 앤 드롭 */
 #sr-app .sr-clgrid > [draggable="true"]{cursor:grab}
 #sr-app .sr-clgrid > [draggable="true"]:active{cursor:grabbing}
@@ -38751,7 +38754,13 @@ function _srRecCardHTML(data){
       +' data-ci="'+ci+'"'+(_pcNo!=null?(' data-pc="'+_pcNo+'"'):'')+'>'
       +'<div class="sr-clflip">'
       +'<div class="sr-clface sr-clfront">'
-      +'<div class="sr-clcard-top"><span class="sr-clcard-nm">'+esc(o.client||c)+'</span>'+((o.pc!=null&&String(o.pc)!=='')?'<span class="sr-clcard-pc">PC'+esc(String(o.pc))+'</span>':'')+'</div>'
+      +'<div class="sr-clcard-top"><span class="sr-clcard-nm">'+esc(o.client||c)+'</span>'+((o.pc!=null&&String(o.pc)!=='')?'<span class="sr-clcard-pc">PC'+esc(String(o.pc))+'</span>':'')
+      +(function(){ /* [v1371] 배치완료 문의가 이 카드로 흡수됐으면 7일간 표시 */
+          try{ if(typeof PCB_INQ==='undefined'||!Array.isArray(PCB_INQ)) return '';
+            var _hit = PCB_INQ.some(function(iq){ return iq && _pcbIqStage3(iq)==='done' && clNorm(String(iq.name||''))===c && (Date.now()-(Number(iq.doneAt)||0)) < 7*864e5; });
+            return _hit ? '<span class="sr-clcard-newchip" title="'+(_kl?'문의 → 테스트 → 배치완료를 거쳐 이 카드로 합쳐졌어요':'Merged from an inquiry card')+'">🆕 '+(_kl?'배치완료':'Placed')+'</span>' : '';
+          }catch(_){ return ''; } })()
+      +'</div>'
       +'<div class="sr-clcard-hero"><div class="sr-clcard-bigwrap"><span class="sr-clcard-big">'+(st.actualH!=null?st.actualH.toFixed(2)+'%':'—')+'</span></div>'+/* [v1356] boss "평균 EXP%/H 라벨은 없애자 — 크게 돼 있어 누가 봐도 안다" */''+'<div class="sr-clcard-side">'+(pf!=null?'<span class="sr-pfp '+pfCls(pf)+'">'+(_kl?'기준 ':'vs Std ')+Math.round(pf)+'%</span>':'')+'<span class="sr-clcard-meta"><b>👥 '+st.nStaff+(_kl?'명':'')+'</b></span></div></div>'   /* [v1364] boss "1명은 기준 90% 밑으로" */
       +(st.targetH!=null?'<div class="sr-clcard-act"><span class="sr-clcard-act-l">'+(_kl?'기준/h':'Std/h')+'</span><span class="sr-clcard-act-v">'+st.targetH.toFixed(2)+'%</span></div>':'')
       +((o.adeN>0)?(function(){ /* [v1348] 툴팁은 민글자만 — _srAdeFmt 는 HTML(따옴표 포함)을 돌려줘 title 이 중간에 닫히며 '+…건">' 이 화면에 샜다 */
@@ -38855,6 +38864,7 @@ function _srRecCardHTML(data){
       var iq = PCB_INQ.find(function(x){ return x.id === id; }); if(!iq) return;
       var cur = _pcbIqStage3(iq);
       iq.st3 = cur === 'ask' ? 'test' : (cur === 'test' ? 'done' : 'ask');
+      if(iq.st3 === 'done') iq.doneAt = Date.now();   /* [v1371] 클라 카드의 '🆕 배치완료' 표시(7일) 기준 */
       /* [v1369] boss "테스트중으로 바꾸는 거 렉이 좀 있어" — 화면은 즉시(카드·팝업 DOM 직접 갱신),
          저장·전체 재렌더·PC 현황·브로드캐스트는 다음 틱에 돌려 클릭이 바로 반응하게 */
       try{
@@ -38867,10 +38877,18 @@ function _srRecCardHTML(data){
         if(_box){ _box.classList.remove('st-ask','st-test','st-done'); _box.classList.add('st-'+iq.st3);
           var _hb = _box.querySelector('.sr-iqpop-hd .sr-iqstage'); if(_hb) _hb.textContent = _L[0]+' '+_L[1]+' ⇄'; }
       }catch(_){}
-      try{ toast(iq.st3==='ask'?'📥 문의':(iq.st3==='test'?'🧪 테스트':'✅ 배치완료')); }catch(_){}
+      /* [v1371] boss "배치완료 누르니까 하나가 사라져버림" — 같은 이름의 클라 카드로 흡수된 것(v1369). 사라진 게 아니라
+         옮겨간 것이 보이게: 토스트에 행선지를 적고, 다시 그린 뒤 그 클라 카드로 스크롤해 금색으로 깜빡인다. */
+      var _mergedKey = null;
+      try{ if(iq.st3==='done'){ var _mk = clNorm(String(iq.name||'')); if(_mk && byClient && byClient[_mk]) _mergedKey = _mk; } }catch(_){}
+      try{ toast(iq.st3==='ask'?'📥 문의':(iq.st3==='test'?'🧪 테스트':(_mergedKey?('✅ 배치완료 — 「'+(iq.name||'')+'」 문의는 클라 카드로 합쳐졌어요'):'✅ 배치완료'))); }catch(_){}
       _pcbSave();
       setTimeout(function(){
         try{ renderRecords(true); }catch(_){}
+        try{ if(_mergedKey){ var _cards = document.querySelectorAll('#sr-app .sr-clgrid .sr-clcard:not(.sr-clcard-blank)');
+          for(var _ci2=0; _ci2<_cards.length; _ci2++){ var _nmEl = _cards[_ci2].querySelector('.sr-clcard-nm'); if(_nmEl && clNorm(String(_nmEl.textContent||'')) === _mergedKey){
+            var _tg = _cards[_ci2]; _tg.classList.add('sr-clcard-flash'); try{ _tg.scrollIntoView({ block:'center', behavior:'smooth' }); }catch(_){}
+            setTimeout(function(){ try{ _tg.classList.remove('sr-clcard-flash'); }catch(_){} }, 2600); break; } } } }catch(_){}
         try{ if(typeof render === 'function' && document.querySelector('.pc-grid')) render(); }catch(_){}
         try{ if(_pcRT) _pcRT.send({ type:'broadcast', event:'inq', payload:{ id:_pcRTMe(), tab:_PC_TAB_ID } }); }catch(_){}
       }, 40);
