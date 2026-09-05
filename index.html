@@ -4,7 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
 <title>ARASAKA Corp</title>
-<!-- BUILD: v1371 | 배치완료 흡수가 '사라짐'으로 보이지 않게 — 행선지 토스트·스크롤·깜빡임·🆕 칩(7일) -->
+<!-- BUILD: v1373 | 배치완료는 드래그로 — 문의 카드를 PC 카드에 놓으면 그 PC 배치·흡수, 더블클릭은 문의↔테스트만 -->
 <!-- v745 기록은 git 이력(v1302 이전 커밋)에 있다 — 100KB 변경사 주석을 배포에서 제거 -->
 <!-- [v677] a <link href> cannot read a CSS variable, so the favicon carries its own copy.
      64px: a browser tab draws it at 16-32px, so this is 2x-DPR sharp at 11KB. -->
@@ -9457,6 +9457,7 @@ html[data-theme=light] #nav-chg{background:#fff;border-color:rgba(0,0,0,.1);box-
 #sr-app .sr-clgrid > .sr-dragging{opacity:.35}
 #sr-app .sr-clgrid > .sr-drop-before{box-shadow:-7px 0 0 -2px #c9963a!important}
 #sr-app .sr-clgrid > .sr-drop-after{box-shadow:7px 0 0 -2px #c9963a!important}
+#sr-app .sr-clgrid > .sr-drop-into{outline:2px dashed #4caf6e;box-shadow:0 0 0 6px rgba(76,175,110,.28)!important}   /* [v1373] 문의 카드를 PC 카드 위에 */
 /* ═══ [v1368] boss "직원별 표 7개 다 가고 클라별도 맞춰" — 가독성·시인성. 디자인 뼈대는 그대로, 읽히게만.
    주입 CSS(#sr-app …)가 문서 뒤에 붙어 같은 specificity 면 지므로 html #sr-app … 로 한 단계 올린다. ═══ */
 /* 1. 글자 크기 · 머리글 */
@@ -37681,7 +37682,7 @@ function _srClDndBind(g){
   if(!g || g._srDnd) return; g._srDnd = 1;
   var pick = function(t){ return (t && t.closest) ? t.closest('.sr-clgrid > [draggable="true"]') : null; };
   var kindOf = function(el){ return el.hasAttribute('data-iqid') ? 'iq' : (el.hasAttribute('data-pc') ? 'pc' : null); };
-  var clearMarks = function(){ g.querySelectorAll('.sr-drop-before,.sr-drop-after').forEach(function(x){ x.classList.remove('sr-drop-before','sr-drop-after'); }); };
+  var clearMarks = function(){ g.querySelectorAll('.sr-drop-before,.sr-drop-after,.sr-drop-into').forEach(function(x){ x.classList.remove('sr-drop-before','sr-drop-after','sr-drop-into'); }); };
   g.addEventListener('dragstart', function(e){
     var el = pick(e.target); if(!el) return;
     var k = kindOf(el); if(!k) return;
@@ -37692,7 +37693,13 @@ function _srClDndBind(g){
   });
   g.addEventListener('dragover', function(e){
     var d = window._srClDrag; if(!d) return;
-    var el = pick(e.target); if(!el || kindOf(el) !== d.kind){ clearMarks(); return; }
+    var el = pick(e.target); if(!el){ clearMarks(); return; }
+    var tk = kindOf(el);
+    if(d.kind === 'iq' && tk === 'pc'){   /* [v1373] 문의 카드를 PC 카드 위에 — 배치 */
+      e.preventDefault(); try{ e.dataTransfer.dropEffect = 'move'; }catch(_){}
+      clearMarks(); el.classList.add('sr-drop-into'); return;
+    }
+    if(tk !== d.kind){ clearMarks(); return; }
     e.preventDefault(); try{ e.dataTransfer.dropEffect = 'move'; }catch(_){}
     var r = el.getBoundingClientRect(); var after = (e.clientX - r.left) > r.width/2;
     clearMarks(); el.classList.add(after ? 'sr-drop-after' : 'sr-drop-before');
@@ -37700,7 +37707,13 @@ function _srClDndBind(g){
   g.addEventListener('dragleave', function(e){ if(!g.contains(e.relatedTarget)) clearMarks(); });
   g.addEventListener('drop', function(e){
     var d = window._srClDrag; if(!d) return;
-    var el = pick(e.target); if(!el || kindOf(el) !== d.kind){ clearMarks(); return; }
+    var el = pick(e.target); if(!el){ clearMarks(); return; }
+    if(d.kind === 'iq' && kindOf(el) === 'pc'){
+      e.preventDefault(); clearMarks();
+      try{ _srIqPlace(d.iqid, Number(el.getAttribute('data-pc'))); }catch(err){ console.warn('iq place:', err); }
+      return;
+    }
+    if(kindOf(el) !== d.kind){ clearMarks(); return; }
     e.preventDefault();
     var after = el.classList.contains('sr-drop-after'); clearMarks();
     try{
@@ -37723,6 +37736,29 @@ function _srClMovePc(src, dst, after){
   try{ if(typeof render === 'function') render(); }catch(_){}
   try{ renderRecords(true); }catch(_){}
   try{ toast('PC-'+pad2(src)+' → PC-'+pad2(dst)+(after ? ' 뒤' : ' 앞')); }catch(_){}
+}
+/* [v1373] 문의 카드를 PC 카드에 놓기 = 배치완료. PC 연결 + 단계 done + 그 PC 카드로 흡수.
+   PC 에 클라가 비어 있고 문의에 고객 카드(crmId)가 있으면 PC 판에도 그 고객을 앉힌다(없으면 PC 연결만). */
+function _srIqPlace(iqid, pc){
+  if(!iqid || !(pc > 0)) return;
+  if(typeof PCB_INQ === 'undefined' || !Array.isArray(PCB_INQ)) return;
+  var iq = null; for(var i=0;i<PCB_INQ.length;i++){ if(PCB_INQ[i] && PCB_INQ[i].id === iqid){ iq = PCB_INQ[i]; break; } }
+  if(!iq) return;
+  iq.pcKey = String(pc); iq.st3 = 'done'; iq.doneAt = Date.now(); iq.placedPc = pc;
+  var seated = false;
+  try{
+    if(typeof PCS !== 'undefined' && Array.isArray(PCS) && iq.crmId){
+      var p = null; for(var j=0;j<PCS.length;j++){ if(PCS[j] && Number(PCS[j].id) === pc){ p = PCS[j]; break; } }
+      if(p && !(p.clients && p.clients.length)){ p.clients = [iq.crmId]; seated = true; if(typeof savePCState === 'function') savePCState(); }
+    }
+  }catch(_){}
+  try{ _pcbSave(); }catch(_){}
+  try{ logAction('update', 'inquiry placed', (iq.name||'')+' -> PC-'+pad2(pc)); }catch(_){}
+  try{ toast('✅ 「'+(iq.name||'')+'」 → PC-'+pad2(pc)+(seated ? ' 배치 (PC 판에도 앉혔어요)' : ' 배치완료')); }catch(_){}
+  try{ renderRecords(true); }catch(_){}
+  try{ if(typeof render === 'function' && document.querySelector('.pc-grid')) render(); }catch(_){}
+  try{ if(typeof _pcRT !== 'undefined' && _pcRT) _pcRT.send({ type:'broadcast', event:'inq', payload:{ id:_pcRTMe(), tab:_PC_TAB_ID } }); }catch(_){}
+  try{ setTimeout(function(){ var t = document.querySelector('#sr-app .sr-clgrid .sr-clcard[data-pc="'+pc+'"]:not(.sr-clcard-blank)'); if(t){ t.classList.add('sr-clcard-flash'); try{ t.scrollIntoView({ block:'center', behavior:'smooth' }); }catch(_){} setTimeout(function(){ t.classList.remove('sr-clcard-flash'); }, 2600); } }, 120); }catch(_){}
 }
 function _srClMoveIq(srcId, dstId, after){
   if(!srcId || !dstId || srcId === dstId) return;
@@ -38757,7 +38793,7 @@ function _srRecCardHTML(data){
       +'<div class="sr-clcard-top"><span class="sr-clcard-nm">'+esc(o.client||c)+'</span>'+((o.pc!=null&&String(o.pc)!=='')?'<span class="sr-clcard-pc">PC'+esc(String(o.pc))+'</span>':'')
       +(function(){ /* [v1371] 배치완료 문의가 이 카드로 흡수됐으면 7일간 표시 */
           try{ if(typeof PCB_INQ==='undefined'||!Array.isArray(PCB_INQ)) return '';
-            var _hit = PCB_INQ.some(function(iq){ return iq && _pcbIqStage3(iq)==='done' && clNorm(String(iq.name||''))===c && (Date.now()-(Number(iq.doneAt)||0)) < 7*864e5; });
+            var _hit = PCB_INQ.some(function(iq){ return iq && _pcbIqStage3(iq)==='done' && (clNorm(String(iq.name||''))===c || (Number(iq.placedPc)>0 && Number(iq.placedPc)===Number(o.pc))) && (Date.now()-(Number(iq.doneAt)||0)) < 7*864e5; });
             return _hit ? '<span class="sr-clcard-newchip" title="'+(_kl?'문의 → 테스트 → 배치완료를 거쳐 이 카드로 합쳐졌어요':'Merged from an inquiry card')+'">🆕 '+(_kl?'배치완료':'Placed')+'</span>' : '';
           }catch(_){ return ''; } })()
       +'</div>'
@@ -38863,7 +38899,8 @@ function _srRecCardHTML(data){
       if(ev){ ev.preventDefault(); ev.stopPropagation(); }
       var iq = PCB_INQ.find(function(x){ return x.id === id; }); if(!iq) return;
       var cur = _pcbIqStage3(iq);
-      iq.st3 = cur === 'ask' ? 'test' : (cur === 'test' ? 'done' : 'ask');
+      /* [v1373] boss "더블클릭으로 바로 배치완료 넘어가게 하지 말고, 위쪽 PC 카드에 드래그 앤 드롭으로 배치하면 기존 카드에 흡수" */
+      iq.st3 = (cur === 'ask') ? 'test' : 'ask';
       if(iq.st3 === 'done') iq.doneAt = Date.now();   /* [v1371] 클라 카드의 '🆕 배치완료' 표시(7일) 기준 */
       /* [v1369] boss "테스트중으로 바꾸는 거 렉이 좀 있어" — 화면은 즉시(카드·팝업 DOM 직접 갱신),
          저장·전체 재렌더·PC 현황·브로드캐스트는 다음 틱에 돌려 클릭이 바로 반응하게 */
@@ -38880,7 +38917,7 @@ function _srRecCardHTML(data){
       /* [v1371] boss "배치완료 누르니까 하나가 사라져버림" — 같은 이름의 클라 카드로 흡수된 것(v1369). 사라진 게 아니라
          옮겨간 것이 보이게: 토스트에 행선지를 적고, 다시 그린 뒤 그 클라 카드로 스크롤해 금색으로 깜빡인다. */
       var _mergedKey = null;
-      try{ if(iq.st3==='done'){ var _mk = clNorm(String(iq.name||'')); if(_mk && byClient && byClient[_mk]) _mergedKey = _mk; } }catch(_){}
+      try{ if(iq.st3==='done'){ var _mk = clNorm(String(iq.name||'')); if(_mk && byClient && byClient[_mk] && !byClient[_mk]._hidden) _mergedKey = _mk; } }catch(_){}
       try{ toast(iq.st3==='ask'?'📥 문의':(iq.st3==='test'?'🧪 테스트':(_mergedKey?('✅ 배치완료 — 「'+(iq.name||'')+'」 문의는 클라 카드로 합쳐졌어요'):'✅ 배치완료'))); }catch(_){}
       _pcbSave();
       setTimeout(function(){
@@ -38928,7 +38965,10 @@ function _srRecCardHTML(data){
       return (PCB_INQ||[]).filter(Boolean).filter(function(iq){
         /* [v1369] boss "배치완료 돼서 정식 진행이면 배치완료 카드가 아니라 기존 카드들에 섞여 들어가야" —
            같은 이름의 클라 카드(리포트 또는 PC판 배정)가 있으면 문의 카드는 그 카드로 흡수된다. */
-        try{ if(_pcbIqStage3(iq)!=='done') return true; var _k=clNorm(String(iq.name||'')); return !(_k && byClient && byClient[_k]); }catch(_){ return true; }
+        try{ if(_pcbIqStage3(iq)!=='done') return true; var _k=clNorm(String(iq.name||''));
+          if(_k && byClient && byClient[_k] && !byClient[_k]._hidden) return false;
+          var _pp=Number(iq.placedPc); if(_pp>0 && clKeys.some(function(k){ return byClient[k] && Number(byClient[k].pc)===_pp && !byClient[k]._hidden; })) return false;   /* [v1373] 놓은 PC 의 클라 카드로 흡수 */
+          return true; }catch(_){ return true; }   /* [v1372] 숨긴(휴면·나간) 클라 카드로는 흡수하지 않는다 — 양쪽 다 안 보이게 되던 구멍 */
       }).map(function(iq){
         var st = _pcbIqStage3(iq); var L = stL[st] || stL.ask;
         var pcIt = iq.pcKey ? items.find(function(x){ return x.key === iq.pcKey; }) : null;
