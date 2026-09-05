@@ -4,7 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
 <title>ARASAKA Corp</title>
-<!-- BUILD: v1381 | 고객 편집 스테퍼 → 다이얼(라벨 위·큰 숫자·위쪽 +1/아래쪽 −1·휠) -->
+<!-- BUILD: v1382 | 신규 = 아직 안 눌린 스티커(오른쪽 아래 들림, 함께 뛴 날 30일), 경고 대신 안내, 케어 완화 -->
 <!-- v745 기록은 git 이력(v1302 이전 커밋)에 있다 — 100KB 변경사 주석을 배포에서 제거 -->
 <!-- [v677] a <link href> cannot read a CSS variable, so the favicon carries its own copy.
      64px: a browser tab draws it at 16-32px, so this is 2x-DPR sharp at 11KB. -->
@@ -9542,20 +9542,19 @@ html .cs-ed-dialnum.bump-up .h.up,html .cs-ed-dialnum.bump-dn .h.dn{opacity:1}
           곡선 그림자). 윗면에 새 물건 특유의 옅은 광택 한 줄. --newness(1→0)로 30일에 걸쳐 가라앉는다.
    케어 = 열 나는 물건: 얼룩이 아니라 카드 아랫자락 밑에서 잔불처럼 올라오는 온기 — 안쪽은 아래에서 위로 옅게 번지고,
           바깥으로는 따뜻한 그림자가 바닥에 깔린다. --heat(0.35에서 1)가 셀수록 붉고 숨이 빠르다. */
+/* [v1382] 신규 = 방금 붙인 스티커. 오른쪽 아래 두 변이 아직 안 눌려 밑에 그림자 띠가 보인다(그리는 요소 0).
+   --newness(1→0)는 함께 뛴 날로 줄어 30일에 딱 붙는다. 손을 올리면 살짝 눌린다(아직 탄성이 있다). */
 #sr-app .sr-clcard.sr-clcard-new{--newness:1;position:relative;overflow:visible;
-  transform:translateY(calc(-2px * var(--newness))) rotate(calc(-0.9deg * var(--newness)));
-  box-shadow:0 calc(8px * var(--newness)) calc(22px * var(--newness)) rgba(0,0,0,calc(.42 * var(--newness))),
-             inset 0 1px 0 rgba(255,255,255,calc(.07 * var(--newness)));
-  transition:transform .45s cubic-bezier(.2,1.1,.3,1),box-shadow .45s ease}
-#sr-app .sr-clcard.sr-clcard-new:hover{transform:translateY(calc(-2px * var(--newness) - 2px)) rotate(0deg)}
-#sr-app .sr-clcard.sr-clcard-new::before{content:"";position:absolute;top:0;right:0;z-index:3;pointer-events:none;
-  width:calc(9px + 9px * var(--newness));height:calc(9px + 9px * var(--newness));
-  background:
-    linear-gradient(225deg,transparent 0 49%,rgba(0,0,0,.55) 50%,transparent 51%) ,
-    linear-gradient(225deg,var(--bg,#0f0f0f) 0 50%,#34343a 50%,#4a4a52 78%,#2a2a2f 100%);
-  border-top-right-radius:14px;border-bottom-left-radius:5px;
-  box-shadow:-3px 3px 6px rgba(0,0,0,.42);
-  opacity:calc(.3 + .7 * var(--newness))}
+  box-shadow:calc(5px * var(--newness)) calc(5px * var(--newness)) 0 0 rgba(0,0,0,.62),
+             calc(9px * var(--newness)) calc(10px * var(--newness)) 16px rgba(0,0,0,calc(.38 * var(--newness)));
+  transition:box-shadow .35s ease,transform .25s cubic-bezier(.2,1.1,.3,1)}
+#sr-app .sr-clcard.sr-clcard-new:hover{transform:translate(calc(2px * var(--newness)),calc(2px * var(--newness)));
+  box-shadow:calc(3px * var(--newness)) calc(3px * var(--newness)) 0 0 rgba(0,0,0,.62),
+             calc(5px * var(--newness)) calc(6px * var(--newness)) 12px rgba(0,0,0,calc(.3 * var(--newness)))}
+#sr-app .sr-clcard.sr-clcard-new::before{content:none}
+#sr-app .sr-clcard-warn.soft{border-color:#2c2c31;background:#141417;color:#9a9a95}
+#sr-app .sr-clcard-warn.soft b{color:#a8a8a2}
+#sr-app .sr-clcard-warn.soft em{color:#6f6f6a}
 #sr-app .sr-clcard.sr-clcard-care{--heat:.5;position:relative;overflow:hidden;
   box-shadow:0 8px 26px rgba(236,110,70,calc(.28 * var(--heat)));
   transition:box-shadow .5s ease}
@@ -38910,8 +38909,17 @@ function _srRecCardHTML(data){
         var _ca=null; for(var _ai=0;_ai<CLIENT_ACCOUNTS.length;_ai++){ var _r=CLIENT_ACCOUNTS[_ai]; if(_r && _r.name && clNorm(String(_r.name))===c){ _ca=_r; break; } }
         if(_ca) _startMs=_pd(_ca.start) || _pd(_ca.created_at) || null;
       }
-      if(_startMs!=null){ var _d=Math.floor((Date.now()-_startMs)/86400000); if(_d>=0 && _d<30) _newDays=_d; }
-      if(pf!=null && pf<85){ _care=true; _careWhy.push(_kl?('기준 대비 '+Math.round(pf)+'%'):('vs std '+Math.round(pf)+'%')); }
+      /* [v1382] "아직 안 눌린 스티커" — 익는 단위는 달력이 아니라 함께 뛴 날(리포트가 있는 날). 30일 뛰면 붙는다. 쉬는 날은 안 닳는다 */
+      if(_startMs!=null && Date.now()>=_startMs){
+        var _wd=0; try{
+          var _all=(window._srRecAll&&window._srRecAll.sessions)||[];
+          if(!window._srWdCache || window._srWdCache.src!==_all){ var _m={}; for(var _si=0;_si<_all.length;_si++){ var _ss=_all[_si]; if(!_ss||!_ss.client||!_ss.date) continue; var _ck=clNorm(String(_ss.client)); if(!_ck) continue; (_m[_ck]=_m[_ck]||{})[String(_ss.date)]=1; } window._srWdCache={src:_all,map:_m}; }
+          var _dm=window._srWdCache.map[c]; if(_dm){ var _sd=new Date(_startMs); var _sk=_sd.getFullYear()+'-'+String(_sd.getMonth()+1).padStart(2,'0')+'-'+String(_sd.getDate()).padStart(2,'0'); for(var _dk in _dm){ if(_dk>=_sk) _wd++; } }
+        }catch(_){ _wd=0; }
+        if(_wd<30) _newDays=_wd;
+      }
+      var _careTh=(_newDays!=null)?60:85;   /* [v1382] 신규 30일은 봐준다 — 첫 주 미달은 정상 */
+      if(pf!=null && pf<_careTh){ _care=true; _careWhy.push(_kl?('기준 대비 '+Math.round(pf)+'%'):('vs std '+Math.round(pf)+'%')); }
       if(o.adeN>0 && (o.ade/o.adeN)<0){ _care=true; _careWhy.push(_kl?'아데나 평균 마이너스':'negative adena'); }
       if((o.noStd||0)>=3){ _care=true; _careWhy.push(_kl?('기준 없는 세션 '+o.noStd+'회'):('no-standard sessions '+o.noStd)); }
       if(_care){ _heat=(pf!=null&&pf<85)?Math.min(1,Math.max(.35,(85-pf)/40)):.35; if(o.adeN>0&&(o.ade/o.adeN)<0) _heat=Math.min(1,_heat+.2); if((o.noStd||0)>=3) _heat=Math.min(1,_heat+.15); }
@@ -38932,7 +38940,7 @@ function _srRecCardHTML(data){
     var _emptyCard = (st.actualH==null && !(o.statuses>0));   /* [v1364] boss "오늘 눌렀을 때 —/0명 카드 왜 이래" — 기간 내 기록이 없는 카드 */
     return '<div class="sr-clcard'+(o._noData?' sr-clcard-nodata':'')+(_emptyCard?' sr-clcard-empty':'')+(_newDays!=null?' sr-clcard-new':'')+(_care?' sr-clcard-care':'')+'" role="button" tabindex="0"'
       +((_newDays!=null||_care)?(' style="'+(_newDays!=null?('--newness:'+(1-_newDays/30).toFixed(3)+';'):'')+(_care?('--heat:'+_heat.toFixed(2)+';'):'')+'"'):'')
-      +(_care?(' title="'+esc((_kl?'케어 필요 — ':'Needs care — ')+_careWhy.join(' · '))+'"'):(_newDays!=null?(' title="'+esc(_kl?('온 지 '+_newDays+'일'):('day '+_newDays))+'"'):''))+(_pcNo!=null?' draggable="true"':'')+(_emptyCard?(' data-empty="'+(_kl?'이 기간 기록 없음':'No records in this period')+'"'):'')
+      +(_care?(' title="'+esc((_kl?'케어 필요 — ':'Needs care — ')+_careWhy.join(' · '))+'"'):(_newDays!=null?(' title="'+esc(_kl?('함께한 지 '+_newDays+'일'+(_newDays===29?' — 내일부터 다른 카드처럼 봅니다':'')):('day '+_newDays+' together'))+'"'):''))+(_pcNo!=null?' draggable="true"':'')+(_emptyCard?(' data-empty="'+(_kl?'이 기간 기록 없음':'No records in this period')+'"'):'')
       +' onclick="_srClCardTap(event,'+ci+')"'
       +' ondblclick="_srClFlip(event,'+ci+')"'
       +' onkeydown="if(event.key===\'Enter\'){_srRecClientByIdx('+ci+')}"'
@@ -38965,8 +38973,9 @@ function _srRecCardHTML(data){
          if(!(o.noStd > 0)) return '';
          var mk = Object.keys(o.noStdMaps||{}).sort(function(a,b){ return o.noStdMaps[b]-o.noStdMaps[a]; });
          var few = mk.slice(0,2).map(esc).join(' · ') + (mk.length>2 ? ' 외 '+(mk.length-2) : '');
-         return '<div class="sr-clcard-warn" title="이 사냥터의 기준 EXP가 카드에 없어서 채점이 안 됩니다. 카드를 눌러 기준을 넣어주세요.">'
-              + '<b>⚠ 기준 없음</b><span>'+o.noStd+(_kl?'시간 안 세짐':'h unscored')+'</span>'
+         /* [v1382] 새 손님한텐 혼내는 말을 안 한다 — 신규 30일은 주황 경고 대신 회색 안내 */
+         return '<div class="sr-clcard-warn'+(_newDays!=null?' soft':'')+'" title="'+(_newDays!=null?(_kl?'새 클라라 기준을 아직 정하는 중입니다. 카드를 눌러 기준을 넣으면 채점이 시작됩니다.':'New client — standard not set yet.'):'이 사냥터의 기준 EXP가 카드에 없어서 채점이 안 됩니다. 카드를 눌러 기준을 넣어주세요.')+'">'
+              + (_newDays!=null?'<b>◌ '+(_kl?'아직 기준 정하는 중':'Standard pending')+'</b>':'<b>⚠ 기준 없음</b>')+'<span>'+o.noStd+(_kl?'시간 안 세짐':'h unscored')+'</span>'
               + '<em>'+few+'</em></div>';
        })()
       +'</div>'                       /* ← 앞면 끝 */
