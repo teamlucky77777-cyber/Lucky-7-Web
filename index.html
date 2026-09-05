@@ -4,7 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
 <title>ARASAKA Corp</title>
-<!-- BUILD: v1368 | 직원별 두 표·클라별 카드 가독성 7종(글자·보조숫자·줄무늬·정렬·알약·바·맵 한국어) -->
+<!-- BUILD: v1369 | 빈 자리=PC 현황에 보이는 PC(18·19), 배치완료는 클라 카드로 흡수, 단계 전환 즉시 반응 -->
 <!-- v745 기록은 git 이력(v1302 이전 커밋)에 있다 — 100KB 변경사 주석을 배포에서 제거 -->
 <!-- [v677] a <link href> cannot read a CSS variable, so the favicon carries its own copy.
      64px: a browser tab draws it at 16-32px, so this is 2x-DPR sharp at 11KB. -->
@@ -38855,11 +38855,25 @@ function _srRecCardHTML(data){
       var iq = PCB_INQ.find(function(x){ return x.id === id; }); if(!iq) return;
       var cur = _pcbIqStage3(iq);
       iq.st3 = cur === 'ask' ? 'test' : (cur === 'test' ? 'done' : 'ask');
-      _pcbSave();
+      /* [v1369] boss "테스트중으로 바꾸는 거 렉이 좀 있어" — 화면은 즉시(카드·팝업 DOM 직접 갱신),
+         저장·전체 재렌더·PC 현황·브로드캐스트는 다음 틱에 돌려 클릭이 바로 반응하게 */
+      try{
+        var _L = { ask:['📥','문의중'], test:['🧪','테스트중'], done:['✅','배치완료'] }[iq.st3];
+        document.querySelectorAll('.sr-iqwrap[data-iqid="'+id+'"]').forEach(function(w){
+          w.classList.remove('st-ask','st-test','st-done'); w.classList.add('st-'+iq.st3);
+          var b = w.querySelector('.sr-iqstage'); if(b) b.textContent = _L[0]+' '+_L[1];
+        });
+        var _box = document.querySelector('#sr-iqpop .sr-iqpop-box');
+        if(_box){ _box.classList.remove('st-ask','st-test','st-done'); _box.classList.add('st-'+iq.st3);
+          var _hb = _box.querySelector('.sr-iqpop-hd .sr-iqstage'); if(_hb) _hb.textContent = _L[0]+' '+_L[1]+' ⇄'; }
+      }catch(_){}
       try{ toast(iq.st3==='ask'?'📥 문의':(iq.st3==='test'?'🧪 테스트':'✅ 배치완료')); }catch(_){}
-      try{ renderRecords(true); }catch(_){}
-      try{ if(typeof render === 'function') render(); }catch(_){}   /* PC 현황 테스트 배지 갱신 */
-      try{ if(_pcRT) _pcRT.send({ type:'broadcast', event:'inq', payload:{ id:_pcRTMe(), tab:_PC_TAB_ID } }); }catch(_){}
+      _pcbSave();
+      setTimeout(function(){
+        try{ renderRecords(true); }catch(_){}
+        try{ if(typeof render === 'function' && document.querySelector('.pc-grid')) render(); }catch(_){}
+        try{ if(_pcRT) _pcRT.send({ type:'broadcast', event:'inq', payload:{ id:_pcRTMe(), tab:_PC_TAB_ID } }); }catch(_){}
+      }, 40);
     }catch(e){ console.warn('iq cycle:', e); }
   };
   window._srIqAdd = function(){ try{ _pcbInqNew(); }catch(e){ toast('문의 생성 실패: '+(e&&e.message), true); } };
@@ -38893,7 +38907,11 @@ function _srRecCardHTML(data){
       var vet = _pcbVeteranSet();
       var stL = { ask:['📥','문의중'], test:['🧪','테스트중'], done:['✅','배치완료'] };
       /* [v1353] boss "누가 저걸 다 읽냐 — 압축해서 보여주고 누르면 세부가 팝업으로" */
-      return (PCB_INQ||[]).filter(Boolean).map(function(iq){
+      return (PCB_INQ||[]).filter(Boolean).filter(function(iq){
+        /* [v1369] boss "배치완료 돼서 정식 진행이면 배치완료 카드가 아니라 기존 카드들에 섞여 들어가야" —
+           같은 이름의 클라 카드(리포트 또는 PC판 배정)가 있으면 문의 카드는 그 카드로 흡수된다. */
+        try{ if(_pcbIqStage3(iq)!=='done') return true; var _k=clNorm(String(iq.name||'')); return !(_k && byClient && byClient[_k]); }catch(_){ return true; }
+      }).map(function(iq){
         var st = _pcbIqStage3(iq); var L = stL[st] || stL.ask;
         var pcIt = iq.pcKey ? items.find(function(x){ return x.key === iq.pcKey; }) : null;
         var bits = [];
@@ -39085,7 +39103,10 @@ function _srRecCardHTML(data){
      'online·클라 0' 이라 데이터로는 '원래 없는 PC'와 '빈 PC'를 못 가른다.
      → 빈 카드는 **이번 기간에 카드가 있다가 숨겨진 자리**(휴면·나간 클라의 PC, v1358 _hidCl)만 만든다.
        그게 리모트뷰에서 '컴퓨터는 있는데 비어 있는' 자리(2·18·19)와 같다. */
-  var _boardPcs=[]; try{ var _bp={}; _hidCl.forEach(function(k){ var pn=Number(byClient[k]&&byClient[k].pc); if(isFinite(pn)&&pn>0) _bp[pn]=1; }); _boardPcs=Object.keys(_bp).map(Number); }catch(_){} _boardPcs.sort(function(a,b){ return a-b; });
+  /* [v1369] boss "18·19번 왜 비었음? 추가해" — 숨긴 클라의 자리만 그리던 v1362 규칙은 그 클라가 이번 기간
+     리포트에 없으면 빈 자리도 사라졌다. 이제 PC 현황에 '보이는' PC(숨김·offline 제외) 가운데 카드 없는 자리를
+     그린다. 원래 없는 PC(5·10·15·20)는 PC 현황에서 숨김 처리해 데이터로 가른다. */
+  var _boardPcs=[]; try{ var _lst=(typeof pcsShown==='function')?pcsShown():((typeof PCS!=='undefined'&&Array.isArray(PCS))?PCS:[]); _lst.forEach(function(p){ if(!p||p.status==='offline'||p.hidden) return; var pn=Number(p.id); if(isFinite(pn)&&pn>0) _boardPcs.push(pn); }); }catch(_){} _boardPcs.sort(function(a,b){ return a-b; });
   var _seenPc={}; clKeys.forEach(function(c){ var pn=Number(byClient[c]&&byClient[c].pc); if(isFinite(pn)&&pn>0) _seenPc[pn]=1; });
   var _blankI=0;
   var _blankCard=function(pn){ return '<div class="sr-clcard sr-clcard-blank" aria-hidden="true" draggable="true" data-pc="'+pn+'"><div class="sr-clcard-top"><span class="sr-clcard-nm">—</span><span class="sr-clcard-pc">PC'+pn+'</span></div><div class="sr-clcard-blank-body">'+(_uiLang()==='ko'?'비어 있음':'Empty')+'</div></div>'; };
