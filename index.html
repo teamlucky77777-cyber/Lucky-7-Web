@@ -4,7 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
 <title>ARASAKA Corp</title>
-<!-- BUILD: v1382 | 신규 = 아직 안 눌린 스티커(오른쪽 아래 들림, 함께 뛴 날 30일), 경고 대신 안내, 케어 완화 -->
+<!-- BUILD: v1383 | 세션 기록 최신 묶음 기본 펼침 · 신규 모서리 진짜 말림 · 배치 착지 장면 -->
 <!-- v745 기록은 git 이력(v1302 이전 커밋)에 있다 — 100KB 변경사 주석을 배포에서 제거 -->
 <!-- [v677] a <link href> cannot read a CSS variable, so the favicon carries its own copy.
      64px: a browser tab draws it at 16-32px, so this is 2x-DPR sharp at 11KB. -->
@@ -9551,7 +9551,17 @@ html .cs-ed-dialnum.bump-up .h.up,html .cs-ed-dialnum.bump-dn .h.dn{opacity:1}
 #sr-app .sr-clcard.sr-clcard-new:hover{transform:translate(calc(2px * var(--newness)),calc(2px * var(--newness)));
   box-shadow:calc(3px * var(--newness)) calc(3px * var(--newness)) 0 0 rgba(0,0,0,.62),
              calc(5px * var(--newness)) calc(6px * var(--newness)) 12px rgba(0,0,0,calc(.3 * var(--newness)))}
-#sr-app .sr-clcard.sr-clcard-new::before{content:none}
+#sr-app .sr-clcard.sr-clcard-new::before{content:"";position:absolute;right:-1px;bottom:-1px;z-index:4;pointer-events:none;
+  width:calc(8px + 20px * var(--newness));height:calc(8px + 20px * var(--newness));
+  background:linear-gradient(315deg,var(--bg,#0e0e10) 0 46%,#4a4a52 47%,#34343a 70%,#26262b 100%);
+  border-top-left-radius:100%;border-bottom-right-radius:14px;
+  box-shadow:-5px -5px 10px rgba(0,0,0,.5);
+  opacity:calc(.25 + .75 * var(--newness));transition:width .35s ease,height .35s ease,opacity .35s ease}
+#sr-app .sr-clcard.sr-clcard-new:hover::before{width:calc(6px + 14px * var(--newness));height:calc(6px + 14px * var(--newness))}
+/* 착지 — 문의 카드가 PC 자리에 놓이는 그 한 번: 위에서 내려앉아 살짝 눌렸다 튀어 오른다 */
+@keyframes srLand{0%{transform:translateY(-26px) scale(1.04);opacity:0}55%{transform:translateY(3px) scale(.995);opacity:1}78%{transform:translateY(-2px) scale(1.005)}100%{transform:translateY(0) scale(1)}}
+#sr-app .sr-clcard.sr-clcard-land{animation:srLand .62s cubic-bezier(.2,.9,.3,1.1) both}
+@media (prefers-reduced-motion:reduce){#sr-app .sr-clcard.sr-clcard-land{animation:none}}
 #sr-app .sr-clcard-warn.soft{border-color:#2c2c31;background:#141417;color:#9a9a95}
 #sr-app .sr-clcard-warn.soft b{color:#a8a8a2}
 #sr-app .sr-clcard-warn.soft em{color:#6f6f6a}
@@ -37878,7 +37888,7 @@ function _srIqPlace(iqid, pc){
   try{ renderRecords(true); }catch(_){}
   try{ if(typeof render === 'function' && document.querySelector('.pc-grid')) render(); }catch(_){}
   try{ if(typeof _pcRT !== 'undefined' && _pcRT) _pcRT.send({ type:'broadcast', event:'inq', payload:{ id:_pcRTMe(), tab:_PC_TAB_ID } }); }catch(_){}
-  try{ setTimeout(function(){ var t = document.querySelector('#sr-app .sr-clgrid .sr-clcard[data-pc="'+pc+'"]:not(.sr-clcard-blank)'); if(t){ t.classList.add('sr-clcard-flash'); try{ t.scrollIntoView({ block:'center', behavior:'smooth' }); }catch(_){} setTimeout(function(){ t.classList.remove('sr-clcard-flash'); }, 2600); } }, 120); }catch(_){}
+  try{ setTimeout(function(){ var t = document.querySelector('#sr-app .sr-clgrid .sr-clcard[data-pc="'+pc+'"]:not(.sr-clcard-blank)'); if(t){ t.classList.add('sr-clcard-land'); try{ t.scrollIntoView({ block:'center', behavior:'smooth' }); }catch(_){} setTimeout(function(){ t.classList.remove('sr-clcard-land'); t.classList.add('sr-clcard-flash'); setTimeout(function(){ t.classList.remove('sr-clcard-flash'); }, 1800); }, 650); } }, 120); }catch(_){}
 }
 function _srClMoveIq(srcId, dstId, after){
   if(!srcId || !dstId || srcId === dstId) return;
@@ -38557,7 +38567,8 @@ function _srRecCardHTML(data){
          나머지는 접은 채로 연다. '오늘'은 리포트 날짜 규칙(KST 02시 경계 = KST−2h)과 같은 날짜.
          사용자가 열고 닫은 묶음은 window._srSlOpen 에 기억해 실시간 재렌더에도 그대로 둔다. */
       var _recToday=(function(){ try{ return new Date(Date.now()+7*3600*1000).toISOString().slice(0,10); }catch(_){ return ''; } })();
-      var _open=(window._srSlOpen && Object.prototype.hasOwnProperty.call(window._srSlOpen,d)) ? !!window._srSlOpen[d] : (d===_recToday);
+      /* [v1383] boss "가장 최근 기록으로 열리게" — 오늘 기록이 없으면 다 접혀 있었다. 맨 위(최신) 묶음이 기본 */
+      var _open=(window._srSlOpen && Object.prototype.hasOwnProperty.call(window._srSlOpen,d)) ? !!window._srSlOpen[d] : (gi===0 || d===_recToday);
       var _dayIgBtn=(isAdmin&&_dayIds.length)?('<button type="button" class="sr-sl-dayign'+(_dayAllIg?' on':'')+'" data-ids="'+esc(_dayIds.join(','))+'" data-ig="'+(_dayAllIg?'0':'1')+'" onclick="event.stopPropagation();_srRecToggleIgnoreDay(this)" title="'+(_dKo?'이 날 전체를 성과 계산에서 제외/포함':'Exclude/include the WHOLE day from performance')+'">'+(_dayAllIg?(_dKo?'✓ 포함 (전체)':'✓ Include all'):(_dKo?'미반영 (전체)':'Exclude all'))+'</button>'):'';
       var head='<div class="sr-sl-day" onclick="_srSlToggle(\''+wid+'\')"><span class="sr-sl-ca">'+(_open?'▾':'▸')+'</span><span class="sr-sl-dn">'+dayLabelKo(d)+'</span><span class="sr-sl-dc">'+rws.length+'</span>'+_dayIgBtn+'</div>';
       // [v372] one row per report, except CLEAN readings in the same clock-hour + client + map collapse
