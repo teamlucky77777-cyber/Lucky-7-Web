@@ -4,7 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
 <title>ARASAKA Corp</title>
-<!-- BUILD: v1387 | 진동을 감쇠 진동(휴대폰식)+불규칙 간격으로, 신규 클라 테두리 초록 -->
+<!-- BUILD: v1388 | 신규 클라 테두리 청록(문의중 초록과 구분) -->
 <!-- v745 기록은 git 이력(v1302 이전 커밋)에 있다 — 100KB 변경사 주석을 배포에서 제거 -->
 <!-- [v677] a <link href> cannot read a CSS variable, so the favicon carries its own copy.
      64px: a browser tab draws it at 16-32px, so this is 2x-DPR sharp at 11KB. -->
@@ -9586,8 +9586,9 @@ html .cs-ed-dialnum.bump-up .h.up,html .cs-ed-dialnum.bump-dn .h.dn{opacity:1}
 #sr-app .sr-clcard.sr-clcard-care.sr-buzz:not(.flipped) > .sr-clflip{animation:srBuzz .55s cubic-bezier(.2,.7,.3,1) both;transform-origin:50% 55%}
 @keyframes srBuzz{0%{transform:translate(0,0) rotate(0)}8%{transform:translate(-1.6px,.3px) rotate(-.25deg)}18%{transform:translate(1.4px,-.3px) rotate(.22deg)}28%{transform:translate(-1.1px,.2px) rotate(-.16deg)}38%{transform:translate(.8px,-.2px) rotate(.1deg)}50%{transform:translate(-.5px,.1px) rotate(-.06deg)}62%{transform:translate(.3px,0) rotate(.03deg)}76%{transform:translate(-.12px,0) rotate(0)}100%{transform:translate(0,0) rotate(0)}}
 /* [v1387] boss "신입 클라이언트들은 테두리 색을 다르게" — 문의(초록) 에서 이어지는 초록 */
-#sr-app .sr-clcard.sr-clcard-new{border-color:rgba(76,175,110,.6)}
-#sr-app .sr-clcard.sr-clcard-new:hover{border-color:rgba(76,175,110,.9)}
+/* [v1388] boss "문의중이 이미 초록이라" — 신규는 청록(민트): 초록(문의)·빨강(테스트)·금색(배치완료)·파랑(백업) 어느 것과도 안 겹친다 */
+#sr-app .sr-clcard.sr-clcard-new{border-color:rgba(92,200,190,.62)}
+#sr-app .sr-clcard.sr-clcard-new:hover{border-color:rgba(92,200,190,.95)}
 /* 오래된 카드 — 함께한 날이 길수록 모서리가 닳아 둥글다(45일부터, 180일에 +4px) */
 #sr-app .sr-clcard.sr-clcard-old{border-radius:calc(14px + 4px * var(--age,0))}
 #sr-app .sr-clcard.sr-clcard-new.sr-clcard-care{overflow:visible}
