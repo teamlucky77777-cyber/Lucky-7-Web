@@ -4,7 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
 <title>ARASAKA Corp</title>
-<!-- BUILD: v1390 | 신규 테두리 살짝 더 진하게 -->
+<!-- BUILD: v1391 | 기준표 탭 메뉴에서 제거, 뒷면에서 기준 만들기(없으면 누르면 생성) -->
 <!-- v745 기록은 git 이력(v1302 이전 커밋)에 있다 — 100KB 변경사 주석을 배포에서 제거 -->
 <!-- [v677] a <link href> cannot read a CSS variable, so the favicon carries its own copy.
      64px: a browser tab draws it at 16-32px, so this is 2x-DPR sharp at 11KB. -->
@@ -39342,8 +39342,21 @@ function _srRecCardHTML(data){
       face.onclick = function(e){
         try{ if(e.target && e.target.closest && e.target.closest("button,input,select,textarea,.cs-map-grip,.sr-clback-x,[contenteditable=true]")) return; }catch(_){}
         e.stopPropagation();
-        if(!(idx >= 0) || typeof _csOpenEditor !== "function") return;
-        clearTimeout(face._edT); face._edT = setTimeout(function(){ face._edT = null; try{ _csOpenEditor(idx); }catch(err){ console.warn("back edit:", err); } }, 260);
+        if(typeof _csOpenEditor !== "function") return;
+        /* [v1391] boss "기준 EXP 탭 지워도 되지? 기록·통계에서 수정되니까" — 지우려면 '없는 기준을 만드는 길'이 여기 있어야 한다.
+           기준이 없는 카드를 누르면 이 이름·PC 로 기준 레코드를 만들어 바로 편집창을 연다(저장하면 리포트 서버 clients 에 추가). */
+        clearTimeout(face._edT); face._edT = setTimeout(function(){ face._edT = null;
+          try{
+            if(!(idx >= 0)){
+              if(typeof expCanEdit === "function" && !expCanEdit()) return;
+              if(!Array.isArray(_csClients)) _csClients = [];
+              var _pcNo = card.getAttribute("data-pc"); var _rec = { name:nm, pc:(_pcNo!=null && _pcNo!=="") ? Number(_pcNo) : "", maps:[] };
+              if(!_csClients.some(function(x){ return String((x&&x.name)||"").trim()===nm; })) _csClients.push(_rec);
+              _csBuildRows(_csClients); idx = _srClCsIdx(nm);
+              if(!(idx >= 0)) return;
+            }
+            _csOpenEditor(idx);
+          }catch(err){ console.warn("back edit:", err); } }, 260);
       };
       face.ondblclick = function(){ clearTimeout(face._edT); face._edT = null; };
       /* 뒷면에서는 맵을 끌어 옮기지 않는다 — 옮길 곳(기준 EXP 그리드)이 여기엔 없다.
@@ -39374,7 +39387,7 @@ function _srRecCardHTML(data){
         put("<div class='sr-clback-msg'>" + (kl ? "기준 불러오는 중…" : "Loading…") + "</div>", true);
         return;
       }
-      put("<div class='sr-clback-msg'>" + (kl ? "이 고객의 기준이 아직 없습니다" : "No standard yet") + "</div>");
+      put("<div class='sr-clback-msg'>" + (kl ? "기준이 아직 없습니다<br><small>눌러서 만들기</small>" : "No standard yet<br><small>tap to create</small>") + "</div>");
       return;
     }
     var inner = "";
@@ -52527,7 +52540,7 @@ function visibleTree(){
       .filter(cat => canSee(cat.perms))
       .map(cat => ({
         ...cat,
-        channels: cat.channels.filter(ch => ch.id !== 'op-backup' && (ch.kind === 'divider' || (canSee(ch.perms) && matrixAllows(ch.id))))
+        channels: cat.channels.filter(ch => ch.id !== 'op-backup' && ch.id !== 'pl-calc-std' /* [v1391] 기준표 탭은 메뉴에서 뺀다 — 기록·통계 카드 뒷면이 같은 편집창을 연다 */ && (ch.kind === 'divider' || (canSee(ch.perms) && matrixAllows(ch.id))))
       }))
       // [v290] hide a category header if the role ends up with no visible channels in it
       // (e.g. 운영 is open to all for PC 현황, but a role with PC 현황 disabled shows nothing there)
