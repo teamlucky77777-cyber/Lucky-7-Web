@@ -4,7 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
 <title>ARASAKA Corp</title>
-<!-- BUILD: v1384 | 붙는 날(30일째 모서리 탁) + 오늘의 카드(단골×열 하나가 튀어나와 누르면 앉음) -->
+<!-- BUILD: v1385 | 렉: 케어 애니 불투명도만·뜨거운 4장만 + 숨쉬기(살아있는 열), 열 축적(며칠 미달), 오래된 카드 둥글게 -->
 <!-- v745 기록은 git 이력(v1302 이전 커밋)에 있다 — 100KB 변경사 주석을 배포에서 제거 -->
 <!-- [v677] a <link href> cannot read a CSS variable, so the favicon carries its own copy.
      64px: a browser tab draws it at 16-32px, so this is 2x-DPR sharp at 11KB. -->
@@ -9580,12 +9580,16 @@ html .cs-ed-dialnum.bump-up .h.up,html .cs-ed-dialnum.bump-dn .h.dn{opacity:1}
   box-shadow:0 8px 26px rgba(236,110,70,calc(.28 * var(--heat)));
   transition:box-shadow .5s ease}
 #sr-app .sr-clcard.sr-clcard-care::after{content:"";position:absolute;inset:0;pointer-events:none;z-index:0;border-radius:inherit;
-  background:
-    radial-gradient(75% 48% at 50% 108%,rgba(236,110,70,calc(.34 * var(--heat))) 0%,rgba(236,110,70,calc(.12 * var(--heat))) 45%,transparent 72%),
-    linear-gradient(180deg,transparent 55%,rgba(236,110,70,calc(.05 * var(--heat))) 100%);
-  animation:srEmber calc(4.2s - 2s * var(--heat)) ease-in-out infinite}
+  background:radial-gradient(75% 48% at 50% 108%,rgba(236,110,70,calc(.34 * var(--heat))) 0%,rgba(236,110,70,calc(.12 * var(--heat))) 45%,transparent 72%);
+  opacity:.85}
+/* [v1385] 살아 있는 열 — 뜨거운 4장만: 잔불이 불투명도로만 일렁이고(GPU), 카드가 숨 쉬듯 아주 미세하게 부풀었다 가라앉는다. 열이 셀수록 숨이 얕고 빠르다 */
+#sr-app .sr-clcard.sr-clcard-care.sr-heat-anim::after{will-change:opacity;animation:srEmber calc(4.2s - 2s * var(--heat)) ease-in-out infinite}
+#sr-app .sr-clcard.sr-clcard-care.sr-heat-anim:not(.flipped) > .sr-clflip{will-change:transform;animation:srBreathe calc(5s - 2.4s * var(--heat)) ease-in-out infinite;transform-origin:50% 60%}
+@keyframes srBreathe{0%,100%{transform:scale(1)}50%{transform:scale(calc(1 + .004 + .004 * var(--heat)))}}
+/* 오래된 카드 — 함께한 날이 길수록 모서리가 닳아 둥글다(45일부터, 180일에 +4px) */
+#sr-app .sr-clcard.sr-clcard-old{border-radius:calc(14px + 4px * var(--age,0))}
 #sr-app .sr-clcard.sr-clcard-care > *{position:relative;z-index:1}
-@keyframes srEmber{0%,100%{opacity:.5;transform:translateY(2px)}50%{opacity:1;transform:translateY(0)}}
+@keyframes srEmber{0%,100%{opacity:.55}50%{opacity:1}}
 #sr-app .sr-clcard.sr-clcard-new.sr-clcard-care{overflow:visible}
 #sr-app .sr-clcard.sr-clcard-new.sr-clcard-care::after{border-radius:14px}
 @media (prefers-reduced-motion:reduce){#sr-app .sr-clcard.sr-clcard-care::after{animation:none;opacity:.8}}
@@ -37820,6 +37824,15 @@ function _srRecClientByIdx(i){ var c=(window._srRecClients||[])[i]; window._srRe
    문의 카드는 PCB_INQ 순서. 저장은 각자의 기존 경로(savePCState / _pcbSave). 같은 종류끼리만 놓인다. */
 /* [v1384] 오늘의 카드 — 아침에 '제일 오래된 단골 중 제일 뜨거운' 카드 하나가 그리드 위로 살짝 튀어나와 있다.
    누르면 자리로 내려앉고(확인), 그 날은 다시 안 올라온다(localStorage). 규칙은 안 보이고 카드만 움직인다. */
+/* [v1385] boss "렉이 너무 심해졌는데" — 케어 카드마다 매 프레임 그라디언트 애니가 돌았다.
+   이제 불투명도만 움직이고(GPU), 가장 뜨거운 4장만 숨 쉰다. 나머지는 정지된 열. */
+function _srHeatBudget(g){
+  if(!g) return;
+  var cards = [].slice.call(g.querySelectorAll('.sr-clcard.sr-clcard-care'));
+  cards.sort(function(a,b){ return (Number(b.getAttribute('data-heat'))||0) - (Number(a.getAttribute('data-heat'))||0); });
+  cards.forEach(function(el, i){ el.classList.toggle('sr-heat-anim', i < 4); });
+  var olds = g.querySelectorAll('.sr-clcard[data-age]'); for(var j=0;j<olds.length;j++){ olds[j].style.setProperty('--age', olds[j].getAttribute('data-age')); olds[j].classList.add('sr-clcard-old'); }
+}
 function _srTodayPick(g){
   if(!g) return;
   var dayKey = new Date(Date.now() + 7*3600*1000).toISOString().slice(0,10);
@@ -38967,7 +38980,12 @@ function _srRecCardHTML(data){
       if(pf!=null && pf<_careTh){ _care=true; _careWhy.push(_kl?('기준 대비 '+Math.round(pf)+'%'):('vs std '+Math.round(pf)+'%')); }
       if(o.adeN>0 && (o.ade/o.adeN)<0){ _care=true; _careWhy.push(_kl?'아데나 평균 마이너스':'negative adena'); }
       if((o.noStd||0)>=3){ _care=true; _careWhy.push(_kl?('기준 없는 세션 '+o.noStd+'회'):('no-standard sessions '+o.noStd)); }
-      if(_care){ _heat=(pf!=null&&pf<85)?Math.min(1,Math.max(.35,(85-pf)/40)):.35; if(o.adeN>0&&(o.ade/o.adeN)<0) _heat=Math.min(1,_heat+.2); if((o.noStd||0)>=3) _heat=Math.min(1,_heat+.15); }
+      if(_care){ _heat=(pf!=null&&pf<_careTh)?Math.min(1,Math.max(.35,(_careTh-pf)/40)):.35;
+        /* [v1385] 열은 축적된다 — 미달인 날이 하루면 미지근, 나흘 이상이면 제 온도. 가장 최근 날이 통과면 절반으로 식는다 */
+        try{ var _byDay={}; (o._reps||[]).forEach(function(r){ if(!r||r.ms==null||r.target==null) return; var _dk=new Date(r.ms+9*3600000).toISOString().slice(0,10); var _dd=(_byDay[_dk]=_byDay[_dk]||{miss:0,ok:0}); if((Number(r.gain)||0) < Number(r.target)) _dd.miss++; else _dd.ok++; });
+          var _dks=Object.keys(_byDay).sort(); var _missDays=0; _dks.forEach(function(k){ if(_byDay[k].miss>_byDay[k].ok) _missDays++; });
+          if(_dks.length){ _heat=_heat*(0.4+0.6*Math.min(1,_missDays/4)); var _lastD=_byDay[_dks[_dks.length-1]]; if(_lastD.ok>=_lastD.miss) _heat*=0.5; }
+          _heat=Math.max(.2, _heat); }catch(_){} if(o.adeN>0&&(o.ade/o.adeN)<0) _heat=Math.min(1,_heat+.2); if((o.noStd||0)>=3) _heat=Math.min(1,_heat+.15); }
     }catch(_){ _newDays=null; _care=false; _heat=0; }
     /* ═══ [v1330] 카드를 더블클릭하면 뒤집혀 기준을 고친다 ═══════════════════════
        boss "클라별로 나오는 저 카드를 더블클릭하면 360도 자연스러운 애니메이션으로
@@ -38984,6 +39002,7 @@ function _srRecCardHTML(data){
     var _pcNo = (o.pc!=null && String(o.pc)!=='') ? Number(o.pc) : null;
     var _emptyCard = (st.actualH==null && !(o.statuses>0));   /* [v1364] boss "오늘 눌렀을 때 —/0명 카드 왜 이래" — 기간 내 기록이 없는 카드 */
     return '<div class="sr-clcard'+(o._noData?' sr-clcard-nodata':'')+(_emptyCard?' sr-clcard-empty':'')+(_newDays!=null?' sr-clcard-new':'')+(_care?' sr-clcard-care':'')+(_stickNow?' sr-clcard-stick':'')+'" role="button" tabindex="0"'+' data-heat="'+(_care?_heat.toFixed(2):'0')+'" data-days="'+_wdAll+'" data-ck="'+esc(c)+'"'
+      +(_wdAll>=45?(' data-age="'+Math.min(1,_wdAll/180).toFixed(2)+'"'):'')
       +((_newDays!=null||_care)?(' style="'+(_newDays!=null?('--newness:'+(1-_newDays/30).toFixed(3)+';'):'')+(_care?('--heat:'+_heat.toFixed(2)+';'):'')+'"'):'')
       +(_care?(' title="'+esc((_kl?'케어 필요 — ':'Needs care — ')+_careWhy.join(' · '))+'"'):(_newDays!=null?(' title="'+esc(_kl?('함께한 지 '+_newDays+'일'+(_newDays===29?' — 내일부터 다른 카드처럼 봅니다':'')):('day '+_newDays+' together'))+'"'):''))+(_pcNo!=null?' draggable="true"':'')+(_emptyCard?(' data-empty="'+(_kl?'이 기간 기록 없음':'No records in this period')+'"'):'')
       +' onclick="_srClCardTap(event,'+ci+')"'
@@ -39143,6 +39162,7 @@ function _srRecCardHTML(data){
       var g = document.querySelector('#sr-app .sr-clgrid'); if(!g) return;
       try{ _srClDndBind(g); }catch(_){}   /* [v1367] 드래그 앤 드롭 위임 핸들러(그리드가 새로 그려질 때마다) */
       try{ _srTodayPick(g); }catch(_){}   /* [v1384] 오늘의 카드 */
+      try{ _srHeatBudget(g); }catch(_){}   /* [v1385] 애니메이션 예산 — 뜨거운 4장만 */
       var hs = [].map.call(g.querySelectorAll('.sr-clcard:not(.flipped):not(.sr-clcard-nodata):not(.sr-clcard-blank):not(.sr-clcard-empty)'), function(el){ return el.getBoundingClientRect().height; })
         .filter(function(h){ return h > 0; }).sort(function(a,b){ return a-b; });
       if(!hs.length){ g.style.removeProperty('--sr-iqh'); return; }
