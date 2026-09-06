@@ -4,7 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
 <title>ARASAKA Corp</title>
-<!-- BUILD: v1395 | PC 현황 문의 띠(문의중/테스트중+테스터/신규 D+N), 놓을 때 클라 카드 자동 생성, 배치 시 PC 현황 갱신 -->
+<!-- BUILD: v1396 | PC 현황: 요일(일요일·work_days) 배정 차단 제거 — 승인된 휴무·HR 휴무 토글만 배정 불가 -->
 <!-- v745 기록은 git 이력(v1302 이전 커밋)에 있다 — 100KB 변경사 주석을 배포에서 제거 -->
 <!-- [v677] a <link href> cannot read a CSS variable, so the favicon carries its own copy.
      64px: a browser tab draws it at 16-32px, so this is 2x-DPR sharp at 11KB. -->
@@ -55200,8 +55200,17 @@ const DAY_LABELS_KO = ['일','월','화','수','목','금','토'];
 // work_days:5 = 월~금 (1-5), 6 = 월~토 (1-6). 일요일은 항상 휴무
 // (overrideWorkDays === true 면 모든 요일 허용 — 테스트용)
 function staffWorksOn(s, day){
+  /* [v1396] boss "일요일이면 전부 흐리게 — 요일마다 이러지 말고 진짜 Dayoff 인 직원만 배정 불가하게"
+     요일·work_days 규칙 제거. 배정 불가는 (1) HR 휴무 토글 s.day_off (호출부가 봄) (2) 그 날짜에 '승인된 휴무 신청'
+     (off_state) 뿐이다. PC 현황은 요일만 알아서, 그 요일 = 오늘이면 오늘, 아니면 다음 그 요일 날짜로 본다. */
   if(overrideWorkDays) return true;
-  return day >= 1 && day <= s.work_days;
+  try{
+    if(typeof isApprovedOff !== 'function') return true;
+    var now = new Date(Date.now() + 9*3600000); var todayWd = now.getUTCDay();
+    var diff = ((Number(day) - todayWd) % 7 + 7) % 7;
+    var iso = new Date(now.getTime() + diff*86400000).toISOString().slice(0,10);
+    return !isApprovedOff(s && s.name, iso);
+  }catch(_){ return true; }
 }
 
 // 실제 시각 ↔ 타임라인 표시 위치 변환
