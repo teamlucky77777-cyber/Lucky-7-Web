@@ -4,7 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
 <title>ARASAKA Corp</title>
-<!-- BUILD: v1385 | 렉: 케어 애니 불투명도만·뜨거운 4장만 + 숨쉬기(살아있는 열), 열 축적(며칠 미달), 오래된 카드 둥글게 -->
+<!-- BUILD: v1386 | 케어 = 진동(색·잔불·숨쉬기·오늘의 카드 띄우기 제거) -->
 <!-- v745 기록은 git 이력(v1302 이전 커밋)에 있다 — 100KB 변경사 주석을 배포에서 제거 -->
 <!-- [v677] a <link href> cannot read a CSS variable, so the favicon carries its own copy.
      64px: a browser tab draws it at 16-32px, so this is 2x-DPR sharp at 11KB. -->
@@ -9576,23 +9576,18 @@ html .cs-ed-dialnum.bump-up .h.up,html .cs-ed-dialnum.bump-dn .h.dn{opacity:1}
 #sr-app .sr-clcard-warn.soft{border-color:#2c2c31;background:#141417;color:#9a9a95}
 #sr-app .sr-clcard-warn.soft b{color:#a8a8a2}
 #sr-app .sr-clcard-warn.soft em{color:#6f6f6a}
-#sr-app .sr-clcard.sr-clcard-care{--heat:.5;position:relative;overflow:hidden;
-  box-shadow:0 8px 26px rgba(236,110,70,calc(.28 * var(--heat)));
-  transition:box-shadow .5s ease}
-#sr-app .sr-clcard.sr-clcard-care::after{content:"";position:absolute;inset:0;pointer-events:none;z-index:0;border-radius:inherit;
-  background:radial-gradient(75% 48% at 50% 108%,rgba(236,110,70,calc(.34 * var(--heat))) 0%,rgba(236,110,70,calc(.12 * var(--heat))) 45%,transparent 72%);
-  opacity:.85}
+/* [v1386] boss "어설프게 색으로 표현하지 말고 카드에 진동이 오게" — 케어 카드는 휴대폰처럼 짧게 '드르륵' 운다.
+   열(--heat)이 셀수록 더 자주(6초→2.5초 간격). 색·잔불·숨쉬기 전부 제거. transform 만 움직여 렉 없음 */
+#sr-app .sr-clcard.sr-clcard-care{--heat:.5;position:relative}
+#sr-app .sr-clcard.sr-clcard-care::after{content:none}
 /* [v1385] 살아 있는 열 — 뜨거운 4장만: 잔불이 불투명도로만 일렁이고(GPU), 카드가 숨 쉬듯 아주 미세하게 부풀었다 가라앉는다. 열이 셀수록 숨이 얕고 빠르다 */
-#sr-app .sr-clcard.sr-clcard-care.sr-heat-anim::after{will-change:opacity;animation:srEmber calc(4.2s - 2s * var(--heat)) ease-in-out infinite}
-#sr-app .sr-clcard.sr-clcard-care.sr-heat-anim:not(.flipped) > .sr-clflip{will-change:transform;animation:srBreathe calc(5s - 2.4s * var(--heat)) ease-in-out infinite;transform-origin:50% 60%}
-@keyframes srBreathe{0%,100%{transform:scale(1)}50%{transform:scale(calc(1 + .004 + .004 * var(--heat)))}}
+#sr-app .sr-clcard.sr-clcard-care:not(.flipped) > .sr-clflip{will-change:transform;animation:srBuzz calc(6s - 3.5s * var(--heat)) linear infinite}
+@keyframes srBuzz{0%{transform:translate(0,0)}1%{transform:translate(-1.2px,.4px)}2%{transform:translate(1.2px,-.4px)}3%{transform:translate(-1px,.3px)}4%{transform:translate(1px,-.3px)}5%{transform:translate(-.6px,.2px)}6%{transform:translate(.4px,0)}7%,100%{transform:translate(0,0)}}
 /* 오래된 카드 — 함께한 날이 길수록 모서리가 닳아 둥글다(45일부터, 180일에 +4px) */
 #sr-app .sr-clcard.sr-clcard-old{border-radius:calc(14px + 4px * var(--age,0))}
-#sr-app .sr-clcard.sr-clcard-care > *{position:relative;z-index:1}
-@keyframes srEmber{0%,100%{opacity:.55}50%{opacity:1}}
 #sr-app .sr-clcard.sr-clcard-new.sr-clcard-care{overflow:visible}
 #sr-app .sr-clcard.sr-clcard-new.sr-clcard-care::after{border-radius:14px}
-@media (prefers-reduced-motion:reduce){#sr-app .sr-clcard.sr-clcard-care::after{animation:none;opacity:.8}}
+@media (prefers-reduced-motion:reduce){#sr-app .sr-clcard.sr-clcard-care:not(.flipped) > .sr-clflip{animation:none}}
 /* [v1371] 흡수 행선지 표시 */
 #sr-app .sr-clcard-newchip{font-weight:800;font-size:10.5px;color:#1a1408;background:#c9963a;padding:2px 7px;border-radius:6px;margin-left:6px;white-space:nowrap}
 #sr-app .sr-clcard.sr-clcard-flash{outline:2px solid #c9963a;box-shadow:0 0 0 6px rgba(201,150,58,.28)!important;transition:box-shadow .3s,outline-color .3s}
@@ -37830,11 +37825,11 @@ function _srHeatBudget(g){
   if(!g) return;
   var cards = [].slice.call(g.querySelectorAll('.sr-clcard.sr-clcard-care'));
   cards.sort(function(a,b){ return (Number(b.getAttribute('data-heat'))||0) - (Number(a.getAttribute('data-heat'))||0); });
-  cards.forEach(function(el, i){ el.classList.toggle('sr-heat-anim', i < 4); });
   var olds = g.querySelectorAll('.sr-clcard[data-age]'); for(var j=0;j<olds.length;j++){ olds[j].style.setProperty('--age', olds[j].getAttribute('data-age')); olds[j].classList.add('sr-clcard-old'); }
 }
 function _srTodayPick(g){
   if(!g) return;
+  return;   /* [v1386] boss "카드 띄우지 말고" — 오늘의 카드 튀어나옴 끔 */
   var dayKey = new Date(Date.now() + 7*3600*1000).toISOString().slice(0,10);
   var cards = g.querySelectorAll('.sr-clcard[data-heat]'); if(!cards.length) return;
   var best = null, bestScore = 0;
