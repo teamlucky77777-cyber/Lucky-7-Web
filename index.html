@@ -4,7 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
 <title>ARASAKA Corp</title>
-<!-- BUILD: v1394 | 진동 3단계 + 계정보드 탭 메뉴에서 제거(문의 파이프라인은 클라별로 이전 완료) -->
+<!-- BUILD: v1395 | PC 현황 문의 띠(문의중/테스트중+테스터/신규 D+N), 놓을 때 클라 카드 자동 생성, 배치 시 PC 현황 갱신 -->
 <!-- v745 기록은 git 이력(v1302 이전 커밋)에 있다 — 100KB 변경사 주석을 배포에서 제거 -->
 <!-- [v677] a <link href> cannot read a CSS variable, so the favicon carries its own copy.
      64px: a browser tab draws it at 16-32px, so this is 2x-DPR sharp at 11KB. -->
@@ -9448,6 +9448,16 @@ html[data-theme=light] #nav-chg{background:#fff;border-color:rgba(0,0,0,.1);box-
 .sr-clhid{grid-column:1/-1;justify-self:start;background:transparent;border:1px dashed var(--br2,#2f2f33);color:#7a7a76;border-radius:10px;padding:8px 12px;font-weight:600;font-size:12px;cursor:pointer;transition:color .14s,border-color .14s}   /* [v1358] 숨긴 클라 토글 */
 .sr-clhid:hover{color:#c9c9c4;border-color:#55555a}
 .pcb-iqnewpc{display:flex;gap:6px;flex:1;align-items:center}   /* [v1363] 새 PC 번호 입력 */
+/* [v1395] PC 현황 문의 띠 — 백업 간판과 같은 문법, 색만 상태별 */
+.pc-inq-band{display:flex;align-items:center;gap:6px;margin:2px 8px 6px;padding:5px 9px;border-radius:8px;font-size:11px;font-weight:800;letter-spacing:.02em;line-height:1.2;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.pc-inq-band b{font-weight:800}
+.pc-inq-band i{width:6px;height:6px;border-radius:50%;flex:0 0 auto;background:currentColor;animation:pcInqDot 1.6s ease-in-out infinite}
+.pc-inq-band.ask{color:#74d4ab;background:rgba(76,175,110,.14);border:1px solid rgba(76,175,110,.45)}
+.pc-inq-band.test{color:#f0837c;background:rgba(224,90,77,.16);border:1px solid rgba(224,90,77,.5)}
+.pc-inq-band.new{color:#7fd8cd;background:rgba(92,200,190,.14);border:1px solid rgba(92,200,190,.5)}
+.pc-inq-band.new i{animation:none}
+@keyframes pcInqDot{0%,100%{opacity:.35}50%{opacity:1}}
+@media (prefers-reduced-motion:reduce){.pc-inq-band i{animation:none}}
 /* [v1378] 클라 카드 뒷면 — 버튼 없이 카드 자체가 편집 진입 */
 #sr-app .sr-clback{cursor:pointer}
 #sr-app .sr-clback .cs-edit{display:none!important}
@@ -37943,12 +37953,14 @@ function _srClMovePc(src, dst, after){
 }
 /* [v1373] 문의 카드를 PC 카드에 놓기 = 배치완료. PC 연결 + 단계 done + 그 PC 카드로 흡수.
    PC 에 클라가 비어 있고 문의에 고객 카드(crmId)가 있으면 PC 판에도 그 고객을 앉힌다(없으면 PC 연결만). */
-function _srIqPlace(iqid, pc){
+async function _srIqPlace(iqid, pc){
   if(!iqid || !(pc > 0)) return;
   if(typeof PCB_INQ === 'undefined' || !Array.isArray(PCB_INQ)) return;
   var iq = null; for(var i=0;i<PCB_INQ.length;i++){ if(PCB_INQ[i] && PCB_INQ[i].id === iqid){ iq = PCB_INQ[i]; break; } }
   if(!iq) return;
   iq.pcKey = String(pc); iq.st3 = 'done'; iq.doneAt = Date.now(); iq.placedPc = pc;
+  /* [v1395] 클라이언트 카드가 없으면 만들어서 연결 — 그래야 PC 현황에 이름이 앉는다 */
+  try{ if(!iq.crmId && typeof _pcbInqCrm === 'function' && String(iq.name||'').trim()) await _pcbInqCrm(iq.id); }catch(_){}
   var seated = false;
   try{
     if(typeof PCS !== 'undefined' && Array.isArray(PCS) && iq.crmId){
@@ -43253,6 +43265,7 @@ function _pcbInqAssign(id, role, sid){
   if(role==='tester') iq.tester = sid;
   else { iq.staff = iq.staff||[]; if(!iq.staff.includes(sid)) iq.staff.push(sid); }
   _pcbSave(); renderPcBoard();
+  try{ if(typeof render === 'function' && document.querySelector('.pc-grid')) render(); }catch(_){}   /* [v1395] PC 현황 띠 갱신 */
   toast(_pcbStaffName(sid)+' → '+(role==='tester'?_iqT('테스터','tester'):_iqT('담당','staff')));
 }
 function _pcbInqRmStaff(id, sid){
@@ -60273,6 +60286,37 @@ function renderPCs(){
   try{ _ckRefreshSoon(); }catch(_){}   /* [v1076] 시계는 한 박자 늦게 */
 }
 
+/* [v1395] boss "PC 현황이랑 클라별 연동 충분히 됐나?" — PC 현황이 문의를 알게 한다.
+   이 PC 에 연결된 문의 카드가 있으면 헤더 아래 띠 하나: 문의중(초록) / 테스트중(빨강 + 테스터) / 신규 30일(청록 + D+N).
+   백업 간판과 같은 문법(작은 띠 + 점), 색만 상태별. 문의가 없으면 아무것도 없다. */
+function _pcInqBandHTML(p){
+  try{
+    if(typeof PCB_INQ === 'undefined' || !Array.isArray(PCB_INQ) || !p) return '';
+    var pcNo = Number(p.id); if(!(pcNo > 0)) return '';
+    var iq = null;
+    for(var i=0;i<PCB_INQ.length;i++){ var q = PCB_INQ[i]; if(!q) continue;
+      var k = Number(String(q.pcKey==null?'':q.pcKey).replace(/^x/,'')); var pp = Number(q.placedPc);
+      if(k === pcNo || pp === pcNo){ iq = q; break; } }
+    if(!iq) return '';
+    var st = (typeof _pcbIqStage3 === 'function') ? _pcbIqStage3(iq) : (iq.st3 || 'ask');
+    var ko = (typeof _uiLang !== 'function') || _uiLang() === 'ko';
+    var nm = String(iq.name || '').trim();
+    var esc = function(s){ return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;'); };
+    if(st === 'ask'){
+      return '<div class="pc-inq-band ask" title="' + esc(ko ? '이 PC 로 문의가 들어와 있습니다' : 'Inquiry linked to this PC') + '"><i></i>📥 ' + esc(ko ? '문의중' : 'Inquiry') + ' · <b>' + esc(nm) + '</b></div>';
+    }
+    if(st === 'test'){
+      var tn = iq.tester && typeof _pcbStaffName === 'function' ? _pcbStaffName(iq.tester) : '';
+      return '<div class="pc-inq-band test" title="' + esc(ko ? '이 PC 에서 테스트 중입니다' : 'Testing on this PC') + '"><i></i>🧪 ' + esc(ko ? '테스트중' : 'Testing') + ' · <b>' + esc(nm) + '</b>' + (tn ? ' · ' + esc(ko ? '테스터 ' : 'tester ') + esc(tn) : '') + '</div>';
+    }
+    if(st === 'done'){
+      var d0 = Number(iq.doneAt) || 0; if(!d0) return '';
+      var days = Math.floor((Date.now() - d0) / 86400000); if(days < 0 || days >= 30) return '';
+      return '<div class="pc-inq-band new" title="' + esc(ko ? '배치된 지 ' + days + '일 — 한 달 동안 표시' : 'Placed ' + days + ' days ago') + '"><i></i>🌱 ' + esc(ko ? '신규' : 'New') + ' · <b>' + esc(nm) + '</b> · D+' + days + '</div>';
+    }
+    return '';
+  }catch(e){ return ''; }
+}
 function pcCardHTML(p){
   const canEdit = currentUserRole === 'admin' || currentUserRole === 'op';
   const dispG = pcDisplayGame(p);
@@ -60348,6 +60392,7 @@ function pcCardHTML(p){
         ${canEdit?`<button onclick="event.stopPropagation();deletePC(${p.id})" title="이 PC 삭제 / Delete this PC" style="background:none;border:none;color:var(--tx3);cursor:pointer;font-size:13px;line-height:1;padding:2px 4px;margin-left:2px;border-radius:6px" onmouseover="this.style.color='var(--re)';this.style.background='var(--re-bg)'" onmouseout="this.style.color='var(--tx3)';this.style.background='none'">🗑</button>`:''}
       </div>
     </div>
+    ${_pcInqBandHTML(p)}
     ${leaderHTML}
     ${hasStaff?`<div class="slot-staff-group">${slotsHTML}${emptyDrop}</div>`:''}
     ${(hasStaff&&hasClient)?`<div class="slot-divider"></div>`:''}
