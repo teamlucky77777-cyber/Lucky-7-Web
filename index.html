@@ -4,7 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
 <title>ARASAKA Corp</title>
-<!-- BUILD: v1396 | PC 현황: 요일(일요일·work_days) 배정 차단 제거 — 승인된 휴무·HR 휴무 토글만 배정 불가 -->
+<!-- BUILD: v1397 | 2번 계획: 클라별 카드 클릭 → 성과 계산기 그 클라 PC 선택 + 체크인/시간 보고 화면(리더·직원) -->
 <!-- v745 기록은 git 이력(v1302 이전 커밋)에 있다 — 100KB 변경사 주석을 배포에서 제거 -->
 <!-- [v677] a <link href> cannot read a CSS variable, so the favicon carries its own copy.
      64px: a browser tab draws it at 16-32px, so this is 2x-DPR sharp at 11KB. -->
@@ -39096,10 +39096,39 @@ function _srRecCardHTML(data){
   /* 한 번 누르면 상세, 두 번 누르면 뒤집기. 두 손짓이 안 싸우게 한 번 누른 것은
      220ms 기다렸다가 실행한다 — 그 사이에 두 번째가 오면 취소하고 뒤집는다. */
   window._srClTapT = window._srClTapT || 0;
+  /* [v1397] 2번 계획 — boss "리포트도 기록·통계 클라별 눌러서 리포트할 수 있게".
+     리더·직원이 클라 카드를 누르면 성과 계산기가 그 클라 PC 카드를 고른 채로 열리고, 이미 그 클라로 체크인해
+     있으면 '시간 보고' 화면, 아니면 '체크인' 화면으로 간다. 관리자(admin/op/hr…)의 클릭은 지금처럼 상세로. */
+  window._srReportFromCard = function(name, pc){
+    try{ setActiveChannel('pl-exp-standard'); }catch(e){ return; }
+    var tries = 0;
+    (function pick(){
+      var cards = document.querySelectorAll('#sr-app .sr-pc-card');
+      if(!cards.length && tries++ < 30){ setTimeout(pick, 120); return; }
+      var target = null, want = String(name||'').trim(), wantPc = (pc==null) ? '' : String(pc);
+      for(var i=0;i<cards.length;i++){ var c = cards[i]; var cn = String(c.getAttribute('data-name')||'').trim(), cp = String(c.getAttribute('data-pc')||'');
+        if((wantPc && cp === wantPc) || (want && cn === want)){ target = c; break; } }
+      if(!target){ try{ toast((_uiLang()==='ko') ? (want+' — 계산기에 이 클라 카드가 없어요') : (want+' — not in the calculator')); }catch(_){} return; }
+      try{ _srPickCard(target.getAttribute('data-idx')); }catch(_){}
+      try{ target.scrollIntoView({ block:'center' }); }catch(_){}
+      var sess = (typeof _srSession !== 'undefined') ? _srSession : null;
+      var screen = (sess && String(sess.client||'').trim() === want) ? 'update' : 'checkin';
+      try{ _srGo(screen); }catch(_){}
+      try{ toast(screen === 'update' ? ('📝 ' + want + ((_uiLang()==='ko') ? ' 시간 보고' : ' hourly report')) : ('▶ ' + want + ((_uiLang()==='ko') ? ' 체크인' : ' check-in'))); }catch(_){}
+    })();
+  };
   window._srClCardTap = function(ev, ci){
     try{
       if(ev && ev.target && ev.target.closest && ev.target.closest(".sr-clback")) return;  /* 뒷면은 상세로 안 간다 */
       clearTimeout(window._srClTapT);
+      var _role = String(typeof currentUserRole !== 'undefined' ? currentUserRole : '').toLowerCase();
+      if(_role === 'leader' || _role === 'staff' || _role === 'player'){
+        var _card = ev && ev.currentTarget ? ev.currentTarget : (ev && ev.target && ev.target.closest ? ev.target.closest('.sr-clcard') : null);
+        var _nmEl = _card ? _card.querySelector('.sr-clcard-nm') : null;
+        var _nm = _nmEl ? String(_nmEl.textContent||'').trim() : '', _pc = _card ? _card.getAttribute('data-pc') : '';
+        window._srClTapT = setTimeout(function(){ try{ _srReportFromCard(_nm, _pc); }catch(_){} }, 220);
+        return;
+      }
       window._srClTapT = setTimeout(function(){ try{ _srRecClientByIdx(ci); }catch(_){} }, 220);
     }catch(_){ }
   };
