@@ -4,7 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
 <title>ARASAKA Corp</title>
-<!-- BUILD: v1400 | 타임라인 접힘 · 기록·통계 직원 열람(보기 전용 가드 13곳) · 신규 테두리 포커스 링+후광 -->
+<!-- BUILD: v1401 | 내 클라 카드 리포트 1단계 — 클라별 카드 탭 → 카드 열림 · 손잡이 당겨 줄 · 두 자리 · 앉히기 · 위로 밀기 = 휴식 -->
 <!-- v745 기록은 git 이력(v1302 이전 커밋)에 있다 — 100KB 변경사 주석을 배포에서 제거 -->
 <!-- [v677] a <link href> cannot read a CSS variable, so the favicon carries its own copy.
      64px: a browser tab draws it at 16-32px, so this is 2x-DPR sharp at 11KB. -->
@@ -39066,7 +39066,7 @@ function _srRecCardHTML(data){
        키보드 접근은 그대로 준다. */
     var _pcNo = (o.pc!=null && String(o.pc)!=='') ? Number(o.pc) : null;
     var _emptyCard = (st.actualH==null && !(o.statuses>0));   /* [v1364] boss "오늘 눌렀을 때 —/0명 카드 왜 이래" — 기간 내 기록이 없는 카드 */
-    return '<div class="sr-clcard'+(o._noData?' sr-clcard-nodata':'')+(_emptyCard?' sr-clcard-empty':'')+(_newDays!=null?' sr-clcard-new':'')+(_care?' sr-clcard-care':'')+(_stickNow?' sr-clcard-stick':'')+'" role="button" tabindex="0"'+' data-heat="'+(_care?_heat.toFixed(2):'0')+'" data-days="'+_wdAll+'" data-ck="'+esc(c)+'"'
+    return '<div class="sr-clcard'+(o._noData?' sr-clcard-nodata':'')+(_emptyCard?' sr-clcard-empty':'')+(_newDays!=null?' sr-clcard-new':'')+(_care?' sr-clcard-care':'')+(_stickNow?' sr-clcard-stick':'')+((typeof _mcIdleKey==='function'&&_mcIdleKey()===c)?' sr-clcard-idle':'')+'" role="button" tabindex="0"'+' data-heat="'+(_care?_heat.toFixed(2):'0')+'" data-days="'+_wdAll+'" data-ck="'+esc(c)+'"'
       +(_wdAll>=45?(' data-age="'+Math.min(1,_wdAll/180).toFixed(2)+'"'):'')
       +((_newDays!=null||_care)?(' style="'+(_newDays!=null?('--newness:'+(1-_newDays/30).toFixed(3)+';'):'')+(_care?('--heat:'+_heat.toFixed(2)+';'):'')+'"'):'')
       +(_care?(' title="'+esc((_kl?'케어 필요 — ':'Needs care — ')+_careWhy.join(' · '))+'"'):(_newDays!=null?(' title="'+esc(_kl?('함께한 지 '+_newDays+'일'+(_newDays===29?' — 내일부터 다른 카드처럼 봅니다':'')):('day '+_newDays+' together'))+'"'):''))+(_pcNo!=null?' draggable="true"':'')+(_emptyCard?(' data-empty="'+(_kl?'이 기간 기록 없음':'No records in this period')+'"'):'')
@@ -39077,6 +39077,7 @@ function _srRecCardHTML(data){
       +'<div class="sr-clflip">'
       +'<div class="sr-clface sr-clfront">'
       +'<div class="sr-clcard-top"><span class="sr-clcard-nm">'+esc(o.client||c)+'</span>'+((o.pc!=null&&String(o.pc)!=='')?'<span class="sr-clcard-pc">PC'+esc(String(o.pc))+'</span>':'')
+      +((typeof _mcHolderChip==='function')?_mcHolderChip(o.client||c,o.pc):'')   /* [v1401] 지금 이 카드를 들고 있는 사람 */
       +(function(){ /* [v1371] 배치완료 문의가 이 카드로 흡수됐으면 7일간 표시 */
           try{ if(typeof PCB_INQ==='undefined'||!Array.isArray(PCB_INQ)) return '';
             var _hit = PCB_INQ.some(function(iq){ return iq && _pcbIqStage3(iq)==='done' && (clNorm(String(iq.name||''))===c || (Number(iq.placedPc)>0 && Number(iq.placedPc)===Number(o.pc))) && (Date.now()-(Number(iq.doneAt)||0)) < 7*864e5; });
@@ -39141,11 +39142,11 @@ function _srRecCardHTML(data){
       if(ev && ev.target && ev.target.closest && ev.target.closest(".sr-clback")) return;  /* 뒷면은 상세로 안 간다 */
       clearTimeout(window._srClTapT);
       var _role = String(typeof currentUserRole !== 'undefined' ? currentUserRole : '').toLowerCase();
-      if(_role === 'leader' || _role === 'staff' || _role === 'player'){
+      if(_role === 'leader' || _role === 'staff' || _role === 'player' || (ev && ev.shiftKey) || window._mcForce){   /* [v1401] 관리자는 Shift+클릭으로 같은 카드 */
         var _card = ev && ev.currentTarget ? ev.currentTarget : (ev && ev.target && ev.target.closest ? ev.target.closest('.sr-clcard') : null);
         var _nmEl = _card ? _card.querySelector('.sr-clcard-nm') : null;
         var _nm = _nmEl ? String(_nmEl.textContent||'').trim() : '', _pc = _card ? _card.getAttribute('data-pc') : '';
-        window._srClTapT = setTimeout(function(){ try{ _srReportFromCard(_nm, _pc); }catch(_){} }, 220);
+        window._srClTapT = setTimeout(function(){ try{ if(typeof _mcOpen === 'function') _mcOpen(_nm, _pc); else _srReportFromCard(_nm, _pc); }catch(_){} }, 220);   /* [v1401] 내 클라 카드 — 카드가 크게 열린다 */
         return;
       }
       window._srClTapT = setTimeout(function(){ try{ _srRecClientByIdx(ci); }catch(_){} }, 220);
@@ -41534,13 +41535,14 @@ async function renderRecords(silent){
   var _grr=((currentUser&&currentUser.role)||'').toLowerCase();
   /* [v701] boss 8/3: team leaders (KAIJI/BRUCE, raw role 'leader') and HR may VIEW the page too —
      read-only is preserved because every mutating control below is isAdmin-gated. */
-  var _canRec=(currentUserRole==='admin')||_grr==='ceo'||_grr==='manager'||_grr==='leader'||_grr==='hr';
+  var _canRec=(currentUserRole==='admin')||_grr==='ceo'||_grr==='manager'||_grr==='leader'||_grr==='hr'
+    ||['op','manager','leader','staff','player'].indexOf(String(currentUserRole||'').toLowerCase())>=0||_grr==='staff'||_grr==='player'||_grr==='op';   /* [v1401] 직원도 본다(보기 전용 _srRecRO) — 카드 리포트의 입구 */
   if(!_canRec){ if(!silent) otherView.innerHTML='<div id="sr-app" class="sr-app-wide"><div class="sr-card"><div class="sr-head"><h2>기록 · 통계</h2></div><div class="sr-empty">대표 · 매니저 · 팀리더 전용입니다.</div></div></div>'; return; }
   _srInjectCSS();
   if(silent && window._srRecMode==='clock'){ return; }   // [v355] don't clobber clock playback
   // [v365] instant paint from cache so the page is never blank while the network catches up
   var _painted=false;
-  if(!silent && window._srRecMode!=='clock'){ var _cz=_rcGetCache(); if(_cz){ try{ otherView.innerHTML='<div id="sr-app" class="sr-app-wide">'+_srRecCardHTML(_srRecCompute(_cz.reports,_cz.clients))+'</div>'; _painted=true; }catch(_){ } } }
+  if(!silent && window._srRecMode!=='clock'){ var _cz=_rcGetCache(); if(_cz){ try{ otherView.innerHTML='<div id="sr-app" class="sr-app-wide">'+_srRecCardHTML(_srRecCompute(_cz.reports,_cz.clients))+'</div>'; _painted=true; try{ if(typeof _mcAutoOpen==='function') _mcAutoOpen(); }catch(_){} }catch(_){ } } }
   var _bg = silent || _painted;   // after a cache paint, the fresh fetch refreshes in place (keep scroll/filter)
   // [v310] silent/bg = keep scroll + current filter, no loading flash, no error wipe
   var _keepTop = _bg ? (otherView.scrollTop||0) : 0;
@@ -41567,6 +41569,7 @@ async function renderRecords(silent){
     var app=otherView.querySelector('#sr-app.sr-app-wide');
     if(_bg && app){ app.innerHTML=_srRecCardHTML(recRows); }
     else { if(_ep !== (window._chEpoch||0)) return; otherView.innerHTML='<div id="sr-app" class="sr-app-wide">'+_srRecCardHTML(recRows)+'</div>'; }   /* [v859] */
+    try{ if(typeof _mcAutoOpen==='function') _mcAutoOpen(); }catch(_){}   /* [v1401] */
     if(window._srRecMode==='clock'){ try{ requestAnimationFrame(function(){ if(typeof _ckInit==='function') _ckInit(); }); }catch(_){} }
     if(_bg){ try{ otherView.scrollTop=_keepTop; window.scrollTo(0,_keepWin); }catch(_){} }
   }catch(e){
@@ -69571,6 +69574,506 @@ console.info('AUTO100 build applied',AUTO100_BUILD.version,v3Audit());
 })();
 
 };
+</script>
+<style id="mc-style">
+/* ═══ [v1401] 내 클라 카드 리포트 — 1단계 ═══════════════════════════════════════
+   boss: "리포트도 클라별 카드에서" · 목업(내 클라 카드 리포트) 그대로.
+   카드 = PC 것. 직원이 클라별에서 카드를 누르면 크게 열리고(집기), 손잡이를 당기면 빈 줄이 나오고(당기기),
+   사진을 던지고 뒷자리 두 글자를 치고 앉히면 줄이 굳는다(던지기). 카드를 위로 밀면 클라별로 돌아가고 그게
+   휴식이다(놓기). 서버로 나가는 것은 지금 그대로 checkin / status / checkout — 아래 숨은 폼 자리를 기존 제출
+   함수(_srCheckIn·_srFinishSubmit)가 읽는다. 봇·급여·서버는 모른다. */
+#mc-layer{position:fixed;inset:0;z-index:100300;display:flex;align-items:flex-start;justify-content:center;overflow:auto;padding:22px 12px 40px;font-family:inherit}
+#mc-layer .mc-scrim{position:fixed;inset:0;background:rgba(6,6,8,.72);backdrop-filter:blur(4px);-webkit-backdrop-filter:blur(4px)}
+#mc-layer .mc-wrap{position:relative;width:100%;max-width:480px}
+#mc-layer .mc-card{position:relative;background:#161618;border:1px solid #2a2a2e;border-radius:18px;padding:0 18px 14px;color:#ecebe6;box-shadow:0 30px 60px rgba(0,0,0,.6);transform-origin:50% 100%;animation:mcFly .42s cubic-bezier(.2,.9,.3,1.1) both;transition:transform .5s cubic-bezier(.2,.9,.3,1.1),box-shadow .5s ease}
+@keyframes mcFly{0%{transform:translateY(90px) scale(.72);opacity:0}100%{transform:none;opacity:1}}
+#mc-layer .mc-card.mc-leave{animation:mcLeave .36s cubic-bezier(.4,0,.8,.4) both}
+@keyframes mcLeave{100%{transform:translateY(-140px) scale(.7);opacity:0}}
+#mc-layer .mc-card.mc-late{transform:translateY(4px) scale(.994);box-shadow:0 18px 34px rgba(0,0,0,.7)}
+#mc-layer .mc-card.mc-buzz > .mc-inner{animation:mcBuzz .8s cubic-bezier(.2,.7,.3,1) both}
+@keyframes mcBuzz{0%{transform:translate(0,0)}6%{transform:translate(-6px,1.2px) rotate(-.8deg)}12%{transform:translate(5.4px,-1.2px) rotate(.7deg)}18%{transform:translate(-4.2px,.9px) rotate(-.5deg)}24%{transform:translate(3px,-.6px)}30%{transform:translate(-1.5px,.3px)}36%{transform:translate(.5px,0)}44%{transform:translate(0,0)}52%{transform:translate(-5.5px,1px) rotate(-.7deg)}58%{transform:translate(5px,-1px) rotate(.6deg)}64%{transform:translate(-3.8px,.8px)}70%{transform:translate(2.6px,-.5px)}84%{transform:translate(.4px,0)}100%{transform:translate(0,0)}}
+#mc-layer .mc-push{text-align:center;font-size:11px;letter-spacing:.06em;color:#6f6f6a;padding:12px 0 10px;cursor:pointer;user-select:none;-webkit-user-select:none;touch-action:none}
+#mc-layer .mc-push:hover{color:#a9a9a3}
+#mc-layer .mc-hd{display:flex;align-items:center;gap:8px;margin-bottom:8px}
+#mc-layer .mc-nm{font-size:17px;font-weight:700}
+#mc-layer .mc-pc{margin-left:auto;font-size:11px;font-weight:700;color:#a9a9a3;background:#1c1c1f;border:1px solid #3a3a40;padding:2px 8px;border-radius:7px}
+#mc-layer .mc-hero{display:flex;align-items:flex-end;justify-content:space-between;gap:12px;margin-bottom:6px}
+#mc-layer .mc-big{font-size:34px;font-weight:700;color:#c9963a;letter-spacing:-.02em;line-height:1;font-variant-numeric:tabular-nums;transition:color .3s}
+#mc-layer .mc-big small{font-size:12px;color:#6f6f6a;font-weight:500;margin-left:6px;letter-spacing:0}
+#mc-layer .mc-big.mc-flash{color:#fff}
+#mc-layer .mc-side{display:flex;flex-direction:column;align-items:flex-end;gap:4px}
+#mc-layer .mc-pill{font-size:11px;font-weight:700;padding:3px 9px;border-radius:7px;background:rgba(201,150,58,.14);color:#c9963a}
+#mc-layer .mc-pill.ok{background:rgba(95,191,138,.14);color:#5fbf8a}
+#mc-layer .mc-pill.bad{background:rgba(224,90,77,.14);color:#e05a4d}
+#mc-layer .mc-meta{font-size:11px;color:#6f6f6a}
+#mc-layer .mc-today{font-size:11px;color:#6f6f6a;margin:0 0 8px;display:flex;justify-content:space-between;font-variant-numeric:tabular-nums}
+#mc-layer .mc-lines{display:flex;flex-direction:column;gap:6px}
+#mc-layer .mc-line{display:grid;grid-template-columns:44px 1fr auto;gap:10px;align-items:center;background:#1c1c1f;border:1px solid #2a2a2e;border-radius:12px;padding:8px 10px;font-variant-numeric:tabular-nums;animation:mcLand .4s cubic-bezier(.2,.9,.3,1.1) both}
+@keyframes mcLand{0%{transform:translateY(-6px);opacity:0}100%{transform:none;opacity:1}}
+#mc-layer .mc-line .t{font-size:12px;color:#6f6f6a;font-weight:600}
+#mc-layer .mc-line .v{font-size:14px;font-weight:600;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+#mc-layer .mc-line .v i{font-style:normal;color:#6f6f6a;font-weight:500;font-size:12px;margin-left:6px}
+#mc-layer .mc-line .who{font-size:10.5px;color:#6f6f6a;margin-left:6px;font-weight:500}
+#mc-layer .mc-line .r{font-size:11px;font-weight:700;padding:2px 8px;border-radius:6px;white-space:nowrap}
+#mc-layer .mc-line .r.ok{background:rgba(95,191,138,.14);color:#5fbf8a}
+#mc-layer .mc-line .r.bad{background:rgba(224,90,77,.14);color:#e05a4d}
+#mc-layer .mc-line .r.in{background:rgba(201,150,58,.14);color:#c9963a}
+#mc-layer .mc-line .r.out,#mc-layer .mc-line .r.na{background:transparent;color:#6f6f6a;border:1px solid #3a3a40}
+#mc-layer .mc-line.hole{background:transparent;border-style:dashed}
+#mc-layer .mc-line.hole .v{color:#6f6f6a;font-weight:500;font-size:12px}
+#mc-layer .mc-line.hole .r{background:transparent;color:#e05a4d;border:1px dashed rgba(224,90,77,.45)}
+#mc-layer .mc-line.mine{border-color:#34343a}
+#mc-layer .mc-draft{border:1.5px solid #c9963a;border-radius:14px;padding:12px;background:#1c1c1f;margin-top:8px;animation:mcPull .45s cubic-bezier(.2,.9,.3,1.1) both}
+@keyframes mcPull{0%{transform:translateY(-16px);opacity:0}100%{transform:none;opacity:1}}
+#mc-layer .mc-draft .mc-dh{display:flex;align-items:center;gap:10px;margin-bottom:10px;font-size:12px;font-weight:700;color:#c9963a}
+#mc-layer .mc-draft .mc-dh .mc-dx{margin-left:auto;font-weight:500;color:#6f6f6a;cursor:pointer;font-size:11.5px}
+#mc-layer .mc-draft .mc-dh .mc-dx:hover{color:#a9a9a3}
+#mc-layer .mc-drop{position:relative;height:74px;border:1.5px dashed #3a3a40;border-radius:12px;display:flex;align-items:center;justify-content:center;color:#6f6f6a;font-size:12.5px;cursor:pointer;user-select:none;transition:border-color .2s,background .2s;overflow:hidden}
+#mc-layer .mc-drop:hover,#mc-layer .mc-drop.over{border-color:#c9963a;color:#a9a9a3}
+#mc-layer .mc-drop.has{border-style:solid;border-color:#5cc8be;background:rgba(92,200,190,.08);color:#5cc8be;animation:mcSuck .5s cubic-bezier(.2,.9,.3,1.1) both}
+@keyframes mcSuck{0%{transform:scale(1.06)}60%{transform:scale(.985)}100%{transform:scale(1)}}
+#mc-layer .mc-drop .idle,#mc-layer .mc-drop .done{position:relative;z-index:1}
+#mc-layer .mc-drop .done{display:none} #mc-layer .mc-drop.has .idle{display:none} #mc-layer .mc-drop.has .done{display:inline}
+#mc-layer .mc-drop .sr-shot-prev{position:absolute;inset:0;opacity:.28;pointer-events:none}
+#mc-layer .mc-drop .sr-shot-prev img{width:100%;height:100%;object-fit:cover;display:block}
+#mc-layer .mc-nums{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-top:10px}
+#mc-layer .mc-num{background:#161618;border:1px solid #3a3a40;border-radius:12px;padding:8px 10px;min-width:0}
+#mc-layer .mc-num label{display:block;font-size:11px;font-weight:700;color:#a9a9a3;margin-bottom:4px}
+#mc-layer .mc-field{display:flex;align-items:baseline;font-size:24px;font-weight:700;font-variant-numeric:tabular-nums;letter-spacing:-.01em;min-width:0}
+#mc-layer .mc-field .pre{color:#6f6f6a;font-weight:600;cursor:text}
+#mc-layer .mc-field input{width:3ch;min-width:3ch;background:transparent;border:none;border-bottom:2px solid #c9963a;color:#ecebe6;font:inherit;outline:none;padding:0 2px;caret-color:#c9963a;border-radius:0}
+#mc-layer .mc-field input.wide{width:100%}
+#mc-layer .mc-field input::placeholder{color:#4a4a48}
+#mc-layer .mc-field .unit{font-size:13px;color:#6f6f6a;margin-left:4px;font-weight:500}
+#mc-layer .mc-field input.ade{width:100%;font-size:18px;text-align:left}
+#mc-layer .mc-first{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-top:10px}
+#mc-layer .mc-chip{display:inline-flex;align-items:center;gap:6px;font-size:12px;color:#a9a9a3;background:#161618;border:1px solid #3a3a40;border-radius:9px;padding:7px 10px;cursor:pointer;min-width:0}
+#mc-layer .mc-chip b{color:#ecebe6;font-weight:600;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+#mc-layer .mc-chip:hover{border-color:#55555c}
+#mc-layer .mc-maps{margin-top:8px;display:flex;flex-wrap:wrap;gap:6px}
+#mc-layer .mc-maps button{font:inherit;font-size:12px;background:#161618;border:1px solid #3a3a40;color:#a9a9a3;border-radius:8px;padding:6px 9px;cursor:pointer}
+#mc-layer .mc-maps button.sel{border-color:#c9963a;color:#ecebe6}
+#mc-layer .mc-judge{margin-top:10px;font-size:12.5px;color:#a9a9a3;min-height:18px;display:flex;gap:8px;align-items:center;flex-wrap:wrap;line-height:1.4}
+#mc-layer .mc-judge b{color:#ecebe6}
+#mc-layer .mc-judge .tag{font-size:11px;font-weight:700;padding:2px 8px;border-radius:6px}
+#mc-layer .mc-judge .tag.ok{background:rgba(95,191,138,.14);color:#5fbf8a}
+#mc-layer .mc-judge .tag.bad{background:rgba(224,90,77,.14);color:#e05a4d}
+#mc-layer .mc-judge .tag.warn{background:rgba(201,150,58,.14);color:#c9963a}
+#mc-layer .mc-seat{margin-top:12px;width:100%;padding:12px;border-radius:12px;border:none;background:#c9963a;color:#1a1408;font:inherit;font-weight:700;font-size:14px;cursor:pointer;opacity:.45;transition:opacity .2s,transform .12s}
+#mc-layer .mc-seat.ready{opacity:1} #mc-layer .mc-seat.ready:active{transform:translateY(1px)} #mc-layer .mc-seat:disabled{cursor:default}
+#mc-layer .mc-handle{margin:12px auto 0;width:72px;height:16px;border-radius:9px;background:#3a3a40;position:relative;cursor:grab;transition:transform .25s,background .25s;touch-action:none}
+#mc-layer .mc-handle::after{content:"";position:absolute;left:20px;right:20px;top:6px;height:4px;border-radius:2px;background:#6a6a72}
+#mc-layer .mc-handle:hover{background:#4a4a52;transform:translateY(2px)}
+#mc-layer .mc-handle.pull{transform:translateY(10px);background:#55555e}
+#mc-layer .mc-handle.hidden{visibility:hidden}
+#mc-layer .mc-foot{margin-top:10px;text-align:center;font-size:11px;color:#55554f;display:flex;justify-content:center;gap:14px}
+#mc-layer .mc-foot span{cursor:pointer} #mc-layer .mc-foot span:hover{color:#a9a9a3}
+#mc-layer .mc-stub{display:none}
+#mc-layer .mc-note{font-size:11.5px;color:#a9a9a3;background:rgba(201,150,58,.08);border:1px solid rgba(201,150,58,.25);border-radius:10px;padding:8px 10px;margin-bottom:10px;line-height:1.45}
+/* 클라별 카드에 붙는 것: 들고 있는 사람 이름 하나 · 놓고 간 지 오래된 카드는 가라앉고 떨린다 */
+#sr-app .sr-clcard .sr-clcard-holder{font-size:10px;font-weight:700;color:#8a8a86;background:#1c1c1f;border:1px solid #34343a;padding:1px 6px;border-radius:6px;margin-left:4px;white-space:nowrap}
+#sr-app .sr-clcard .sr-clcard-holder.me{color:#c9963a;border-color:rgba(201,150,58,.4)}
+#sr-app .sr-clcard.sr-clcard-idle{transform:translateY(3px) scale(.995);box-shadow:0 14px 28px rgba(0,0,0,.6)}
+#sr-app .sr-clcard.sr-clcard-idle > .sr-clflip{animation:mcBuzz .8s cubic-bezier(.2,.7,.3,1) both}
+@media (prefers-reduced-motion:reduce){#mc-layer .mc-card,#mc-layer .mc-draft,#mc-layer .mc-line,#mc-layer .mc-drop.has,#mc-layer .mc-card.mc-buzz > .mc-inner,#sr-app .sr-clcard.sr-clcard-idle > .sr-clflip{animation:none}}
+@media (max-width:520px){#mc-layer{padding:10px 8px 30px} #mc-layer .mc-nums,#mc-layer .mc-first{grid-template-columns:1fr}}
+</style>
+<script>
+/* ═══ [v1401] 내 클라 카드 리포트 — 1단계 ═══ (설명은 위 <style> 머리에) */
+(function(){
+  var MC = { open:false, client:'', pc:'', key:'', draft:null, lateT:null, buzzT:null, lastKey:'', idleT:null };
+  window._mc = MC;
+  var LS_LAST = 'mc_last_card';
+  function ko(){ try{ return (typeof _uiLang !== 'function') || _uiLang() === 'ko'; }catch(_){ return true; } }
+  function esc(s){ return String(s == null ? '' : s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;'); }
+  function me(){ try{ return _srBooster(); }catch(_){ return ''; } }
+  function meKey(){ return nmKey(me()); }
+  function nmKey(n){ return String(n || '').toLowerCase().replace(/^\s*(mr|ms|mrs)(\.|\s)\s*/, '').trim().split(/\s+/)[0] || ''; }
+  function role(){ return String(typeof currentUserRole !== 'undefined' ? currentUserRole : '').toLowerCase(); }
+  function cardRole(){ var r = role(); return r === 'leader' || r === 'staff' || r === 'player' || !!window._mcForce; }
+  function fmt2(n){ n = Number(n); if(!isFinite(n)) return '—'; return (Math.round(n * 100) / 100).toFixed(2); }
+  function hhmm(ms){ var d = new Date(Number(ms) + 9 * 3600000); return ('0' + d.getUTCHours()).slice(-2) + ':' + ('0' + d.getUTCMinutes()).slice(-2); }
+  function toastK(k, e){ try{ toast(ko() ? k : e); }catch(_){} }
+  /* 클라 키 — 기록·통계 클라별과 같은 규칙(번호 접두·존칭·공백 제거) */
+  function clKey(n){ n = String(n || '').trim(); n = n.replace(/^\s*\d+\s*[.)\-]\s*/, ''); n = n.replace(/선생님|사장님|형님|언니|누나|쌤|님|형|씨/g, '').replace(/\b(mr|ms|mrs)\.?\b/gi, '').replace(/[\s·.\-_'"]/g, '').toLowerCase(); var al = { namgang:'남강' }; return al[n] || n; }
+  function pcNum(p){ var n = Number(String(p == null ? '' : p).replace(/[^0-9]/g, '')); return n > 0 ? n : null; }
+
+  /* ── 자료: 리포트 원본(서버 캐시 → 기록·통계 캐시) ───────────────────────── */
+  function rawReports(){
+    try{ var c = (typeof _srCalcCache !== 'undefined') ? _srCalcCache.reports : null; if(c && Array.isArray(c.data)) return c.data; }catch(_){}
+    try{ var z = (typeof _rcGetCache === 'function') ? _rcGetCache() : null; if(z && Array.isArray(z.reports)) return z.reports; }catch(_){}
+    return [];
+  }
+  function reportMs(r){ if(!r) return null; if(typeof r.createdAt === 'number' && r.createdAt > 1e12) return r.createdAt; var m = String(r.id || '').match(/^rpt-(\d+)/); return m ? Number(m[1]) : null; }
+  /* 기준(target/sl)은 기록·통계가 리포트마다 매겨 둔 것을 id 로 찾는다 */
+  function stdIndex(){
+    var ix = {}; try{ var all = window._srRecAll; if(all && Array.isArray(all.sessions)) all.sessions.forEach(function(s){ if(s && s.id) ix[s.id] = s; }); }catch(_){}
+    return ix;
+  }
+  function sameCard(r){
+    if(!r) return false;
+    var ck = clKey(r.client); if(MC.key && ck === MC.key) return true;
+    if(!MC.key && MC.pc && pcNum(r.pc) === pcNum(MC.pc)) return true;
+    return false;
+  }
+  /* 오늘의 줄 = 최근 20시간 안의 이 카드 리포트 */
+  function lines(){
+    var out = [], ix = stdIndex(), since = Date.now() - 20 * 3600000;
+    rawReports().forEach(function(r){
+      if(!sameCard(r)) return; var ms = reportMs(r); if(ms == null || ms < since) return;
+      var s = ix[r.id] || null;
+      var gain = (function(){ var dLv = (Number(r.lvAfter) || 0) - (Number(r.lvBefore) || 0), dE = (Number(r.expAfter) || 0) - (Number(r.expBefore) || 0); if(Math.abs(dLv) > 20) return dE; return dLv * 100 + dE; })();
+      out.push({ id:r.id, ms:ms, tag:String(r.tag || 'status'), name:String(r.booster || ''), lv:Number(r.lvAfter), exp:Number(r.expAfter), adena:Number(r.adena), gain:gain, map:String(r.map || ''),
+                 ignored:!!r.ignored, target:(s && s.target != null) ? Number(s.target) : null, sl:(s && s.sl != null) ? Number(s.sl) : null, dead:!!r.dead });
+    });
+    out.sort(function(a, b){ return a.ms - b.ms; });
+    /* 방금 앉힌 줄은 기록·통계가 아직 기준을 안 매겼다 — 이 카드의 마지막 기준을 빌려 판정한다 */
+    try{ var fb = stdFor(out), recent = Date.now() - 3 * 3600000;
+      if(fb) out.forEach(function(s){ if(s.target == null && s.tag !== 'checkin' && !s.ignored && s.ms > recent){ s.target = fb.target; s.sl = fb.sl; } }); }catch(_){}
+    return out;
+  }
+  /* 기준: 이 카드에서 가장 최근에 매겨진 target/sl */
+  function stdFor(ls){
+    for(var i = ls.length - 1; i >= 0; i--){ if(ls[i].target > 0) return { target:ls[i].target, sl:(ls[i].sl > 0 ? ls[i].sl : ls[i].target * 0.8) }; }
+    try{ var all = window._srRecAll, best = null; if(all && Array.isArray(all.sessions)) all.sessions.forEach(function(s){ if(!s || !(s.target > 0)) return; if(clKey(s.client) !== MC.key) return; if(!best || (s.ms || 0) > (best.ms || 0)) best = s; });
+      if(best) return { target:Number(best.target), sl:(best.sl > 0 ? Number(best.sl) : Number(best.target) * 0.8) }; }catch(_){}
+    return null;
+  }
+  function mySess(){ try{ var s = (typeof _srSession !== 'undefined') ? _srSession : null; if(s && s.client && clKey(s.client) === MC.key) return s; }catch(_){} return null; }
+  function myAttBreak(){ try{ return !!(myAtt && myAtt.break_start && !myAtt.break_end); }catch(_){ return false; } }
+  function myAttWorking(){ try{ return typeof attStatus === 'function' && attStatus() === 'working'; }catch(_){ return false; } }
+
+  /* ── 열기 ───────────────────────────────────────────────────────────────── */
+  window._mcOpen = function(name, pc){
+    try{
+      MC.client = String(name || '').trim(); MC.pc = pc == null ? '' : String(pc); MC.key = clKey(MC.client);
+      if(!MC.client && !MC.pc) return;
+      MC.draft = null; MC.open = true;
+      try{ localStorage.setItem(LS_LAST, JSON.stringify({ n:MC.client, pc:MC.pc, t:Date.now() })); }catch(_){}
+      /* 돌아온 것 — 휴식 중이었으면 복귀 */
+      if(myAttBreak() && MC.lastKey === MC.key){ try{ breakEnd(); }catch(_){} }
+      MC.lastKey = MC.key;
+      stopIdle();
+      var old = document.getElementById('mc-layer'); if(old) old.parentNode.removeChild(old);
+      var el = document.createElement('div'); el.id = 'mc-layer';
+      el.innerHTML = '<div class="mc-scrim"></div><div class="mc-wrap"><div class="mc-card" id="mc-card"><div class="mc-inner" id="mc-inner"></div></div>' + stubHTML() + '</div>';
+      document.body.appendChild(el);
+      el.querySelector('.mc-scrim').addEventListener('click', function(){ _mcClose(false); });
+      /* 내 시프트 되살리기 — 성과 계산기 화면이 하던 일(로컬 → 구름) */
+      try{ if(!(_srSession && _srSession.client) && typeof _srLoadSession === 'function') _srLoadSession(); }catch(_){}
+      try{ if(!(_srSession && _srSession.client) && typeof _srRecoverFromReports === 'function'){ _srRecoverFromReports().then(function(ok){ if(ok && _srSession){ try{ _srSaveSession(); }catch(_){} if(MC.open && !MC.draft) render(); } }).catch(function(){}); } }catch(_){}
+      render();
+      bindPush();
+      try{ if(typeof _srBindPaste === 'function') _srBindPaste(); }catch(_){}
+      startLate();
+      /* 자료가 오래됐으면 뒤에서 새로 받는다 */
+      try{ if(typeof _srGetCalc === 'function') _srGetCalc('reports').then(function(){ if(MC.open) render(); }).catch(function(){}); }catch(_){}
+    }catch(e){ try{ console.error('[mc] open', e); }catch(_){} }
+  };
+  /* 숨은 폼 자리 — 기존 제출 경로(_srSel·_srReadScreen·_srCheckIn)가 읽는 곳. 화면엔 안 보인다. */
+  function stubHTML(){
+    return '<div id="sr-app" class="mc-stub">'
+      + '<div class="sr-s" id="sr-s-checkin"><div class="sr-pc-grid"><button class="sr-pc-card sel" data-idx="0" data-pc="' + esc(MC.pc) + '" data-name="' + esc(MC.client) + '"></button></div>'
+      + '<div class="sr-dd" id="sr-dd-map"><span class="ttl" data-sr-map id="mc-stub-map"></span></div>'
+      + '<div class="sr-exp"><input class="sr-inp" id="mc-stub-lv"><input class="sr-inp" id="mc-stub-exp"></div>'
+      + '<input data-sr-adena id="mc-stub-ade-ci"><input data-sr-note id="mc-stub-note-ci"></div>'
+      + '<div class="sr-s" id="sr-s-update" style="display:none"><span data-sr-pc></span><span data-sr-map id="mc-stub-map-up"></span>'
+      + '<input class="sr-exp-live" id="mc-stub-exp-up"><input type="checkbox" class="sr-death-cb" id="mc-stub-death"><input data-sr-adena id="mc-stub-ade-up"><input data-sr-note id="mc-stub-note-up"></div>'
+      + '<div class="sr-s" id="sr-s-checkout" style="display:none"></div>'
+      + '</div>';
+  }
+  window._mcClose = function(asBreak){
+    if(!MC.open) return;
+    var card = document.getElementById('mc-card'), layer = document.getElementById('mc-layer');
+    MC.open = false; MC.draft = null; stopLate();
+    try{ if(typeof _srShots !== 'undefined'){ _srShots.update = null; _srShots.checkin = null; } }catch(_){}
+    if(asBreak){
+      if(myAttWorking()){ try{ breakStart(); }catch(_){} startIdle(); }
+      else if(myAttBreak()){ startIdle(); }
+      else { toastK('출근 기록이 없어 휴식은 안 찍혔어요 — 카드만 돌려놨어요', 'Not clocked in — card put back, no break recorded'); }
+    }
+    if(card){ card.classList.add('mc-leave'); setTimeout(function(){ if(layer && layer.parentNode) layer.parentNode.removeChild(layer); }, 340); }
+    else if(layer && layer.parentNode) layer.parentNode.removeChild(layer);
+  };
+
+  /* ── 그리기 ─────────────────────────────────────────────────────────────── */
+  function render(){
+    var inner = document.getElementById('mc-inner'); if(!inner) return;
+    var ls = lines(), std = stdFor(ls), sess = mySess(), last = ls.length ? ls[ls.length - 1] : null;
+    var lastExp = sess ? Number(sess.prev.exp) : (last ? last.exp : NaN);
+    var lastLv = sess ? Number(sess.prev.lv) : (last ? last.lv : NaN);
+    var _k = ko();
+    var holder = ''; if(last && last.tag !== 'checkout' && (Date.now() - last.ms) < 12 * 3600000) holder = last.name;
+    var mine = holder && nmKey(holder) === meKey();
+    var pill = '';
+    if(last && last.tag !== 'checkin' && !last.ignored && last.target > 0){ var pct = Math.round(last.gain / last.target * 100); var ok = last.gain >= (last.sl > 0 ? last.sl : last.target * 0.8); pill = '<span class="mc-pill ' + (ok ? 'ok' : 'bad') + '">' + (_k ? '지난 줄 ' : 'last ') + pct + '%</span>'; }
+    else if(std) pill = '<span class="mc-pill">' + (_k ? '기준 ' : 'std ') + fmt2(std.target) + '%/h</span>';
+    var first = null; for(var i = 0; i < ls.length; i++){ if(ls[i].tag === 'checkin' && nmKey(ls[i].name) === meKey()){ first = ls[i]; } }
+    var h = '<div class="mc-push" id="mc-push">▲ ' + (_k ? '클라별로 · 쉬러 갈 때 위로 밀기' : 'Back to clients · push up to rest') + '</div>'
+      + '<div class="mc-hd"><span class="mc-nm">' + esc(MC.client || ('PC' + MC.pc)) + '</span>' + (pcNum(MC.pc) ? '<span class="mc-pc">PC' + pcNum(MC.pc) + '</span>' : '') + '</div>'
+      + '<div class="mc-hero"><div class="mc-big" id="mc-big">' + (isFinite(lastExp) ? fmt2(lastExp) + '<small>%</small>' : '—') + '</div><div class="mc-side">' + pill + '<span class="mc-meta">' + (isFinite(lastLv) ? 'Lv ' + Math.round(lastLv) + ' · ' : '') + (holder ? esc(holder) + (_k ? ' 들고 있음' : ' holding') : (_k ? '아무도 없음' : 'nobody')) + '</span></div></div>'
+      + '<div class="mc-today"><span>' + (first ? (_k ? '내 시작 ' : 'my start ') + hhmm(first.ms) : (sess ? (_k ? '내 시프트 진행 중' : 'my shift running') : (_k ? '오늘 아직 안 잡음' : 'not picked up yet'))) + '</span><span>' + ls.filter(function(x){ return x.tag !== 'checkin'; }).length + (_k ? '줄' : ' lines') + '</span></div>'
+      + '<div class="mc-lines" id="mc-lines">' + linesHTML(ls) + '</div>'
+      + '<div id="mc-draft"></div>'
+      + '<div class="mc-handle' + (MC.draft ? ' hidden' : '') + '" id="mc-handle" title="' + (_k ? '당겨서 줄 꺼내기' : 'pull for a line') + '"></div>'
+      + '<div class="mc-foot">' + (sess ? '<span id="mc-endday">' + (_k ? '오늘 끝내기' : 'End today') + '</span>' : '') + '</div>';
+    inner.innerHTML = h;
+    var hd = document.getElementById('mc-handle'); if(hd){ hd.addEventListener('click', function(){ openDraft(false); }); bindPull(hd); }
+    var ed = document.getElementById('mc-endday'); if(ed) ed.addEventListener('click', function(){ openDraft(true); });
+    if(MC.draft) drawDraft();
+    bindPush();
+    lateCheck(ls);
+  }
+  function linesHTML(ls){
+    var _k = ko(), h = '', prev = null;
+    if(!ls.length) return '<div class="mc-line hole"><span class="t">—</span><span class="v">' + (_k ? '오늘 이 카드에 줄이 없어요. 손잡이를 당기면 첫 줄이 나옵니다.' : 'No lines today. Pull the handle for the first one.') + '</span><span class="r na">' + (_k ? '비어 있음' : 'empty') + '</span></div>';
+    ls.forEach(function(s){
+      if(prev && s.tag !== 'checkin' && prev.tag !== 'checkout' && (s.ms - prev.ms) > 95 * 60000){
+        var gapMin = Math.round((s.ms - prev.ms) / 60000);
+        h += '<div class="mc-line hole"><span class="t">' + hhmm(prev.ms) + '</span><span class="v">' + (_k ? ('줄 없이 ' + gapMin + '분') : (gapMin + ' min without a line')) + '</span><span class="r">' + (_k ? '구멍' : 'hole') + '</span></div>';
+      }
+      var mine = nmKey(s.name) === meKey();
+      var r;
+      if(s.tag === 'checkin') r = '<span class="r in">' + (_k ? '시작' : 'start') + '</span>';
+      else if(s.ignored) r = '<span class="r na">' + (_k ? '제외' : 'skip') + '</span>';
+      else if(s.tag === 'checkout' && !(s.target > 0)) r = '<span class="r out">' + (_k ? '끝' : 'end') + '</span>';
+      else if(s.target > 0){ var ok = s.gain >= (s.sl > 0 ? s.sl : s.target * 0.8); r = '<span class="r ' + (ok ? 'ok' : 'bad') + '">' + (ok ? (_k ? '통과' : 'pass') : (_k ? '미달' : 'below')) + (s.tag === 'checkout' ? (_k ? ' · 끝' : ' · end') : '') + '</span>'; }
+      else r = '<span class="r na">' + (_k ? '기준 없음' : 'no std') + '</span>';
+      h += '<div class="mc-line' + (mine ? ' mine' : '') + '"><span class="t">' + hhmm(s.ms) + '</span><span class="v">' + fmt2(s.exp) + '%' + (s.tag !== 'checkin' ? '<i>' + (s.gain >= 0 ? '+' : '') + fmt2(s.gain) + '</i>' : '') + '<span class="who">' + esc(s.name) + '</span></span>' + r + '</div>';
+      prev = s;
+    });
+    return h;
+  }
+
+  /* ── 무거워짐·진동: 내 세션에서 마지막 줄 뒤로 시간이 흐르면 ────────────── */
+  function lateCheck(ls){
+    var card = document.getElementById('mc-card'); if(!card) return;
+    var sess = mySess(); if(!sess){ card.classList.remove('mc-late'); return; }
+    var lastMine = null; for(var i = ls.length - 1; i >= 0; i--){ if(nmKey(ls[i].name) === meKey()){ lastMine = ls[i]; break; } }
+    var min = lastMine ? (Date.now() - lastMine.ms) / 60000 : 0;
+    card.classList.toggle('mc-late', min > 65);
+    if(min > 120){ card.classList.remove('mc-buzz'); void card.offsetWidth; card.classList.add('mc-buzz'); setTimeout(function(){ card.classList.remove('mc-buzz'); }, 900); }
+  }
+  function startLate(){ stopLate(); MC.lateT = setInterval(function(){ if(!MC.open){ stopLate(); return; } try{ lateCheck(lines()); }catch(_){} }, 4000 + Math.random() * 1500); }
+  function stopLate(){ if(MC.lateT){ clearInterval(MC.lateT); MC.lateT = null; } }
+  /* 놓고 간 카드: 클라별에서 60분 넘으면 가라앉고 떨린다 (내 것만) */
+  function startIdle(){ stopIdle(); MC.idleT = setInterval(idleTick, 30000); idleTick(); }
+  function stopIdle(){ if(MC.idleT){ clearInterval(MC.idleT); MC.idleT = null; } try{ document.querySelectorAll('#sr-app .sr-clcard.sr-clcard-idle').forEach(function(x){ x.classList.remove('sr-clcard-idle'); }); }catch(_){} }
+  function idleTick(){
+    try{
+      if(!myAttBreak()){ stopIdle(); return; }
+      var min = (Date.now() - new Date(myAtt.break_start).getTime()) / 60000; if(min < 60) return;
+      var el = document.querySelector('#sr-app .sr-clcard[data-ck="' + (MC.lastKey || '').replace(/"/g, '') + '"]'); if(!el) return;
+      el.classList.remove('sr-clcard-idle'); void el.offsetWidth; el.classList.add('sr-clcard-idle');
+    }catch(_){}
+  }
+
+  /* ── 손짓: 위로 밀기 = 놓기 · 손잡이 끌기 = 줄 꺼내기 (문서에 한 번만 건다) ── */
+  var G = { pushY:null, pullY:null };
+  function gY(e){ var t = e.touches && e.touches[0] ? e.touches[0] : (e.changedTouches && e.changedTouches[0] ? e.changedTouches[0] : e); return t.clientY; }
+  function gDown(e){
+    if(!MC.open || !e.target || !e.target.closest) return;
+    if(e.target.closest('#mc-push')){ G.pushY = gY(e); }
+    else if(e.target.closest('#mc-handle')){ G.pullY = gY(e); e.target.closest('#mc-handle').classList.add('pull'); if(e.cancelable) e.preventDefault(); }
+  }
+  function gMove(e){ if(G.pushY == null) return; var d = G.pushY - gY(e); var card = document.getElementById('mc-card'); if(card && d > 0) card.style.transform = 'translateY(' + (-Math.min(d, 90) * .6) + 'px)'; }
+  function gUp(e){
+    var y = gY(e);
+    if(G.pushY != null){ var d = G.pushY - y; G.pushY = null; var card = document.getElementById('mc-card'); if(card) card.style.transform = ''; if(d > 60) _mcClose(true); return; }
+    if(G.pullY != null){ var d2 = y - G.pullY; G.pullY = null; var hd = document.getElementById('mc-handle'); if(hd) hd.classList.remove('pull'); if(d2 > 24) openDraft(false); }
+  }
+  document.addEventListener('mousedown', gDown); document.addEventListener('touchstart', gDown, { passive:false });
+  document.addEventListener('mousemove', gMove); document.addEventListener('touchmove', gMove, { passive:true });
+  document.addEventListener('mouseup', gUp); document.addEventListener('touchend', gUp);
+  function bindPush(){ var p = document.getElementById('mc-push'); if(!p || p._mcBound) return; p._mcBound = true; p.addEventListener('click', function(){ _mcClose(true); }); }
+  function bindPull(hd){ /* 문서 손짓이 처리한다 */ }
+
+  /* ── 빈 줄 ──────────────────────────────────────────────────────────────── */
+  function shiftSetup(){
+    /* 첫 줄(checkin) 창: 배정 시프트가 있으면 그 틀, 없으면 지금부터 8시간 */
+    try{
+      var idx = _srShiftIdxForKey(_srMyShiftKey());
+      if(idx >= 0){ var sh = _SR_SHIFTS[idx]; _srShiftStartH = sh.s; _srShiftEndH = sh.e; _srPlayStartH = _srNowInShift(); }
+      else { _srShiftStartH = _srNowWIB(); _srShiftEndH = _srShiftStartH + 8; _srPlayStartH = _srShiftStartH; }
+      if(_srShiftEndH <= _srPlayStartH) _srShiftEndH = _srPlayStartH + 1;
+      _srShiftLocked = true;
+    }catch(_){}
+  }
+  function mapChoices(){
+    var out = [], seen = {};
+    var push = function(full){ full = String(full || '').trim(); if(!full || seen[full]) return; seen[full] = 1; out.push(full); };
+    try{ var ls = lines(); for(var i = ls.length - 1; i >= 0; i--) push(ls[i].map); }catch(_){}
+    try{ var all = window._srRecAll; if(all && Array.isArray(all.sessions)){ var cnt = {}; all.sessions.forEach(function(s){ if(s && clKey(s.client) === MC.key && s.map) cnt[s.map] = (cnt[s.map] || 0) + 1; }); Object.keys(cnt).sort(function(a, b){ return cnt[b] - cnt[a]; }).forEach(push); } }catch(_){}
+    try{ if(out.length < 3 && typeof _srMapGroups === 'function') _srMapGroups().forEach(function(g){ (g.maps || []).forEach(function(m){ if(!m.excl && out.length < 8) push(m.full); }); }); }catch(_){}
+    return out;
+  }
+  function openDraft(endDay){
+    if(MC.draft) { if(endDay){ MC.draft.end = true; drawDraft(); } return; }
+    var sess = mySess(), ls = lines(), last = ls.length ? ls[ls.length - 1] : null;
+    var prev = sess ? { lv:Number(sess.prev.lv), exp:Number(sess.prev.exp), adena:Number(sess.prev.adena) } : { lv:(last ? last.lv : NaN), exp:(last ? last.exp : NaN), adena:(last ? last.adena : NaN) };
+    var maps = mapChoices();
+    MC.draft = { first:!sess, prev:prev, photo:false, end:!!endDay, map:(sess ? sess.map : (maps[0] || '')), maps:maps, showMaps:false, lvEdit:false };
+    var hd = document.getElementById('mc-handle'); if(hd){ hd.classList.add('pull'); setTimeout(function(){ hd.classList.remove('pull'); hd.classList.add('hidden'); drawDraft(); }, 260); }
+    else drawDraft();
+  }
+  function closeDraft(){ MC.draft = null; try{ _srShots.update = null; _srShots.checkin = null; }catch(_){} var d = document.getElementById('mc-draft'); if(d) d.innerHTML = ''; var hd = document.getElementById('mc-handle'); if(hd) hd.classList.remove('hidden'); }
+  function drawDraft(){
+    var d = MC.draft, host = document.getElementById('mc-draft'); if(!d || !host) return;
+    var _k = ko(), scr = d.first ? 'checkin' : 'update';
+    var preExp = isFinite(d.prev.exp) ? String(Math.floor(d.prev.exp)) + '.' : '';
+    var nowLbl = hhmm(Date.now());
+    var ending = !d.first && (d.end || (typeof _srWinEnd !== 'undefined' && _srWinEnd >= _srShiftEndH));
+    var title = d.first ? (_k ? nowLbl + ' · 첫 줄 = 시작' : nowLbl + ' · first line = start') : (ending ? (_k ? nowLbl + ' · 오늘 마지막 줄' : nowLbl + ' · last line today') : (_k ? nowLbl + ' · 이번 시간' : nowLbl + ' · this hour'));
+    var h = '<div class="mc-draft"><div class="mc-dh"><span>' + title + '</span><span class="mc-dx" id="mc-dx">' + (_k ? '접기' : 'close') + '</span></div>';
+    if(d.first && typeof _srSession !== 'undefined' && _srSession && _srSession.client) h += '<div class="mc-note">' + (_k ? esc(_srSession.client) + ' 시프트가 열려 있어요. 이 줄을 앉히면 이 카드에서 새로 시작합니다.' : esc(_srSession.client) + ' shift is open — seating this line starts fresh on this card.') + '</div>';
+    h += '<div class="mc-drop" id="sr-drop-' + scr + '"><input type="file" id="mc-file" accept="image/*" style="display:none"><span class="idle">🖼 ' + (_k ? '여기에 사진 던지기 · 붙여넣기(Ctrl+V) · 눌러서 고르기' : 'Drop a screenshot · paste (Ctrl+V) · tap to pick') + '</span><span class="done">📷 ' + (_k ? '사진 붙음' : 'photo attached') + '</span><div class="sr-shot-prev" id="sr-prevshot-' + scr + '"></div></div>';
+    h += '<div class="mc-nums"><div class="mc-num"><label>EXP' + (d.first ? (_k ? ' · 지금 화면 그대로' : ' · as on screen') : '') + '</label><div class="mc-field">'
+       + (d.first ? '<input class="wide" id="mc-exp" inputmode="decimal" placeholder="' + (isFinite(d.prev.exp) ? fmt2(d.prev.exp) : '0.00') + '" value="' + (isFinite(d.prev.exp) ? fmt2(d.prev.exp) : '') + '">'
+                  : '<span class="pre" id="mc-pre">' + esc(preExp) + '</span><input id="mc-exp" inputmode="decimal" maxlength="6" placeholder="' + (isFinite(d.prev.exp) ? ('0' + String(Math.round((d.prev.exp % 1) * 100))).slice(-2) : '00') + '">')
+       + '<span class="unit">%</span></div></div>'
+       + '<div class="mc-num"><label>' + (_k ? '아데나' : 'Adena') + '</label><div class="mc-field"><input class="ade" id="mc-ade" inputmode="numeric" placeholder="' + (isFinite(d.prev.adena) ? String(Math.round(d.prev.adena)) : '0') + '" value="' + (isFinite(d.prev.adena) ? String(Math.round(d.prev.adena)) : '') + '"></div></div></div>';
+    h += '<div class="mc-first"><span class="mc-chip" id="mc-lvchip">Lv <b id="mc-lvv">' + (isFinite(d.prev.lv) ? Math.round(d.prev.lv) : '?') + '</b>' + (d.first ? '<input id="mc-lv" inputmode="numeric" style="display:none;width:4ch;background:transparent;border:none;border-bottom:1px solid #c9963a;color:#ecebe6;font:inherit;outline:none" value="' + (isFinite(d.prev.lv) ? Math.round(d.prev.lv) : '') + '">' : '') + '</span>'
+       + '<span class="mc-chip" id="mc-mapchip" title="' + (_k ? '사냥터' : 'map') + '">🗺 <b>' + esc((typeof _mapDisp === 'function' ? _mapDisp(d.map) : d.map) || (_k ? '사냥터 고르기' : 'pick a map')) + '</b></span></div>';
+    if(d.showMaps) h += '<div class="mc-maps">' + d.maps.map(function(m){ return '<button data-m="' + esc(m) + '"' + (m === d.map ? ' class="sel"' : '') + '>' + esc(typeof _mapDisp === 'function' ? _mapDisp(m) : m) + '</button>'; }).join('') + '</div>';
+    h += '<div class="mc-judge" id="mc-judge"></div>'
+       + (d.first ? '' : '<label style="display:flex;align-items:center;gap:6px;font-size:11.5px;color:#6f6f6a;margin-top:8px;cursor:pointer"><input type="checkbox" id="mc-death"> ' + (_k ? '이 시간에 죽었어요 (화면 숫자 그대로 입력)' : 'Died this hour (type what the bar shows)') + '</label>')
+       + '<button class="mc-seat" id="mc-seat" disabled>' + (d.first ? (_k ? '앉히기 · 시작' : 'Seat · start') : (ending ? (_k ? '앉히기 · 오늘 끝' : 'Seat · end today') : (_k ? '앉히기' : 'Seat'))) + '</button></div>';
+    host.innerHTML = h;
+    var drop = document.getElementById('sr-drop-' + scr), file = document.getElementById('mc-file');
+    drop.addEventListener('click', function(e){ if(e.target === file) return; file.click(); });
+    file.addEventListener('change', function(ev){ var f = ev.target.files && ev.target.files[0]; if(f) setPhoto(scr, f); });
+    drop.addEventListener('dragover', function(e){ e.preventDefault(); drop.classList.add('over'); });
+    drop.addEventListener('dragleave', function(){ drop.classList.remove('over'); });
+    drop.addEventListener('drop', function(e){ e.preventDefault(); drop.classList.remove('over'); var f = e.dataTransfer && e.dataTransfer.files && e.dataTransfer.files[0]; if(f && /^image\//.test(f.type)) setPhoto(scr, f); });
+    if(_srShots[scr]) drop.classList.add('has');
+    document.getElementById('mc-dx').addEventListener('click', closeDraft);
+    document.getElementById('mc-exp').addEventListener('input', judge);
+    document.getElementById('mc-ade').addEventListener('input', judge);
+    var dc = document.getElementById('mc-death'); if(dc) dc.addEventListener('change', judge);
+    var pre = document.getElementById('mc-pre'); if(pre) pre.addEventListener('click', function(){ var i = document.getElementById('mc-exp'); i.value = preExp + i.value; i.maxLength = 6; i.classList.add('wide'); pre.style.display = 'none'; i.focus(); judge(); });
+    var lvc = document.getElementById('mc-lvchip'), lvi = document.getElementById('mc-lv'); if(lvc && lvi) lvc.addEventListener('click', function(){ document.getElementById('mc-lvv').style.display = 'none'; lvi.style.display = ''; lvi.focus(); });
+    if(lvi) lvi.addEventListener('input', judge);
+    document.getElementById('mc-mapchip').addEventListener('click', function(){ d.showMaps = !d.showMaps; drawDraft(); });
+    document.querySelectorAll('#mc-draft .mc-maps button').forEach(function(b){ b.addEventListener('click', function(){ d.map = b.getAttribute('data-m'); d.showMaps = false; drawDraft(); }); });
+    document.getElementById('mc-seat').addEventListener('click', seat);
+    /* 붙여넣기(Ctrl+V)는 기존 _srBindPaste 가 _srCurScreen 으로 스텁을 보고 _srSetShot 을 부른다 — 여기 드롭 상자 id 가 같아 그대로 'has' 가 붙는다 */
+    var upStub = document.getElementById('sr-s-update'), ciStub = document.getElementById('sr-s-checkin'); if(upStub && ciStub){ upStub.style.display = d.first ? 'none' : ''; ciStub.style.display = d.first ? '' : 'none'; }
+    setTimeout(function(){ var i = document.getElementById('mc-exp'); if(i && !d.first) i.focus(); }, 80);
+    judge();
+  }
+  function setPhoto(scr, f){ try{ _srSetShot(scr, f); }catch(_){ _srShots[scr] = f; } var drop = document.getElementById('sr-drop-' + scr); if(drop) drop.classList.add('has'); judge(); }
+  /* 값 읽기: 두 자리면 앞자리를 붙이고, 앞자리보다 작으면 하나 올린다(54.12 → "05" = 55.05). 점을 찍거나 세 자리 이상이면 그대로. */
+  function readExp(){
+    var d = MC.draft, raw = String((document.getElementById('mc-exp') || {}).value || '').trim();
+    if(!raw) return null;
+    var death = !!(document.getElementById('mc-death') && document.getElementById('mc-death').checked);
+    if(d.first) return { raw:raw, val:parseFloat(raw), death:false };
+    var full = raw, preEl = document.getElementById('mc-pre');
+    if(preEl && preEl.style.display !== 'none' && /^\d{1,2}$/.test(raw) && isFinite(d.prev.exp)){
+      var ip = Math.floor(d.prev.exp), dec = parseInt(raw, 10) / 100, v = ip + dec;
+      if(raw.length === 2 && !death && v < d.prev.exp) v = ip + 1 + dec;
+      if(v >= 100) v = dec;   /* 99.xx 에서 넘어감 = 레벨업, 새 레벨의 소수부만 */
+      full = fmt2(v);
+    }
+    return { raw:full, val:parseFloat(full), death:death };
+  }
+  function judge(){
+    var d = MC.draft; if(!d) return; var j = document.getElementById('mc-judge'), seatB = document.getElementById('mc-seat'); if(!j || !seatB) return;
+    var _k = ko(), scr = d.first ? 'checkin' : 'update', photo = !!_srShots[scr], r = readExp(), ready = false, msg = '';
+    var std = stdFor(lines());
+    if(!r){ msg = '<span style="color:#6f6f6a">' + (photo ? (_k ? (d.first ? '지금 EXP 를 적어요' : '뒷자리 두 글자') : (d.first ? 'type the EXP' : 'two digits')) : (_k ? '사진 먼저' : 'photo first')) + '</span>'; }
+    else if(d.first){
+      var lv = parseFloat((document.getElementById('mc-lv') || {}).value || d.prev.lv);
+      if(!isFinite(r.val) || r.val < 0 || r.val > 100) msg = '<span class="tag bad">' + (_k ? '숫자 확인' : 'check number') + '</span>';
+      else if(!isFinite(lv) || lv < 1 || lv > 99) msg = '<span class="tag warn">' + (_k ? '레벨을 눌러서 적어요' : 'tap Lv to set it') + '</span>';
+      else if(!d.map) msg = '<span class="tag warn">' + (_k ? '사냥터를 골라요' : 'pick a map') + '</span>';
+      else { msg = '<b>Lv ' + Math.round(lv) + ' · ' + fmt2(r.val) + '%</b> ' + (_k ? '에서 시작' : 'start here') + (std ? ' · ' + (_k ? '기준 ' : 'std ') + fmt2(std.target) + '%/h' : ''); ready = true; }
+    }
+    else {
+      var calc = null; try{ calc = _srApplyExp(d.prev.lv, d.prev.exp, r.raw, r.death); }catch(_){}
+      if(!calc || !calc.valid) msg = '<span class="tag bad">' + esc(calc ? calc.error : '?') + '</span>';
+      else if(calc.typo) msg = '<span class="tag bad">' + (_k ? '너무 큰 점프 +' + fmt2(calc.gain) + '% — 숫자 확인' : 'jump +' + fmt2(calc.gain) + '% too big — check') + '</span>';
+      else {
+        var g = calc.gain, tg = std ? std.target : null;
+        if(calc.isDeath) msg = '<span class="tag warn">' + (_k ? '사망' : 'death') + '</span><b>' + fmt2(calc.exp) + '%</b> · ' + (g >= 0 ? '+' : '') + fmt2(g) + '%';
+        else if(tg > 0){ var pct = Math.round(g / tg * 100), ok = g >= (std.sl > 0 ? std.sl : tg * 0.8); msg = '<span class="tag ' + (ok ? 'ok' : 'bad') + '">' + (ok ? (_k ? '통과' : 'pass') : (_k ? '미달' : 'below')) + '</span><b>+' + fmt2(g) + '%</b> · ' + (_k ? '기준 ' : 'std ') + fmt2(tg) + ' · <b>' + pct + '%</b>' + (calc.leveledUp ? ' · <span class="tag warn">LEVEL UP</span>' : ''); }
+        else msg = '<b>+' + fmt2(g) + '%</b> · ' + (_k ? '기준 없음' : 'no standard') + (calc.leveledUp ? ' · <span class="tag warn">LEVEL UP</span>' : '');
+        if(calc.hot) msg += ' <span class="tag warn">' + (_k ? '높음 — 확인 물어봄' : 'high — will ask') + '</span>';
+        ready = true;
+      }
+    }
+    if(ready && !photo){ msg += ' <span style="color:#6f6f6a">· ' + (_k ? '사진이 없어요' : 'no photo') + '</span>'; ready = false; }
+    j.innerHTML = msg; seatB.classList.toggle('ready', ready); seatB.disabled = !ready;
+  }
+
+  /* ── 앉히기 = 기존 제출 경로로 ─────────────────────────────────────────── */
+  async function seat(){
+    var d = MC.draft; if(!d) return; var seatB = document.getElementById('mc-seat'); if(!seatB || seatB.disabled) return;
+    var _k = ko(), r = readExp(); if(!r) return;
+    seatB.disabled = true; seatB.textContent = _k ? '앉히는 중…' : 'Seating…';
+    var ok = false;
+    try{
+      var ade = String((document.getElementById('mc-ade') || {}).value || '').replace(/[^0-9.\-]/g, '');
+      if(d.first){
+        /* 스텁 채우기 → _srCheckIn 이 읽는다 */
+        var lv = parseFloat((document.getElementById('mc-lv') || {}).value || d.prev.lv);
+        document.getElementById('mc-stub-lv').value = String(Math.round(lv));
+        document.getElementById('mc-stub-exp').value = fmt2(r.val);
+        document.getElementById('mc-stub-ade-ci').value = ade || (isFinite(d.prev.adena) ? String(Math.round(d.prev.adena)) : '0');
+        document.getElementById('mc-stub-note-ci').value = '';
+        document.getElementById('mc-stub-map').textContent = d.map;
+        try{ _srLastMap = d.map; }catch(_){}
+        if(typeof _srSession !== 'undefined' && _srSession && _srSession.client){ _srSession = null; try{ _srClearSession(); }catch(_){} }
+        shiftSetup();
+        try{ _srSyncWin(); }catch(_){}
+        await _srCheckIn();
+        ok = !!(typeof _srSession !== 'undefined' && _srSession && _srSession.client);
+      } else {
+        var sess = mySess(); if(!sess){ toastK('세션이 없어요 — 첫 줄부터', 'No shift — start with the first line'); closeDraft(); render(); return; }
+        document.getElementById('mc-stub-exp-up').value = r.raw;
+        document.getElementById('mc-stub-death').checked = !!r.death;
+        document.getElementById('mc-stub-ade-up').value = ade;
+        document.getElementById('mc-stub-note-up').value = '';
+        if(d.map && d.map !== sess.map){ sess.map = d.map; sess.mapSetAt = Date.now(); try{ _srSaveSession(); }catch(_){} }
+        /* 창: 굴러온 값을 쓰되, 방금 끝난 시간보다 뒤처졌으면 거기로 (휴식 뒤 첫 줄) */
+        try{ var nis = _srNowInShift(); if(_srWinStart < nis - 1){ _srWinStart = nis - 1; _srWinEnd = Math.min(_srWinStart + 1, _srShiftEndH); } }catch(_){}
+        var kind = (d.end || _srWinEnd >= _srShiftEndH) ? 'checkout' : 'update';
+        ok = await _srFinishSubmit(kind, 'update');
+      }
+    }catch(e){ try{ console.error('[mc] seat', e); }catch(_){} try{ _srToast((e && e.message) || 'error'); }catch(_){} ok = false; }
+    if(!ok){ seatB.disabled = false; seatB.textContent = _k ? '앉히기' : 'Seat'; seatB.classList.add('ready'); return; }
+    MC.draft = null;
+    try{ _srShots.update = null; _srShots.checkin = null; }catch(_){}
+    render();
+    var big = document.getElementById('mc-big'); if(big){ big.classList.add('mc-flash'); setTimeout(function(){ big.classList.remove('mc-flash'); }, 600); }
+  }
+
+  /* ── 클라별 카드에 붙는 것: 들고 있는 사람 ─────────────────────────────── */
+  window._mcHolderChip = function(clientName, pc){
+    try{
+      var key = clKey(clientName), pcN = pcNum(pc), best = null, since = Date.now() - 12 * 3600000;
+      rawReports().forEach(function(r){ if(!r) return; var ms = reportMs(r); if(ms == null || ms < since) return; var ck = clKey(r.client); if(!((key && ck === key) || (!key && pcN && pcNum(r.pc) === pcN))) return; if(!best || ms > best._ms){ r._ms = ms; best = r; } });
+      if(!best || String(best.tag) === 'checkout') return '';
+      var nm = String(best.booster || '').replace(/^\s*(mr|ms|mrs)(\.|\s)\s*/i, '').trim(); if(!nm) return '';
+      return '<span class="sr-clcard-holder' + (nmKey(nm) === meKey() ? ' me' : '') + '" title="' + esc(ko() ? '이 카드를 들고 있는 사람' : 'holding this card') + '">' + esc(nm) + '</span>';
+    }catch(_){ return ''; }
+  };
+  /* 클라별이 다시 그려질 때 붙는 클래스 — 내가 놓고 간 지 60분 넘은 카드(그리기 안에 넣어야 다시 그려도 남는다) */
+  window._mcIdleKey = function(){ try{ if(!myAttBreak()) return ''; if((Date.now() - new Date(myAtt.break_start).getTime()) / 60000 < 60) return ''; return MC.lastKey || ''; }catch(_){ return ''; } };
+  /* 로그인하면 마지막 카드가 열려 있게 (내 시프트가 그 카드면) */
+  window._mcAutoOpen = function(){
+    try{
+      if(!cardRole() || MC.open || window._mcAutoDone) return; window._mcAutoDone = true;
+      var raw = localStorage.getItem(LS_LAST); if(!raw) return; var o = JSON.parse(raw); if(!o || (Date.now() - (o.t || 0)) > 14 * 3600000) return;
+      var s = (typeof _srSession !== 'undefined' && _srSession && _srSession.client) ? _srSession : (typeof _srLoadSession === 'function' && _srLoadSession() ? _srSession : null);
+      if(!s || clKey(s.client) !== clKey(o.n)) return;
+      setTimeout(function(){ if(!MC.open) _mcOpen(o.n, o.pc); }, 600);
+    }catch(_){}
+  };
+  /* 채널이 바뀌면 카드는 조용히 닫힌다 (휴식 아님) */
+  try{ if(typeof setActiveChannel === 'function' && !window._mcNavWrapped){ window._mcNavWrapped = true; var _oSAC = setActiveChannel; setActiveChannel = function(id){ try{ if(MC.open) _mcClose(false); }catch(_){} return _oSAC.apply(this, arguments); }; } }catch(_){}
+  document.addEventListener('keydown', function(e){ if(e.key === 'Escape' && MC.open) _mcClose(false); });
+})();
 </script>
 </body>
 </html>
