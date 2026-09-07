@@ -4,7 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
 <title>ARASAKA Corp</title>
-<!-- BUILD: v1405 | 클라 한평생 선반 2·3단계 — 쪽지(소통 기록 한 마디) · 같은 클라 겹치기(같은 PC 카드 위에 놓기) · 클라이언트 탭 둘 메뉴에서 뺌 -->
+<!-- BUILD: v1406 | 클라별 카드에 작업량(🌾 N쌀) — 클라이언트 탭이 빠지며 사라졌던 것 -->
 <!-- v745 기록은 git 이력(v1302 이전 커밋)에 있다 — 100KB 변경사 주석을 배포에서 제거 -->
 <!-- [v677] a <link href> cannot read a CSS variable, so the favicon carries its own copy.
      64px: a browser tab draws it at 16-32px, so this is 2x-DPR sharp at 11KB. -->
@@ -39271,6 +39271,9 @@ function _srRecCardHTML(data){
       +'<div class="sr-clcard-top"><span class="sr-clcard-nm">'+esc(o.client||c)+'</span>'+((o.pc!=null&&String(o.pc)!=='')?'<span class="sr-clcard-pc">PC'+esc(String(o.pc))+'</span>':'')
       +((typeof _mcHolderChip==='function')?_mcHolderChip(o.client||c,o.pc):'')   /* [v1401] 지금 이 카드를 들고 있는 사람 */
       +((typeof _srClAliasChip==='function')?_srClAliasChip(c):'')   /* [v1405] 겹친 이름 */
+      +(function(){ /* [v1406] boss "몇 쌀인지 나오는 건 어디 갔지" — 클라이언트 탭에 있던 작업량(캐릭터 시간 ÷ 10). 관리자·OP 만 */
+          try{ if(typeof clientSsal!=='function' || !(currentUserRole==='admin'||currentUserRole==='op')) return ''; var _s=clientSsal(o.client||c); if(!_s) return '';
+            return '<span class="sr-clcard-ssal" title="'+(_kl?'작업량 — 캐릭터 시간 합 ÷ 10':'workload — character hours ÷ 10')+'">🌾 '+esc(fmtSsal(_s))+'</span>'; }catch(_){ return ''; } })()
       +((typeof _srClNoteHTML==='function')?_srClNoteHTML(c):'')   /* [v1405] 쪽지 */
       +(function(){ /* [v1371] 배치완료 문의가 이 카드로 흡수됐으면 7일간 표시 */
           try{ if(typeof PCB_INQ==='undefined'||!Array.isArray(PCB_INQ)) return '';
@@ -69953,6 +69956,7 @@ console.info('AUTO100 build applied',AUTO100_BUILD.version,v3Audit());
 #sr-app .sr-clcard-note.sr-clcard-note-empty{flex:none;order:0;background:transparent;box-shadow:none;transform:none;color:var(--tx3,#6c6b66);opacity:.45;padding:0 2px;font-size:11px;margin:0}
 #sr-app .sr-clcard:hover .sr-clcard-note-empty{opacity:.9}
 #sr-app .sr-clcard-alias{font-size:10px;font-weight:600;color:var(--tx3,#6c6b66);border:1px dashed var(--br2,#2f2f33);padding:1px 6px;border-radius:6px;white-space:nowrap}
+#sr-app .sr-clcard-ssal{font-size:10px;font-weight:700;color:#d8b45c;background:rgba(216,180,92,.1);border:1px solid rgba(216,180,92,.28);padding:1px 6px;border-radius:6px;white-space:nowrap}   /* [v1406] 작업량 */
 #sr-app .sr-clcard-alias[onclick]{cursor:pointer}
 #sr-app .sr-clcard-alias[onclick]:hover{color:var(--tx,#e6e5e2);border-color:var(--ac-bord,rgba(194,160,74,.4))}
 #sr-app .sr-clgrid > .sr-drop-stack{outline:2px dashed var(--ac,#c2a04a);outline-offset:3px;transform:scale(1.02)}
