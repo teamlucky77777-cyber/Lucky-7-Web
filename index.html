@@ -4,7 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
 <title>ARASAKA Corp</title>
-<!-- BUILD: v1403 | 클라별 카드에 오늘 채운 칸 점(리더용) · 카드별 최근 리포트 인덱스 -->
+<!-- BUILD: v1404 | PC OFF 가 배정을 말없이 지우던 것 — 묻고·되돌리고(OFF까지)·로그 + PC카드 4곳 권한 -->
 <!-- v745 기록은 git 이력(v1302 이전 커밋)에 있다 — 100KB 변경사 주석을 배포에서 제거 -->
 <!-- [v677] a <link href> cannot read a CSS variable, so the favicon carries its own copy.
      64px: a browser tab draws it at 16-32px, so this is 2x-DPR sharp at 11KB. -->
@@ -59768,7 +59768,7 @@ async function _agHide(pcId){
 var _agUndo = null;
 function _agTake(){
   try{ return JSON.stringify(PCS.map(function(p){
-    return { id:p.id, a:p.assignments||[], c:p.clients||[], l:p.leader||null, g:p.game }; })); }   /* [v1292] game은 있는 그대로('' 보존) */
+    return { id:p.id, a:p.assignments||[], c:p.clients||[], l:p.leader||null, g:p.game, s:p.status }; })); }   /* [v1292] game은 있는 그대로('' 보존) · [v1404] s=켜짐/꺼짐 */
   catch(_){ return null; }
 }
 function _agCommit(snap, label){
@@ -59790,7 +59790,7 @@ function agUndoLast(){
       /* [v1292] 그 사이 다른 사람이 이 PC를 만졌으면 건너뛴다 — 남의 작업을 롤백하지 않는다 */
       if(afterRows){
         var ar = null; for(var i=0;i<afterRows.length;i++){ if(afterRows[i].id === r.id){ ar = afterRows[i]; break; } }
-        var curRow = JSON.stringify({ id:p.id, a:p.assignments||[], c:p.clients||[], l:p.leader||null, g:p.game });
+        var curRow = JSON.stringify({ id:p.id, a:p.assignments||[], c:p.clients||[], l:p.leader||null, g:p.game, s:p.status });   /* [v1404] _agTake 와 같은 모양이어야 한다 */
         if(ar && curRow !== JSON.stringify(ar)){
           if(curRow !== JSON.stringify(r)) skipped++;   /* 이미 스냅과 같으면 셀 것도 없다 */
           return;
@@ -59798,6 +59798,7 @@ function agUndoLast(){
       }
       p.assignments = r.a; p.clients = r.c; p.leader = r.l;
       if(Object.prototype.hasOwnProperty.call(r, 'g')) p.game = r.g;
+      if(Object.prototype.hasOwnProperty.call(r, 's')) p.status = r.s;   /* [v1404] OFF 도 같이 되돌린다 */
     });
     if(skipped){ try{ toast((typeof _uiLang!=='function'||_uiLang()==='ko') ? ('⚠ '+skipped+'대는 그 사이 다른 변경이 있어 건너뜀') : ('⚠ '+skipped+' PC(s) changed meanwhile — skipped'), true); }catch(_){} }
     var lb = _agUndo.label; _agUndo = null;
@@ -62096,6 +62097,7 @@ function unassignStaff(pcId, idx){
   render();
 }
 function unassignClient(pcId, clientId){
+  if(!_pcGuardEdit()) return;   /* [v1404] */
   const p = PCS.find(x=>x.id===pcId);
   if(!p) return;
   p.clients = (p.clients||[]).filter(id => id !== clientId);
@@ -62105,6 +62107,7 @@ function unassignClient(pcId, clientId){
   render();
 }
 function unassignLeader(pcId){
+  if(!_pcGuardEdit()) return;   /* [v1404] */
   const p = PCS.find(x=>x.id===pcId);
   const s = p.leader ? staffById(p.leader) : null;
   p.leader = null;
@@ -62246,20 +62249,52 @@ async function clearAll(){
   toast(`초기화 완료 — ${total}건 해제`);
   render();
 }
-function togglePCOff(pcId){
+/* ═══ [v1404] PC OFF 는 하루 배정을 통째로 지운다 — 되돌릴 수 있어야 한다 ═══════
+   Maul 2026-09-07: "Off 를 잘못 눌렀더니 스케줄에서 빠졌고, PC 카드에서 다시
+   누르니 시간이 다르게 들어가 있었다."
+
+   원인은 이 함수였다. 누르는 순간 p.assignments 를 통째로 비우는데
+     · 묻지 않고        — 손이 미끄러지면 그대로 사라진다
+     · 되돌리기 장이 없고 — agUndoLast 가 잡을 스냅샷을 안 남겼다
+     · 로그도 안 남겨서  — 누가 언제 무엇을 지웠는지 알 수가 없었다
+   그래서 복구가 '기억으로 다시 입력하기' 가 되고, 그 과정에서 시간이 달라졌다.
+   실제로 9/7 13:52·13:53 에 Maul 의 PC-21 이 01:00~13:00 → 22:00~10:00 으로
+   다시 들어갔다.
+
+   셋 다 붙인다. 지우는 일 자체는 그대로 둔다 — OFF 면 배정이 빠지는 게 맞다. */
+async function togglePCOff(pcId){
+  if(!_pcGuardEdit()) return;   /* [v1404] 버튼은 숨겨져 있지만 함수는 window 에 있다 */
   const p = PCS.find(x=>x.id===pcId);
   if(!p) return;
   const isOff = p.status === 'offline';
+  const _kl4 = (typeof _uiLang!=='function') || _uiLang()==='ko';
   if(isOff){
     // 복귀
+    const _s0 = (typeof _agTake==='function') ? _agTake() : null;
     p.status = 'online';
+    try{ _agCommit(_s0, 'PC 복귀|pc on'); }catch(_){}
+    try{ _agLog('PC 가동 복귀', 'PC-'+pad2(pcId)); }catch(_){}
     toast(`PC-${pad2(pcId)} → 가동 복귀`);
   } else {
     // OFF 전환 — 기존 시프트·리더 자동 해제 (클라이언트는 유지)
     const removed = p.assignments.length + (p.leader?1:0);
+    if(removed > 0){
+      const _who = (p.assignments||[]).map(function(a){
+        try{ return _agWho(a.staff) + ' ' + _agWhen(a.start, a.len); }catch(_){ return ''; }
+      }).filter(Boolean).join('\n');
+      const _msg = _kl4
+        ? ('PC-'+pad2(pcId)+' 를 OFF 하면 배정 '+removed+'건이 지워집니다.\n\n'+_who+'\n\n계속할까요?')
+        : ('Turning PC-'+pad2(pcId)+' off removes '+removed+' assignment(s).\n\n'+_who+'\n\nContinue?');
+      let _ok = false;
+      try{ _ok = await _askC(_msg); }catch(_){ _ok = false; }
+      if(!_ok) return;
+    }
+    const _s1 = (typeof _agTake==='function') ? _agTake() : null;
     p.assignments = [];
     p.leader = null;
     p.status = 'offline';
+    try{ _agCommit(_s1, 'PC OFF|pc off'); }catch(_){}
+    try{ _agLog('PC OFF · 배정 '+removed+'건 해제', 'PC-'+pad2(pcId)); }catch(_){}
     toast(`PC-${pad2(pcId)} → OFF${removed?` (배정 ${removed}건 해제)`:''}`);
   }
   render();
@@ -62617,6 +62652,7 @@ function dragLeaveLeader(e){
 }
 
 function dropOnPC(e, pcId, kind, idx, targetCid){
+  if(!_pcGuardEdit()){ try{ e.preventDefault(); e.stopPropagation(); }catch(_){} return; }   /* [v1404] */
   e.preventDefault();
   const card = e.currentTarget.closest('.pc');
   if(card) card.classList.remove('drop-staff','drop-client','drop-leader');
