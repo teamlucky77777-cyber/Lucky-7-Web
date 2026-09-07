@@ -4,7 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
 <title>ARASAKA Corp</title>
-<!-- BUILD: v1402 | PC 현황 내역 서랍(누가 뭘 바꿨나) · 클라 앉힘/뺌·백업·리더·PC 숨김도 기록 -->
+<!-- BUILD: v1403 | 클라별 카드에 오늘 채운 칸 점(리더용) · 카드별 최근 리포트 인덱스 -->
 <!-- v745 기록은 git 이력(v1302 이전 커밋)에 있다 — 100KB 변경사 주석을 배포에서 제거 -->
 <!-- [v677] a <link href> cannot read a CSS variable, so the favicon carries its own copy.
      64px: a browser tab draws it at 16-32px, so this is 2x-DPR sharp at 11KB. -->
@@ -39099,6 +39099,7 @@ function _srRecCardHTML(data){
          return '<div class="sr-clcard-maps"><span class="sr-map-ico">🗺</span><b class="sr-map-main">'+ko[0]+'</b>'
            +(ko.length>1?'<span class="sr-map-rest">'+ko.slice(1,4).join(' · ')+(ko.length>4?' 외 '+(ko.length-4):'')+'</span>':'')+'</div>';
        })()
+      +((typeof _mcDotsHTML==='function')?_mcDotsHTML(o.client||c,o.pc):'')   /* [v1403] 오늘 채운 칸 점 */
       /* [v1284] 기준이 없어 채점이 안 되는 시간이 있으면 그 카드에만 한 줄 붙는다.
          없는 카드에는 아무것도 안 붙으므로 화면은 그대로 깨끗하다. */
       +(function(){
@@ -69681,6 +69682,11 @@ console.info('AUTO100 build applied',AUTO100_BUILD.version,v3Audit());
 /* 클라별 카드에 붙는 것: 들고 있는 사람 이름 하나 · 놓고 간 지 오래된 카드는 가라앉고 떨린다 */
 #sr-app .sr-clcard .sr-clcard-holder{font-size:10px;font-weight:700;color:#8a8a86;background:#1c1c1f;border:1px solid #34343a;padding:1px 6px;border-radius:6px;margin-left:4px;white-space:nowrap}
 #sr-app .sr-clcard .sr-clcard-holder.me{color:#c9963a;border-color:rgba(201,150,58,.4)}
+/* [v1403] 오늘 채운 칸 점 — 찬 점(초록) · 빈 점(붉은 점선) · 지금 지나는 시간(흐림) */
+#sr-app .sr-clcard .sr-clcard-dots{display:flex;flex-wrap:wrap;gap:3px;margin-top:7px}
+#sr-app .sr-clcard .sr-clcard-dots i{display:block;width:13px;height:6px;border-radius:2px;background:rgba(95,191,138,.85)}
+#sr-app .sr-clcard .sr-clcard-dots i.hole{background:transparent;border:1px dashed rgba(224,90,77,.65);box-sizing:border-box}
+#sr-app .sr-clcard .sr-clcard-dots i.now{background:#3a3a40}
 #sr-app .sr-clcard.sr-clcard-idle{transform:translateY(3px) scale(.995);box-shadow:0 14px 28px rgba(0,0,0,.6)}
 #sr-app .sr-clcard.sr-clcard-idle > .sr-clflip{animation:mcBuzz .8s cubic-bezier(.2,.7,.3,1) both}
 @media (prefers-reduced-motion:reduce){#mc-layer .mc-card,#mc-layer .mc-draft,#mc-layer .mc-line,#mc-layer .mc-drop.has,#mc-layer .mc-card.mc-buzz > .mc-inner,#sr-app .sr-clcard.sr-clcard-idle > .sr-clflip{animation:none}}
@@ -70056,14 +70062,50 @@ console.info('AUTO100 build applied',AUTO100_BUILD.version,v3Audit());
     var big = document.getElementById('mc-big'); if(big){ big.classList.add('mc-flash'); setTimeout(function(){ big.classList.remove('mc-flash'); }, 600); }
   }
 
-  /* ── 클라별 카드에 붙는 것: 들고 있는 사람 ─────────────────────────────── */
+  /* ── 클라별 카드에 붙는 것: 최근 20시간 리포트를 카드별로 한 번만 묶어 둔다(카드 스물몇 장이 저마다 훑지 않게) ── */
+  var RI = { src:null, t:0, byKey:{}, byPc:{} };
+  function recentIdx(){
+    var arr = rawReports(), now = Date.now();
+    if(RI.src === arr && (now - RI.t) < 60000) return RI;
+    RI = { src:arr, t:now, byKey:{}, byPc:{} };
+    var since = now - 20 * 3600000;
+    for(var i = 0; i < arr.length; i++){ var r = arr[i]; if(!r) continue; var ms = reportMs(r); if(ms == null || ms < since) continue;
+      var it = { ms:ms, tag:String(r.tag || 'status'), name:String(r.booster || '') };
+      var ck = clKey(r.client); if(ck){ (RI.byKey[ck] = RI.byKey[ck] || []).push(it); }
+      var pn = pcNum(r.pc); if(pn){ (RI.byPc[pn] = RI.byPc[pn] || []).push(it); } }
+    var srt = function(o){ Object.keys(o).forEach(function(k){ o[k].sort(function(a, b){ return a.ms - b.ms; }); }); };
+    srt(RI.byKey); srt(RI.byPc);
+    return RI;
+  }
+  function recentFor(clientName, pc){ var ix = recentIdx(), key = clKey(clientName), pcN = pcNum(pc); if(key && ix.byKey[key]) return ix.byKey[key]; if(!key && pcN && ix.byPc[pcN]) return ix.byPc[pcN]; return []; }
   window._mcHolderChip = function(clientName, pc){
     try{
-      var key = clKey(clientName), pcN = pcNum(pc), best = null, since = Date.now() - 12 * 3600000;
-      rawReports().forEach(function(r){ if(!r) return; var ms = reportMs(r); if(ms == null || ms < since) return; var ck = clKey(r.client); if(!((key && ck === key) || (!key && pcN && pcNum(r.pc) === pcN))) return; if(!best || ms > best._ms){ r._ms = ms; best = r; } });
-      if(!best || String(best.tag) === 'checkout') return '';
-      var nm = String(best.booster || '').replace(/^\s*(mr|ms|mrs)(\.|\s)\s*/i, '').trim(); if(!nm) return '';
+      var rs = recentFor(clientName, pc); if(!rs.length) return '';
+      var best = rs[rs.length - 1]; if(best.ms < Date.now() - 12 * 3600000 || best.tag === 'checkout') return '';
+      var nm = String(best.name || '').replace(/^\s*(mr|ms|mrs)(\.|\s)\s*/i, '').trim(); if(!nm) return '';
       return '<span class="sr-clcard-holder' + (nmKey(nm) === meKey() ? ' me' : '') + '" title="' + esc(ko() ? '이 카드를 들고 있는 사람' : 'holding this card') + '">' + esc(nm) + '</span>';
+    }catch(_){ return ''; }
+  };
+  /* [v1403] 오늘 채운 칸 — 시작(체크인)부터 지금(또는 끝)까지 한 시간마다 점 하나. 리포트가 있으면 찬 점, 없으면 빈 점(구멍),
+     지금 지나는 시간은 흐린 점. 리더가 클라별만 훑어도 누가 어디를 비웠는지 보인다. 오늘 줄이 없는 카드엔 아무것도 없다. */
+  window._mcDotsHTML = function(clientName, pc){
+    try{
+      var rs = recentFor(clientName, pc); if(!rs.length) return '';
+      var H = 3600000, now = Date.now(), start = null;
+      for(var i = 0; i < rs.length; i++){ if(rs[i].tag === 'checkin') start = rs[i].ms; }
+      if(start == null) start = rs[0].ms;
+      var last = rs[rs.length - 1], ended = (last.tag === 'checkout' && last.ms >= start);
+      var end = ended ? last.ms : now;
+      if(!ended && (now - last.ms) > 14 * H) return '';   /* 오래 전에 멈춘 카드는 오늘 것이 아니다 */
+      var n = ended ? Math.max(1, Math.round((end - start) / H)) : Math.floor((now - start) / H) + 1;
+      n = Math.min(16, n);
+      var slots = []; for(var k = 0; k < n; k++) slots.push(0);
+      rs.forEach(function(r){ if(r.tag === 'checkin' || r.ms < start) return; var k = Math.round((r.ms - start) / H) - 1; if(k < 0) k = 0; if(k >= n) k = n - 1; slots[k] = 1; });
+      var on = 0, holes = 0, html = '';
+      for(var j = 0; j < n; j++){ var cur = (!ended && j === n - 1); var cls = slots[j] ? 'on' : (cur ? 'now' : 'hole'); if(slots[j]) on++; else if(!cur) holes++; html += '<i class="' + cls + '"></i>'; }
+      var _k = ko();
+      var title = _k ? ('오늘 ' + on + '/' + n + '시간 채움' + (holes ? ' · 빈 시간 ' + holes : '') + (ended ? ' · 끝' : '')) : (on + '/' + n + ' hours filled' + (holes ? ' · ' + holes + ' missing' : '') + (ended ? ' · done' : ''));
+      return '<div class="sr-clcard-dots' + (holes ? ' has-hole' : '') + '" title="' + esc(title) + '">' + html + '</div>';
     }catch(_){ return ''; }
   };
   /* 클라별이 다시 그려질 때 붙는 클래스 — 내가 놓고 간 지 60분 넘은 카드(그리기 안에 넣어야 다시 그려도 남는다) */
