@@ -4,7 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
 <title>ARASAKA Corp</title>
-<!-- BUILD: v1404 | PC OFF 가 배정을 말없이 지우던 것 — 묻고·되돌리고(OFF까지)·로그 + PC카드 4곳 권한 -->
+<!-- BUILD: v1404 | 클라 한평생 선반 1단계 — 3일 흐려짐·7일 가라앉음·30일 엎어짐(쉬는 클라 줄)·60일 먼지 · 끌어내리기=휴식 · 리포트가 깨움 -->
 <!-- v745 기록은 git 이력(v1302 이전 커밋)에 있다 — 100KB 변경사 주석을 배포에서 제거 -->
 <!-- [v677] a <link href> cannot read a CSS variable, so the favicon carries its own copy.
      64px: a browser tab draws it at 16-32px, so this is 2x-DPR sharp at 11KB. -->
@@ -37912,7 +37912,9 @@ function _srClDndBind(g){
   if(!g || g._srDnd) return; g._srDnd = 1;
   var pick = function(t){ return (t && t.closest) ? t.closest('.sr-clgrid > [draggable="true"]') : null; };
   var kindOf = function(el){ return el.hasAttribute('data-iqid') ? 'iq' : (el.hasAttribute('data-pc') ? 'pc' : null); };
-  var clearMarks = function(){ g.querySelectorAll('.sr-drop-before,.sr-drop-after,.sr-drop-into').forEach(function(x){ x.classList.remove('sr-drop-before','sr-drop-after','sr-drop-into'); }); };
+  var clearMarks = function(){ g.querySelectorAll('.sr-drop-before,.sr-drop-after,.sr-drop-into').forEach(function(x){ x.classList.remove('sr-drop-before','sr-drop-after','sr-drop-into'); }); try{ document.querySelectorAll('#sr-app .sr-clrest-zone.over').forEach(function(z){ z.classList.remove('over'); }); }catch(_){} };
+  /* [v1404] 쉬는 줄(.sr-clrest)에 PC 카드를 놓으면 쉬러 간다 */
+  var restOf = function(t){ return (t && t.closest) ? t.closest('.sr-clrest') : null; };
   g.addEventListener('dragstart', function(e){
     if(typeof _pcbRoleOk === 'function' && !_pcbRoleOk()){ e.preventDefault(); return; }   /* [v1399] 보기 전용 */
     var el = pick(e.target); if(!el) return;
@@ -37924,6 +37926,8 @@ function _srClDndBind(g){
   });
   g.addEventListener('dragover', function(e){
     var d = window._srClDrag; if(!d) return;
+    var rz = restOf(e.target);
+    if(rz){ if(d.kind === 'pc'){ e.preventDefault(); try{ e.dataTransfer.dropEffect = 'move'; }catch(_){} clearMarks(); var z = rz.querySelector('.sr-clrest-zone'); if(z) z.classList.add('over'); } return; }   /* [v1404] */
     var el = pick(e.target); if(!el){ clearMarks(); return; }
     var tk = kindOf(el);
     if(d.kind === 'iq' && tk === 'pc'){   /* [v1373] 문의 카드를 PC 카드 위에 — 배치 */
@@ -37938,6 +37942,8 @@ function _srClDndBind(g){
   g.addEventListener('dragleave', function(e){ if(!g.contains(e.relatedTarget)) clearMarks(); });
   g.addEventListener('drop', function(e){
     var d = window._srClDrag; if(!d) return;
+    var rz = restOf(e.target);
+    if(rz){ clearMarks(); if(d.kind === 'pc'){ e.preventDefault(); try{ _srClRest(Number(d.pc)); }catch(err){ console.warn('cl rest:', err); } } return; }   /* [v1404] */
     var el = pick(e.target); if(!el){ clearMarks(); return; }
     if(d.kind === 'iq' && kindOf(el) === 'pc'){
       e.preventDefault(); clearMarks();
@@ -37953,6 +37959,55 @@ function _srClDndBind(g){
     }catch(err){ console.warn('cl dnd:', err); }
   });
   g.addEventListener('dragend', function(){ clearMarks(); g.querySelectorAll('.sr-dragging').forEach(function(x){ x.classList.remove('sr-dragging'); }); window._srClDrag = null; });
+}
+/* ═══ [v1404] 쉬는 클라 — 끌어내리기 · 깨우기 ═══════════════════════════════════════════════
+   카드를 아래 줄로 끌면 로스터가 휴면(active=false, hiatus_at=오늘)이 되고 PC 슬롯이 빈다(clArchiveToggle 과 같은 일,
+   단 클라이언트 탭을 그리지 않는다). 로스터에 없던 클라(리포트로만 있던 클라)는 최소 계정을 만들어 붙인다.
+   깨우기는 리포트가 한다 — hiatus_at 뒤에 줄이 오면 _srRecCardHTML 이 _srClWake 를 부른다. 관리자 손으로도 된다(엎어진 카드 탭). */
+function _srClNorm(n){ n=String(n||'').trim(); n=n.replace(/^\s*\d+\s*[.)\-]\s*/,''); n=n.replace(/선생님|사장님|형님|언니|누나|쌤|님|형|씨/g,'').replace(/\b(mr|ms|mrs)\.?\b/gi,'').replace(/[\s·.\-_'"]/g,'').toLowerCase(); var _al={ namgang:'남강' }; return _al[n]||n; }
+function _srClAcctFor(key){ try{ if(typeof CLIENT_ACCOUNTS==='undefined'||!Array.isArray(CLIENT_ACCOUNTS)) return null; for(var i=0;i<CLIENT_ACCOUNTS.length;i++){ var r=CLIENT_ACCOUNTS[i]; if(r&&r.name&&_srClNorm(r.name)===key) return r; } }catch(_){} return null; }
+function _srClRest(pc, keyIn){
+  if(!_srRecRO()) return;
+  var ko=(typeof _uiLang!=='function')||_uiLang()==='ko';
+  var by=window._srRecByClient||{}, key=keyIn||'', nm='';
+  if(!key){ for(var k in by){ if(by[k] && Number(by[k].pc)===Number(pc)){ key=k; nm=by[k].client||k; break; } } }
+  else nm=(by[key]&&by[key].client)||key;
+  if(!key){ try{ toast(ko?'이 자리엔 클라 카드가 없어요':'No client card there', true); }catch(_){} return; }
+  var acc=_srClAcctFor(key);
+  if(!acc){
+    try{ var iso=_todayKST(); acc={ id:'ca_'+Date.now().toString(36), name:nm, discord:'', joined:iso, work:{start:9,end:19}, active:true, payment:{status:'unpaid',monthly:0,due_day:1,last_paid:null,invoices:[]}, contract:{start:iso,end:'',monthly_fee:0,note:(ko?'클라별에서 등록':'Registered from client cards')}, comms:[] }; CLIENT_ACCOUNTS.push(acc); }catch(_){ return; }
+  }
+  if(acc.active===false){ try{ toast(ko?(nm+' 은 이미 쉬는 중'):(nm+' is already resting')); }catch(_){} return; }
+  acc.active=false; acc.hiatus_at=_todayKST();
+  var freed=[];
+  try{ var ids=(typeof clientChars==='function')?clientChars(acc.name).map(function(ch){ return ch.id; }):[];
+    if(ids.length && typeof PCS!=='undefined' && Array.isArray(PCS)){ PCS.forEach(function(p){ var before=(p.clients||[]).length; p.clients=(p.clients||[]).filter(function(id){ return ids.indexOf(id)<0; }); if(p.clients.length!==before) freed.push('PC-'+String(p.id).padStart(2,'0')); }); if(freed.length && typeof savePCState==='function') savePCState(); } }catch(_){}
+  try{ logAction('update', 'client on hiatus (card pulled down)'+(freed.length?' · freed '+freed.join(','):''), acc.name); }catch(_){}
+  try{ saveClientState(true); }catch(_){}
+  try{ toast('☾ '+nm+(ko?' 쉬러 갔어요 — 리포트가 오면 저절로 일어납니다':' is resting — a report wakes it up')); }catch(_){}
+  try{ renderRecords(true); }catch(_){}
+  try{ if(document.getElementById('pc-grid')){ renderPCs(); if(typeof renderTimeline==='function') renderTimeline(); } }catch(_){}
+}
+window._srClWoke=window._srClWoke||{};
+function _srClWake(acc, key, how){
+  try{
+    if(!acc || acc.active!==false) return;
+    if(typeof _pcbRoleOk!=='function' || !_pcbRoleOk()) return;   /* 로스터를 고치는 건 관리자 브라우저에서만 — 다른 사람 화면에서는 보이기만 */
+    if(window._srClWoke[key]) return; window._srClWoke[key]=1;
+    acc.active=true; delete acc.hiatus_at;
+    try{ logAction('update', how==='report'?'client back from hiatus (report came in)':'client back from hiatus (card tapped)', acc.name); }catch(_){}
+    try{ saveClientState(true); }catch(_){}
+    var ko=(typeof _uiLang!=='function')||_uiLang()==='ko';
+    try{ toast('↩ '+acc.name+(ko?(how==='report'?' 줄이 와서 일어났어요':' 일어났어요'):' is back')); }catch(_){}
+    if(how!=='report'){ try{ renderRecords(true); }catch(_){} }
+  }catch(_){}
+}
+function _srClRestTap(key){
+  var rows=window._srRecRest||[], row=null; for(var i=0;i<rows.length;i++){ if(rows[i].key===key){ row=rows[i]; break; } }
+  var ko=(typeof _uiLang!=='function')||_uiLang()==='ko';
+  if(!row) return;
+  if(row.why==='hiatus' && row.acct){ if(!_srRecRO()) return; _srClWake(row.acct, key, 'tap'); return; }
+  try{ toast(ko?(row.name+' — 리포트가 하나 오면 저절로 일어나요'):(row.name+' — a report wakes it up')); }catch(_){}
 }
 function _srClMovePc(src, dst, after){
   if(!_srRecRO()) return;
@@ -38499,6 +38554,7 @@ function _srAdeFmt(v, mut){
 function _srRecCardHTML(data){
   data = data||{daily:[],sessions:[]};
   var daily=data.daily||[], sessions=data.sessions||[];
+  var _allSess=data.sessions||[];   /* [v1404] 기간 필터 전 전체 — 클라가 마지막으로 줄을 보낸 때를 알아야 한다 */
   window._srRecAll=data;
   // [v368] date-period filter (Today / This Week / This Month / All) — declutters the long log; full data stays in window._srRecAll
   var _period=window._srRecPeriod||'week';
@@ -38809,14 +38865,46 @@ function _srRecCardHTML(data){
      클라별은 리포트로 묶여서 로스터에서 빼도 기간 안에 리포트가 있으면 카드가 남았다.
      규칙: 로스터가 휴면(active===false)이면 숨김 · 로스터에 없고 PC판에도 없으면(나감) 숨김.
      훈련 계정은 예외. 숨긴 건 그리드 끝 '☾ N개 보기'로 언제든 펼친다(_srClShowHidden). */
-  var _hidCl=[];
+  var _hidCl=[], _restRows=[], _dustN=0;
+  /* ═══ [v1404] 클라의 한평생이 선반 한 줄에 — 3번 계획(클라이언트 탭 합치기) 1단계 ═══════════════
+     boss 토론 결론: 탭을 카드에 "합치는" 게 아니라, 탭이 하던 일을 시간과 손짓이 대신한다.
+     · 줄(리포트)이 3일 안 오면 카드가 흐려지고(quiet), 7일이면 가라앉고(sunk), 30일이면 엎어져 맨 아래 줄로(down),
+       60일이면 먼지(dust — 접힌 채, '먼지 N개 보기'로만).
+     · 로스터에서 휴면(active===false)으로 둔 클라도 엎어진 카드. 단, hiatus_at 뒤에 리포트가 왔으면 깨어난 것 —
+       화면은 바로 살리고, 관리자 브라우저면 로스터도 따라 깬다(_srClWake). 되살리기 버튼 없음: 리포트가 곧 되살리기.
+     · 카드를 아래 줄로 끌어내리면 미리 쉬러 간다(_srClRest). 휴면 버튼 없음.
+     v1358 의 '☾ N개 보기' 숨김은 이 줄로 흡수. */
+  var _lastMs={}, _lastNm={}, _lastPc={};
+  try{ for(var _li=0;_li<_allSess.length;_li++){ var _ls=_allSess[_li]; if(!_ls||_ls.ms==null) continue; var _lk=clNorm(String(_ls.client||'')); if(!_lk) continue; if(_lastMs[_lk]==null||_ls.ms>_lastMs[_lk]){ _lastMs[_lk]=_ls.ms; _lastNm[_lk]=String(_ls.client||'').trim(); _lastPc[_lk]=_ls.pc; } } }catch(_){}
+  window._srClLastMs=_lastMs;
   try{
     var _rosterN={}; (typeof CLIENT_ACCOUNTS!=='undefined'&&Array.isArray(CLIENT_ACCOUNTS)?CLIENT_ACCOUNTS:[]).forEach(function(r){ if(r&&r.name){ var k=clNorm(String(r.name)); if(k) _rosterN[k]=r; } });
     var _boardN={}; if(typeof PCS!=='undefined'&&Array.isArray(PCS)) PCS.forEach(function(p){ if(!p||p.status==='offline') return; (p.clients||[]).forEach(function(cid){ var co=(typeof clientById==='function')?clientById(cid):null; if(co&&co.name){ var k=clNorm(String(co.name)); if(k) _boardN[k]=1; } }); });
-    clKeys.forEach(function(k){ var o=byClient[k]; if(!o) return; if(/training|훈련|연습/i.test(String(o.client||''))) return;
-      var r=_rosterN[k]; var hide=r?(r.active===false):!_boardN[k]; if(hide){ o._hidden=r?'hiatus':'gone'; _hidCl.push(k); } });
-    if(!window._srClShowHidden) clKeys=clKeys.filter(function(k){ return !(byClient[k]&&byClient[k]._hidden); });
+    var _now=Date.now(), _D=86400000, _isTr=function(n){ return /training|훈련|연습/i.test(String(n||'')); };
+    var _hzMs=function(r){ try{ return (r&&r.hiatus_at)?new Date(String(r.hiatus_at).slice(0,10)+'T00:00:00').getTime():0; }catch(_){ return 0; } };
+    var _judge=function(k, nm){   /* → {why, quiet, restAt} · why: ''(산다) | 'hiatus' | 'gone' | 'quiet' */
+      var r=_rosterN[k], last=_lastMs[k], quiet=(last!=null)?Math.floor((_now-last)/_D):null, hz=_hzMs(r);
+      if(r && r.active===false){
+        if(last!=null && hz && last>hz+_D){ try{ if(typeof _srClWake==='function') _srClWake(r,k,'report'); }catch(_){} return {why:'',quiet:quiet,r:r}; }
+        return {why:'hiatus',quiet:quiet,restAt:(hz||last||_now),r:r};
+      }
+      if(quiet!=null && quiet>=30) return {why:'quiet',quiet:quiet,restAt:last,r:r};
+      if(!r && !_boardN[k] && last!=null) return {why:'gone',quiet:quiet,restAt:last,r:r};   /* 로스터에도 PC판에도 없음 — 나간 클라 */
+      return {why:'',quiet:quiet,r:r};
+    };
+    var _seenRest={};
+    clKeys.forEach(function(k){ var o=byClient[k]; if(!o) return; if(_isTr(o.client)) return;
+      var j=_judge(k, o.client); o._quiet=j.quiet; o._acct=j.r||null;
+      if(j.why){ o._hidden=j.why; _hidCl.push(k); _seenRest[k]=1; _restRows.push({key:k,name:o.client||k,pc:o.pc,why:j.why,quiet:j.quiet,restAt:j.restAt,acct:j.r||null}); } });
+    /* 이번 기간에 줄이 없어 byClient 에 없는 클라 — 마지막 줄이 30일 넘었거나(엎어짐) 로스터 휴면이면 아래 줄에 */
+    Object.keys(_lastMs).forEach(function(k){ if(byClient[k]||_seenRest[k]||_isTr(_lastNm[k])) return; var j=_judge(k,_lastNm[k]); if(!j.why) return; _seenRest[k]=1; _restRows.push({key:k,name:_lastNm[k]||k,pc:_lastPc[k],why:j.why,quiet:j.quiet,restAt:j.restAt,acct:j.r||null}); });
+    Object.keys(_rosterN).forEach(function(k){ if(byClient[k]||_seenRest[k]) return; var r=_rosterN[k]; if(!r||r.active!==false||_isTr(r.name)) return; _seenRest[k]=1; _restRows.push({key:k,name:r.name,pc:null,why:'hiatus',quiet:(_lastMs[k]!=null?Math.floor((_now-_lastMs[k])/_D):null),restAt:(_hzMs(r)||_now),acct:r}); });
+    _restRows.forEach(function(x){ x.days=Math.max(0,Math.floor((_now-(x.restAt||_now))/_D)); x.dust=(x.quiet!=null&&x.quiet>=60)||x.days>=60; });
+    _restRows.sort(function(a,b){ return (a.dust===b.dust)?(a.days-b.days):(a.dust?1:-1); });
+    _dustN=_restRows.filter(function(x){ return x.dust; }).length;
+    clKeys=clKeys.filter(function(k){ return !(byClient[k]&&byClient[k]._hidden); });
   }catch(_){}
+  window._srRecByClient=byClient; window._srRecRest=_restRows;
   window._srRecClients=clKeys;
 
   // ════════════════ CLIENT FOCUS (한 클라만) ════════════════
@@ -39068,7 +39156,7 @@ function _srRecCardHTML(data){
        키보드 접근은 그대로 준다. */
     var _pcNo = (o.pc!=null && String(o.pc)!=='') ? Number(o.pc) : null;
     var _emptyCard = (st.actualH==null && !(o.statuses>0));   /* [v1364] boss "오늘 눌렀을 때 —/0명 카드 왜 이래" — 기간 내 기록이 없는 카드 */
-    return '<div class="sr-clcard'+(o._noData?' sr-clcard-nodata':'')+(_emptyCard?' sr-clcard-empty':'')+(_newDays!=null?' sr-clcard-new':'')+(_care?' sr-clcard-care':'')+(_stickNow?' sr-clcard-stick':'')+((typeof _mcIdleKey==='function'&&_mcIdleKey()===c)?' sr-clcard-idle':'')+'" role="button" tabindex="0"'+' data-heat="'+(_care?_heat.toFixed(2):'0')+'" data-days="'+_wdAll+'" data-ck="'+esc(c)+'"'
+    return '<div class="sr-clcard'+(o._noData?' sr-clcard-nodata':'')+(_emptyCard?' sr-clcard-empty':'')+(_newDays!=null?' sr-clcard-new':'')+(_care?' sr-clcard-care':'')+(_stickNow?' sr-clcard-stick':'')+((typeof _mcIdleKey==='function'&&_mcIdleKey()===c)?' sr-clcard-idle':'')+((o._quiet!=null&&o._quiet>=7)?' sr-clcard-sunk':((o._quiet!=null&&o._quiet>=3)?' sr-clcard-quiet':''))+'" role="button" tabindex="0"'+' data-heat="'+(_care?_heat.toFixed(2):'0')+'" data-days="'+_wdAll+'" data-ck="'+esc(c)+'"'
       +(_wdAll>=45?(' data-age="'+Math.min(1,_wdAll/180).toFixed(2)+'"'):'')
       +((_newDays!=null||_care)?(' style="'+(_newDays!=null?('--newness:'+(1-_newDays/30).toFixed(3)+';'):'')+(_care?('--heat:'+_heat.toFixed(2)+';'):'')+'"'):'')
       +(_care?(' title="'+esc((_kl?'케어 필요 — ':'Needs care — ')+_careWhy.join(' · '))+'"'):(_newDays!=null?(' title="'+esc(_kl?('함께한 지 '+_newDays+'일'+(_newDays===29?' — 내일부터 다른 카드처럼 봅니다':'')):('day '+_newDays+' together'))+'"'):''))+(_pcNo!=null?' draggable="true"':'')+(_emptyCard?(' data-empty="'+(_kl?'이 기간 기록 없음':'No records in this period')+'"'):'')
@@ -39100,6 +39188,7 @@ function _srRecCardHTML(data){
            +(ko.length>1?'<span class="sr-map-rest">'+ko.slice(1,4).join(' · ')+(ko.length>4?' 외 '+(ko.length-4):'')+'</span>':'')+'</div>';
        })()
       +((typeof _mcDotsHTML==='function')?_mcDotsHTML(o.client||c,o.pc):'')   /* [v1403] 오늘 채운 칸 점 */
+      +((o._quiet!=null&&o._quiet>=3)?('<div class="sr-clcard-quietline">'+(_kl?(o._quiet+'일째 '+(o._quiet>=7?'줄 없음':'조용')):(o._quiet+'d '+(o._quiet>=7?'no lines':'quiet')))+'</div>'):'')   /* [v1404] */
       /* [v1284] 기준이 없어 채점이 안 되는 시간이 있으면 그 카드에만 한 줄 붙는다.
          없는 카드에는 아무것도 안 붙으므로 화면은 그대로 깨끗하다. */
       +(function(){
@@ -39259,7 +39348,7 @@ function _srRecCardHTML(data){
   window._srIqSizeSync = function(){
     try{
       var g = document.querySelector('#sr-app .sr-clgrid'); if(!g) return;
-      try{ _srClDndBind(g); }catch(_){}   /* [v1367] 드래그 앤 드롭 위임 핸들러(그리드가 새로 그려질 때마다) */
+      try{ document.querySelectorAll('#sr-app .sr-clgrid').forEach(function(x){ try{ _srClDndBind(x); }catch(_){} }); }catch(_){ try{ _srClDndBind(g); }catch(_){} }   /* [v1367] 드래그 앤 드롭 위임 핸들러(그리드가 새로 그려질 때마다) · [v1404] 쉬는 줄 그리드도 */
       try{ _srTodayPick(g); }catch(_){}   /* [v1384] 오늘의 카드 */
       try{ _srHeatBudget(g); }catch(_){}   /* [v1385] 애니메이션 예산 — 뜨거운 4장만 */
       var hs = [].map.call(g.querySelectorAll('.sr-clcard:not(.flipped):not(.sr-clcard-nodata):not(.sr-clcard-blank):not(.sr-clcard-empty)'), function(el){ return el.getBoundingClientRect().height; })
@@ -39524,7 +39613,18 @@ function _srRecCardHTML(data){
   var _iqAdd='<button class="sr-iqadd" onclick="_srIqAdd()" title="'+(_uiLang()==='ko'?'새 문의 카드 — PC 없이도 만들 수 있어요(PC는 임대 후 연결)':'New inquiry card')+'">＋ '+(_uiLang()==='ko'?'문의':'Inquiry')+'</button>';
   /* [v1352] boss "밑으로 가게 해야지 위가 아니고" — 문의 카드는 기존 카드들이 끝나는
      그 다음 칸부터 이어진다(새 PC 가 자연히 붙는 자리). ＋문의 타일이 맨 끝. */
-  var _hidLink=_hidCl.length?('<button class="sr-clhid" onclick="window._srClShowHidden=!window._srClShowHidden;try{_srRecReRender()}catch(_){renderRecords(true)}">☾ '+(_uiLang()==='ko'?(window._srClShowHidden?'휴면·나간 클라 다시 숨기기':'휴면·나간 클라 '+_hidCl.length+'개 보기'):(window._srClShowHidden?'Hide inactive clients':'Show '+_hidCl.length+' inactive clients'))+'</button>'):'';   /* [v1358] */
+  var _hidLink='';   /* [v1404] v1358 의 '☾ N개 보기' 는 아래 '쉬는 클라' 줄로 흡수 */
+  var _restSec=(function(){ try{
+    var kl=(_uiLang()==='ko'); var rows=_restRows||[]; var show=rows.filter(function(x){ return !x.dust||window._srClShowHidden; });
+    var cards=show.map(function(x){
+      var lbl=(x.why==='hiatus')?(kl?('쉰 지 '+x.days+'일'):('resting '+x.days+'d')):(x.why==='gone'?(kl?('나감'+(x.quiet!=null?' · '+x.quiet+'일째 줄 없음':'')):'gone'):(kl?(x.quiet+'일째 줄 없음'):(x.quiet+'d no lines')));
+      var tip=kl?(x.why==='hiatus'?'로스터 휴면 — 리포트가 오면 저절로 일어나요 (관리자는 눌러서 깨울 수도)':'리포트가 오면 저절로 일어나요'):'A report wakes it up';
+      return '<div class="sr-clcard sr-clcard-down'+(x.dust?' sr-clcard-dust':'')+'" data-ck="'+esc(x.key)+'" data-rest="1" onclick="_srClRestTap(&#39;'+esc(String(x.key).replace(/'/g,''))+'&#39;)" title="'+esc(tip)+'"><span class="sr-clcard-nm">'+esc(x.name)+((x.pc!=null&&String(x.pc)!=='')?' <span class="sr-clcard-pc" style="margin-left:6px">PC'+esc(String(x.pc))+'</span>':'')+'</span><span class="sr-clcard-quietline">'+(x.dust?(kl?'먼지 · ':'dust · '):'')+lbl+'</span></div>'; }).join('');
+    var dustLink=_dustN?('<button class="sr-clhid" onclick="window._srClShowHidden=!window._srClShowHidden;try{_srRecReRender()}catch(_){renderRecords(true)}">'+(window._srClShowHidden?(kl?'먼지 쌓인 카드 접기':'Hide dusty cards'):(kl?('먼지 쌓인 카드 '+_dustN+'개 보기'):('Show '+_dustN+' dusty cards')))+'</button>'):'';
+    var zone=(typeof _pcbRoleOk==='function'&&_pcbRoleOk())?('<div class="sr-clrest-zone">'+(kl?'카드를 여기로 끌면 미리 쉬러 가요':'Drag a card here to rest it')+'</div>'):'';
+    if(!cards && !zone) return '';
+    return '<div class="sr-cltrain-hd sr-clrest-hd">☾ '+(kl?'쉬는 클라':'Resting clients')+'<span class="sr-cltrain-cnt">'+show.length+'</span><span class="sr-clrest-sub">'+(kl?'줄이 오면 저절로 일어나요 · 30일 줄 없으면 여기로':'a report wakes them · 30 quiet days puts them here')+'</span></div><div class="sr-clgrid sr-clrest">'+cards+zone+dustLink+'</div>';
+  }catch(_){ return ''; } })();
   var clientCards=(_realN?_realCards:('<div class="sr-empty">'+(_uiLang()==='ko'?'클라이언트 세션이 없어요.':'No client sessions yet.')+'</div>'))+_iqCards+_iqAdd+_hidLink;
   /* [v1302] boss "직원별 클라별 옆에 시계 그거 지워버려 그냥 이미 PC 현황쪽에
      있으니까 필요없어" — 같은 시계 보드가 PC 현황에 있다. 두 곳에 두면 어느 쪽이
@@ -39560,7 +39660,7 @@ function _srRecCardHTML(data){
   var body = (mode==='clock')
     ? _clockBoardHTML(sessions)
     : (mode==='client')
-    ? ('<div class="sr-clgrid">'+clientCards+'</div>'+(_trainN?('<div class="sr-cltrain-hd">'+(_uiLang()==='ko'?'\ud83c\udf93 \ud2b8\ub808\uc774\ub2dd \ud074\ub77c · 기준 없음':'\ud83c\udf93 Training · no standard')+'<span class="sr-cltrain-cnt">'+_trainN+'</span></div><div class="sr-clgrid">'+_trainCards+'</div>'):''))
+    ? ('<div class="sr-clgrid">'+clientCards+'</div>'+_restSec+(_trainN?('<div class="sr-cltrain-hd">'+(_uiLang()==='ko'?'\ud83c\udf93 \ud2b8\ub808\uc774\ub2dd \ud074\ub77c · 기준 없음':'\ud83c\udf93 Training · no standard')+'<span class="sr-cltrain-cnt">'+_trainN+'</span></div><div class="sr-clgrid">'+_trainCards+'</div>'):''))
     /* [v1302] 아래 막대(일일 기록 · N + 버튼 셋)를 걷었다. 건수는 머리말 오른쪽으로,
        도구는 탭 줄 오른쪽으로 갔다 — 화면을 가로지르는 줄이 셋에서 둘이 된다. */
     : ((curG==='all'?'':seg)+bands+resignedSec);
@@ -41554,6 +41654,8 @@ async function renderRecords(silent){
   // [v365] roster + map-list enrichments run in the BACKGROUND — first paint waits only on the report fetch (was gated on the slow map sync)
   if(!silent){
     if(typeof loadTeamMembers==='function') Promise.resolve().then(loadTeamMembers).then(function(){ try{ if(window._srRecAll&&window._srRecMode!=='clock') _srRecReRender(); }catch(_){ } }).catch(function(){});   // [v313] roster → every player gets a tab (silent re-render when it lands)
+    /* [v1404] 클라 로스터(휴면·hiatus_at)도 — 쉬는 클라 줄이 이걸 본다 */
+    try{ if(typeof syncClientStateFromCloud==='function' && typeof _clientSynced!=='undefined' && !_clientSynced) Promise.resolve().then(syncClientStateFromCloud).then(function(){ try{ if(window._srRecAll&&window._srRecMode!=='clock') _srRecReRender(); }catch(_){ } }).catch(function(){}); }catch(_){}
     if(typeof syncExpFromCloud==='function'){ if(typeof _expSynced!=='undefined') _expSynced=true; Promise.resolve().then(syncExpFromCloud).catch(function(){}); }   // [v325] master map list for the editor's picker
   }
   var REPORT_URL='https://ohnasvgwzmknzujtqrzt.supabase.co';
@@ -69723,6 +69825,21 @@ console.info('AUTO100 build applied',AUTO100_BUILD.version,v3Audit());
 #sr-app .sr-clcard .sr-clcard-dots i{display:block;width:13px;height:6px;border-radius:2px;background:rgba(95,191,138,.85)}
 #sr-app .sr-clcard .sr-clcard-dots i.hole{background:transparent;border:1px dashed rgba(224,90,77,.65);box-sizing:border-box}
 #sr-app .sr-clcard .sr-clcard-dots i.now{background:#3a3a40}
+/* [v1404] 시간이 흐르면 — 3일 흐려짐 · 7일 가라앉음 · 30일 엎어짐(아래 줄) · 60일 먼지 */
+#sr-app .sr-clcard.sr-clcard-quiet{opacity:.66;filter:saturate(.65)}
+#sr-app .sr-clcard.sr-clcard-sunk{opacity:.45;filter:saturate(.3);transform:translateY(4px);box-shadow:0 10px 22px rgba(0,0,0,.55)}
+#sr-app .sr-clcard.sr-clcard-sunk .sr-clcard-big{color:var(--tx3,#6c6b66)}
+#sr-app .sr-clcard-quietline{font-size:10.5px;color:var(--tx3,#6c6b66);margin-top:6px}
+#sr-app .sr-clrest-hd{text-transform:none;letter-spacing:0}
+#sr-app .sr-clrest-hd .sr-clrest-sub{font-weight:500;color:var(--tx3,#6c6b66);margin-left:6px;font-size:11.5px}
+#sr-app .sr-clcard.sr-clcard-down{background:transparent;border:1px dashed var(--br2,#2f2f33);padding:10px 14px;min-height:0;flex-direction:row;align-items:center;justify-content:space-between;gap:8px;opacity:.75;overflow:visible;cursor:pointer}
+#sr-app .sr-clcard.sr-clcard-down:hover{opacity:1;transform:none;border-color:var(--ac-bord,rgba(194,160,74,.4))}
+#sr-app .sr-clcard.sr-clcard-down .sr-clcard-nm{font-size:13px;color:var(--tx2,#989792)}
+#sr-app .sr-clcard.sr-clcard-down .sr-clcard-quietline{margin:0;white-space:nowrap}
+#sr-app .sr-clcard.sr-clcard-dust{opacity:.38}
+#sr-app .sr-clcard.sr-clcard-dust::after{content:"";position:absolute;inset:0;border-radius:14px;background:repeating-linear-gradient(135deg,transparent 0 6px,rgba(255,255,255,.035) 6px 7px);pointer-events:none}
+#sr-app .sr-clrest-zone{grid-column:1/-1;border:1.5px dashed var(--br2,#2f2f33);border-radius:14px;min-height:52px;display:flex;align-items:center;justify-content:center;color:var(--tx3,#6c6b66);font-size:12px;transition:border-color .2s,background .2s}
+#sr-app .sr-clrest-zone.over{border-color:var(--ac,#c2a04a);background:var(--ac-bg,rgba(194,160,74,.13));color:var(--tx2,#989792)}
 #sr-app .sr-clcard.sr-clcard-idle{transform:translateY(3px) scale(.995);box-shadow:0 14px 28px rgba(0,0,0,.6)}
 #sr-app .sr-clcard.sr-clcard-idle > .sr-clflip{animation:mcBuzz .8s cubic-bezier(.2,.7,.3,1) both}
 @media (prefers-reduced-motion:reduce){#mc-layer .mc-card,#mc-layer .mc-draft,#mc-layer .mc-line,#mc-layer .mc-drop.has,#mc-layer .mc-card.mc-buzz > .mc-inner,#sr-app .sr-clcard.sr-clcard-idle > .sr-clflip{animation:none}}
