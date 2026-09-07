@@ -4,7 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
 <title>ARASAKA Corp</title>
-<!-- BUILD: v1404 | 클라 한평생 선반 1단계 — 3일 흐려짐·7일 가라앉음·30일 엎어짐(쉬는 클라 줄)·60일 먼지 · 끌어내리기=휴식 · 리포트가 깨움 -->
+<!-- BUILD: v1405 | 클라 한평생 선반 2·3단계 — 쪽지(소통 기록 한 마디) · 같은 클라 겹치기(같은 PC 카드 위에 놓기) · 클라이언트 탭 둘 메뉴에서 뺌 -->
 <!-- v745 기록은 git 이력(v1302 이전 커밋)에 있다 — 100KB 변경사 주석을 배포에서 제거 -->
 <!-- [v677] a <link href> cannot read a CSS variable, so the favicon carries its own copy.
      64px: a browser tab draws it at 16-32px, so this is 2x-DPR sharp at 11KB. -->
@@ -37911,8 +37911,8 @@ window._srClDrag = null;
 function _srClDndBind(g){
   if(!g || g._srDnd) return; g._srDnd = 1;
   var pick = function(t){ return (t && t.closest) ? t.closest('.sr-clgrid > [draggable="true"]') : null; };
-  var kindOf = function(el){ return el.hasAttribute('data-iqid') ? 'iq' : (el.hasAttribute('data-pc') ? 'pc' : null); };
-  var clearMarks = function(){ g.querySelectorAll('.sr-drop-before,.sr-drop-after,.sr-drop-into').forEach(function(x){ x.classList.remove('sr-drop-before','sr-drop-after','sr-drop-into'); }); try{ document.querySelectorAll('#sr-app .sr-clrest-zone.over').forEach(function(z){ z.classList.remove('over'); }); }catch(_){} };
+  var kindOf = function(el){ return el.hasAttribute('data-iqid') ? 'iq' : (el.hasAttribute('data-rest') ? 'rest' : (el.hasAttribute('data-pc') ? 'pc' : null)); };   /* [v1405] 쉬는 카드도 끌 수 있다(겹치기용) */
+  var clearMarks = function(){ g.querySelectorAll('.sr-drop-before,.sr-drop-after,.sr-drop-into,.sr-drop-stack').forEach(function(x){ x.classList.remove('sr-drop-before','sr-drop-after','sr-drop-into','sr-drop-stack'); }); try{ document.querySelectorAll('#sr-app .sr-clrest-zone.over').forEach(function(z){ z.classList.remove('over'); }); }catch(_){} };
   /* [v1404] 쉬는 줄(.sr-clrest)에 PC 카드를 놓으면 쉬러 간다 */
   var restOf = function(t){ return (t && t.closest) ? t.closest('.sr-clrest') : null; };
   g.addEventListener('dragstart', function(e){
@@ -37920,7 +37920,7 @@ function _srClDndBind(g){
     var el = pick(e.target); if(!el) return;
     var k = kindOf(el); if(!k) return;
     if(e.target.closest && e.target.closest('button,input,select,[contenteditable=true]')){ e.preventDefault(); return; }
-    window._srClDrag = { kind:k, pc:el.getAttribute('data-pc'), iqid:el.getAttribute('data-iqid') };
+    window._srClDrag = { kind:k, pc:el.getAttribute('data-pc'), iqid:el.getAttribute('data-iqid'), key:el.getAttribute('data-ck'), nm:el.getAttribute('data-nm') };
     el.classList.add('sr-dragging');
     try{ e.dataTransfer.effectAllowed = 'move'; e.dataTransfer.setData('text/plain', k+':'+(window._srClDrag.pc||window._srClDrag.iqid)); }catch(_){}
   });
@@ -37934,8 +37934,14 @@ function _srClDndBind(g){
       e.preventDefault(); try{ e.dataTransfer.dropEffect = 'move'; }catch(_){}
       clearMarks(); el.classList.add('sr-drop-into'); return;
     }
+    if(d.kind === 'rest'){   /* [v1405] 쉬는(나간) 카드를 진짜 카드 위에 = 겹치기 */
+      if(tk === 'pc' && el.hasAttribute('data-ck')){ e.preventDefault(); try{ e.dataTransfer.dropEffect = 'move'; }catch(_){} clearMarks(); el.classList.add('sr-drop-stack'); } else clearMarks();
+      return;
+    }
     if(tk !== d.kind){ clearMarks(); return; }
     e.preventDefault(); try{ e.dataTransfer.dropEffect = 'move'; }catch(_){}
+    /* [v1405] 같은 PC 번호의 카드 위 = 겹치기(같은 클라). 순서 바꾸기는 다른 PC 사이에서만 뜻이 있다 */
+    if(d.kind === 'pc' && Number(el.getAttribute('data-pc')) === Number(d.pc) && !el.classList.contains('sr-dragging') && el.hasAttribute('data-ck')){ clearMarks(); el.classList.add('sr-drop-stack'); return; }
     var r = el.getBoundingClientRect(); var after = (e.clientX - r.left) > r.width/2;
     clearMarks(); el.classList.add(after ? 'sr-drop-after' : 'sr-drop-before');
   });
@@ -37950,8 +37956,21 @@ function _srClDndBind(g){
       try{ _srIqPlace(d.iqid, Number(el.getAttribute('data-pc'))); }catch(err){ console.warn('iq place:', err); }
       return;
     }
+    if(d.kind === 'rest'){   /* [v1405] 쉬는 카드 → 진짜 카드 위 */
+      var wasStack = el.classList.contains('sr-drop-stack'); clearMarks();
+      if(wasStack && kindOf(el) === 'pc'){ e.preventDefault(); try{ var tn0 = String((el.querySelector('.sr-clcard-nm')||{}).textContent||'').replace(/=.*$/,'').trim(); if(d.key && el.getAttribute('data-ck') && d.key !== el.getAttribute('data-ck')) _srClStack(d.key, el.getAttribute('data-ck'), d.nm || d.key, tn0); }catch(err){ console.warn('cl stack:', err); } }
+      return;
+    }
     if(kindOf(el) !== d.kind){ clearMarks(); return; }
     e.preventDefault();
+    if(el.classList.contains('sr-drop-stack')){   /* [v1405] 겹치기 */
+      clearMarks();
+      try{ var srcEl = document.querySelector('#sr-app .sr-clcard.sr-dragging'); var fk = srcEl ? srcEl.getAttribute('data-ck') : '', tk2 = el.getAttribute('data-ck');
+        var fn = srcEl ? String((srcEl.querySelector('.sr-clcard-nm')||{}).textContent||'').trim() : fk, tn = String((el.querySelector('.sr-clcard-nm')||{}).textContent||'').trim();
+        fn = fn.replace(/=.*$/,'').trim(); tn = tn.replace(/=.*$/,'').trim();
+        if(fk && tk2 && fk !== tk2) _srClStack(fk, tk2, fn, tn); }catch(err){ console.warn('cl stack:', err); }
+      return;
+    }
     var after = el.classList.contains('sr-drop-after'); clearMarks();
     try{
       if(d.kind === 'pc') _srClMovePc(Number(d.pc), Number(el.getAttribute('data-pc')), after);
@@ -37964,7 +37983,89 @@ function _srClDndBind(g){
    카드를 아래 줄로 끌면 로스터가 휴면(active=false, hiatus_at=오늘)이 되고 PC 슬롯이 빈다(clArchiveToggle 과 같은 일,
    단 클라이언트 탭을 그리지 않는다). 로스터에 없던 클라(리포트로만 있던 클라)는 최소 계정을 만들어 붙인다.
    깨우기는 리포트가 한다 — hiatus_at 뒤에 줄이 오면 _srRecCardHTML 이 _srClWake 를 부른다. 관리자 손으로도 된다(엎어진 카드 탭). */
-function _srClNorm(n){ n=String(n||'').trim(); n=n.replace(/^\s*\d+\s*[.)\-]\s*/,''); n=n.replace(/선생님|사장님|형님|언니|누나|쌤|님|형|씨/g,'').replace(/\b(mr|ms|mrs)\.?\b/gi,'').replace(/[\s·.\-_'"]/g,'').toLowerCase(); var _al={ namgang:'남강' }; return _al[n]||n; }
+/* ═══ [v1405] 같은 클라 겹치기 — 이름을 바꾸는 게 아니라 "이 둘은 같은 사람" 을 붙인다 ═══════════════════
+   부주가 리포트에 이름을 다르게 치면 카드가 둘로 갈린다(남강쌤 / Namgang). 리포트는 안 건드리고, 정규화 키 사이의
+   별칭(map: fromKey → toKey)만 저장한다. clNorm(기록·통계)·_srClNorm·내 클라 카드 clKey 셋이 모두 이 표를 읽는다.
+   저장: trust_state id 'client_alias' { map:{from:to}, names:{key:보이는 이름} }. 손짓: 같은 PC 번호의 카드 위에 카드를 놓는다. */
+window._clAlias = window._clAlias || { namgang:'남강' };
+window._clAliasNames = window._clAliasNames || {};
+async function _clAliasLoad(){
+  if(window._clAliasLoaded || typeof sb==='undefined' || !sb) return; window._clAliasLoaded = 1;
+  try{ var r = await sb.from('trust_state').select('data').eq('id','client_alias').maybeSingle();
+    var d = (r && r.data && r.data.data && typeof r.data.data==='object') ? r.data.data : null;
+    if(d){ if(d.map && typeof d.map==='object'){ var m = { namgang:'남강' }; Object.keys(d.map).forEach(function(k){ if(d.map[k]) m[k]=String(d.map[k]); }); window._clAlias = m; } if(d.names && typeof d.names==='object') window._clAliasNames = d.names; }
+  }catch(e){ try{ console.warn('client_alias load:', e && e.message); }catch(_){} window._clAliasLoaded = 0; }
+}
+function _clAliasSave(){ try{ return _dbUpsert('trust_state','client_alias',{ map:window._clAlias||{}, names:window._clAliasNames||{} }); }catch(_){ return null; } }
+function _srClNorm(n){ n=String(n||'').trim(); n=n.replace(/^\s*\d+\s*[.)\-]\s*/,''); n=n.replace(/선생님|사장님|형님|언니|누나|쌤|님|형|씨/g,'').replace(/\b(mr|ms|mrs)\.?\b/gi,'').replace(/[\s·.\-_'"]/g,'').toLowerCase(); var _al=window._clAlias||{ namgang:'남강' }; return _al[n]||n; }
+async function _srClStack(fromKey, toKey, fromName, toName){
+  if(!_srRecRO()) return;
+  var ko=(typeof _uiLang!=='function')||_uiLang()==='ko';
+  if(!fromKey || !toKey || fromKey===toKey) return;
+  var okc = true; try{ okc = await (typeof _askC==='function' ? _askC(ko?('"'+fromName+'" 과 "'+toName+'" 은 같은 클라인가요?\n\n겹치면 한 장이 되고, 앞으로 "'+fromName+'" 리포트는 이 카드로 옵니다. (겹친 이름을 눌러 다시 뗄 수 있어요)'):('Are "'+fromName+'" and "'+toName+'" the same client?')) : Promise.resolve(confirm(fromName+' = '+toName+' ?'))); }catch(_){ okc=false; }
+  if(!okc) return;
+  var m = window._clAlias = window._clAlias || {};
+  Object.keys(m).forEach(function(k){ if(m[k]===fromKey) m[k]=toKey; });   /* 이미 from 으로 모이던 것들도 to 로 */
+  m[fromKey] = toKey;
+  window._clAliasNames = window._clAliasNames || {}; window._clAliasNames[fromKey] = fromName; window._clAliasNames[toKey] = toName;
+  try{ await _clAliasSave(); }catch(_){}
+  try{ logAction('update', '같은 클라로 겹침 · '+fromName+' → '+toName, toName); }catch(_){}
+  try{ toast('🃏 '+fromName+' = '+toName+(ko?' — 한 장이 됐어요':' — stacked')); }catch(_){}
+  try{ renderRecords(true); }catch(_){}
+}
+async function _srClUnstack(fromKey){
+  if(!_srRecRO()) return;
+  var ko=(typeof _uiLang!=='function')||_uiLang()==='ko';
+  var m = window._clAlias||{}; if(!m[fromKey]) return;
+  var nm = (window._clAliasNames||{})[fromKey] || fromKey;
+  var okc = true; try{ okc = await (typeof _askC==='function' ? _askC(ko?('"'+nm+'" 를 다시 떼어 따로 카드로 둘까요?'):('Split "'+nm+'" back into its own card?')) : Promise.resolve(confirm('split '+nm+'?'))); }catch(_){ okc=false; }
+  if(!okc) return;
+  var to = m[fromKey]; delete m[fromKey];
+  try{ await _clAliasSave(); }catch(_){}
+  try{ logAction('update', '겹친 클라 뗌 · '+nm, (window._clAliasNames||{})[to]||to); }catch(_){}
+  try{ renderRecords(true); }catch(_){}
+}
+/* 겹친 이름 칩 — 이 카드로 모이는 다른 이름들 */
+function _srClAliasChip(key){
+  try{ var m=window._clAlias||{}, out=[]; Object.keys(m).forEach(function(k){ if(m[k]===key && k!=='namgang') out.push(k); });
+    if(!out.length) return '';
+    var ko=(typeof _uiLang!=='function')||_uiLang()==='ko', can=(typeof _pcbRoleOk==='function'&&_pcbRoleOk());
+    return out.map(function(k){ var nm=(window._clAliasNames||{})[k]||k; return '<span class="sr-clcard-alias" title="'+_srEsc(ko?('"'+nm+'" 리포트도 이 카드로 와요'+(can?' — 눌러서 떼기':'')):('also "'+nm+'"'))+'"'+(can?' onclick="event.stopPropagation();_srClUnstack(&#39;'+_srEsc(k.replace(/'/g,''))+'&#39;)"':'')+'>= '+_srEsc(nm)+'</span>'; }).join('');
+  }catch(_){ return ''; }
+}
+/* ═══ [v1405] 쪽지 — 클라가 한 말 중 지금 필요한 한 마디. 일기가 아니다 ═══════════════════════════════
+   계정의 소통 기록(comms)에 type '쪽지' 로 들어간다 — 새 쪽지를 붙이면 전 쪽지는 기록에 그대로 남고(내역),
+   카드에는 가장 최근 쪽지 한 장만 보인다. 빈 글로 붙이면 뗀 것. */
+function _srClAcctEnsure(key, nm){
+  var acc=_srClAcctFor(key); if(acc) return acc;
+  try{ var ko=(typeof _uiLang!=='function')||_uiLang()==='ko'; var iso=_todayKST();
+    acc={ id:'ca_'+Date.now().toString(36), name:String(nm||key), discord:'', joined:iso, work:{start:9,end:19}, active:true, payment:{status:'unpaid',monthly:0,due_day:1,last_paid:null,invoices:[]}, contract:{start:iso,end:'',monthly_fee:0,note:(ko?'클라별에서 등록':'Registered from client cards')}, comms:[] };
+    CLIENT_ACCOUNTS.push(acc); return acc; }catch(_){ return null; }
+}
+function _srClNoteOf(key){ try{ var acc=_srClAcctFor(key); if(!acc||!Array.isArray(acc.comms)) return null; for(var i=0;i<acc.comms.length;i++){ var cm=acc.comms[i]; if(cm && cm.type==='쪽지'){ return String(cm.note||'').trim() ? cm : null; } } }catch(_){} return null; }
+function _srClNoteHTML(key){
+  try{ var cm=_srClNoteOf(key), can=(typeof _pcbRoleOk==='function'&&_pcbRoleOk());
+    if(!cm && !can) return '';
+    var ko=(typeof _uiLang!=='function')||_uiLang()==='ko';
+    if(!cm) return '<span class="sr-clcard-note sr-clcard-note-empty" title="'+(ko?'쪽지 붙이기 — 클라가 한 말 한 마디':'Stick a note')+'" onclick="event.stopPropagation();_srClNoteEdit(&#39;'+_srEsc(String(key).replace(/'/g,''))+'&#39;)">📝</span>';
+    return '<div class="sr-clcard-note" title="'+_srEsc((cm.date?cm.date+' · ':'')+(cm.by?cm.by+' · ':'')+(ko?(can?'눌러서 새 쪽지 (전 쪽지는 기록에 남아요)':'클라가 한 말'):'note'))+'"'+(can?' onclick="event.stopPropagation();_srClNoteEdit(&#39;'+_srEsc(String(key).replace(/'/g,''))+'&#39;)"':'')+'>'+_srEsc(cm.note)+'</div>';
+  }catch(_){ return ''; }
+}
+async function _srClNoteEdit(key){
+  if(!_srRecRO()) return;
+  var ko=(typeof _uiLang!=='function')||_uiLang()==='ko';
+  var by=window._srRecByClient||{}, nm=(by[key]&&by[key].client)||(window._clAliasNames||{})[key]||key;
+  var cur=_srClNoteOf(key), old=cur?String(cur.note||''):'';
+  var v=null; try{ v = await (typeof _askP==='function' ? _askP(ko?(nm+' 쪽지 — 클라가 한 말 한 마디 (비우면 뗌)'):(nm+' note (empty = remove)'), old) : Promise.resolve(prompt(nm+' note', old))); }catch(_){ v=null; }
+  if(v===null) return; v=String(v).trim(); if(v===old) return;
+  var acc=_srClAcctEnsure(key, nm); if(!acc) return;
+  if(!Array.isArray(acc.comms)) acc.comms=[];
+  acc.comms.unshift({ type:'쪽지', note:v, date:_todayKST(), by:(currentUser&&currentUser.name)||'' });
+  try{ logAction('update', v?('쪽지 · '+v):('쪽지 뗌'+(old?' · '+old:'')), acc.name); }catch(_){}
+  try{ saveClientState(true); }catch(_){}
+  try{ toast(v?('📝 '+nm+(ko?' 쪽지를 붙였어요':' note added')+(old?(ko?' — 전 쪽지는 기록에':''):'')):('📝 '+nm+(ko?' 쪽지를 뗐어요':' note removed'))); }catch(_){}
+  try{ renderRecords(true); }catch(_){}
+}
 function _srClAcctFor(key){ try{ if(typeof CLIENT_ACCOUNTS==='undefined'||!Array.isArray(CLIENT_ACCOUNTS)) return null; for(var i=0;i<CLIENT_ACCOUNTS.length;i++){ var r=CLIENT_ACCOUNTS[i]; if(r&&r.name&&_srClNorm(r.name)===key) return r; } }catch(_){} return null; }
 function _srClRest(pc, keyIn){
   if(!_srRecRO()) return;
@@ -38809,7 +38910,7 @@ function _srRecCardHTML(data){
   // [v362] 클라 정규화: 번호 접두("1. ") + 존칭 + 공백 제거로 같은 클라 변형 병합. 빈 클라(트레이닝 등)는 클라 뷰에서 제외.
   var clNorm=function(n){ n=String(n||'').trim(); n=n.replace(/^\s*\d+\s*[.)\-]\s*/,''); n=n.replace(/선생님|사장님|형님|언니|누나|쌤|님|형|씨/g,'').replace(/\b(mr|ms|mrs)\.?\b/gi,'').replace(/[\s·.\-_'"]/g,'').toLowerCase();
     /* [v1351] boss "Namgang 은 지우고 남강쌤만" — 로마자 표기를 한글 키에 접붙여 카드 하나로 병합(리포트는 안 건드림) */
-    var _al={ namgang:'남강' }; return _al[n]||n; };
+    var _al=window._clAlias||{ namgang:'남강' }; return _al[n]||n; };   /* [v1405] 겹치기 표 */
   var byClient={}, _clName={}, _clCnt={};
   sessions.forEach(function(s){ var raw=String(s.client||'').trim(); if(!raw) return; var c=clNorm(raw); if(!c) return;
     if(!byClient[c])byClient[c]={key:c,client:raw,pc:s.pc,reps:0,statuses:0,mgain:0,ade:0,tgtSum:0,clean:0,cleanN:0,staff:{},maps:{},minMs:null,maxMs:null,_reps:[]};
@@ -38832,6 +38933,7 @@ function _srRecCardHTML(data){
     if(s.key)o.staff[s.key]=(o.staff[s.key]||0)+1; if(s.map)o.maps[s.map]=(o.maps[s.map]||0)+1;   /* [v1355] 개수 집계 — 주력 맵 정렬용 */ if(s.ms){ if(o.minMs==null||s.ms<o.minMs)o.minMs=s.ms; if(o.maxMs==null||s.ms>o.maxMs)o.maxMs=s.ms; } });
   Object.keys(byClient).forEach(function(c){ if(_clName[c]) byClient[c].client=_clName[c]; });
   try{ if(byClient['남강']) byClient['남강'].client='남강쌤'; }catch(_){}   /* [v1351] 병합 카드의 얼굴은 한글로 */
+  try{ var _fn=window._clAliasNames||{}; Object.keys(byClient).forEach(function(c){ if(_fn[c] && (window._clAlias||{})[c]==null){ var _isTo=false; for(var _ak in (window._clAlias||{})){ if(window._clAlias[_ak]===c){ _isTo=true; break; } } if(_isTo) byClient[c].client=_fn[c]; } }); }catch(_){}   /* [v1405] 겹친 카드의 얼굴은 겹칠 때 고른 이름 */
   // [v400] surface clients ASSIGNED on the PC Status board even with no reports this period (e.g. PC9 with no logs shows as an empty card)
   try{ if(typeof PCS!=='undefined' && Array.isArray(PCS)){ PCS.forEach(function(_p){ if(!_p||_p.status==='offline') return; (_p.clients||[]).forEach(function(_cid){ var _co=(typeof clientById==='function')?clientById(_cid):null; var _nm=(_co&&_co.name)?String(_co.name).trim():''; if(!_nm) return; var _ck=clNorm(_nm); if(!_ck) return; if(!byClient[_ck]){ byClient[_ck]={key:_ck,client:_nm,pc:_p.id,reps:0,statuses:0,mgain:0,tgtSum:0,clean:0,cleanN:0,staff:{},maps:{},minMs:null,maxMs:null,_reps:[],_noData:true}; } else if(byClient[_ck].pc==null||String(byClient[_ck].pc)===''){ byClient[_ck].pc=_p.id; } }); }); } }catch(_){ }
   var clientStat=function(o){ var avg=o.cleanN?(o.clean/o.cleanN):null;
@@ -39168,6 +39270,8 @@ function _srRecCardHTML(data){
       +'<div class="sr-clface sr-clfront">'
       +'<div class="sr-clcard-top"><span class="sr-clcard-nm">'+esc(o.client||c)+'</span>'+((o.pc!=null&&String(o.pc)!=='')?'<span class="sr-clcard-pc">PC'+esc(String(o.pc))+'</span>':'')
       +((typeof _mcHolderChip==='function')?_mcHolderChip(o.client||c,o.pc):'')   /* [v1401] 지금 이 카드를 들고 있는 사람 */
+      +((typeof _srClAliasChip==='function')?_srClAliasChip(c):'')   /* [v1405] 겹친 이름 */
+      +((typeof _srClNoteHTML==='function')?_srClNoteHTML(c):'')   /* [v1405] 쪽지 */
       +(function(){ /* [v1371] 배치완료 문의가 이 카드로 흡수됐으면 7일간 표시 */
           try{ if(typeof PCB_INQ==='undefined'||!Array.isArray(PCB_INQ)) return '';
             var _hit = PCB_INQ.some(function(iq){ return iq && _pcbIqStage3(iq)==='done' && (clNorm(String(iq.name||''))===c || (Number(iq.placedPc)>0 && Number(iq.placedPc)===Number(o.pc))) && (Date.now()-(Number(iq.doneAt)||0)) < 7*864e5; });
@@ -39619,7 +39723,7 @@ function _srRecCardHTML(data){
     var cards=show.map(function(x){
       var lbl=(x.why==='hiatus')?(kl?('쉰 지 '+x.days+'일'):('resting '+x.days+'d')):(x.why==='gone'?(kl?('나감'+(x.quiet!=null?' · '+x.quiet+'일째 줄 없음':'')):'gone'):(kl?(x.quiet+'일째 줄 없음'):(x.quiet+'d no lines')));
       var tip=kl?(x.why==='hiatus'?'로스터 휴면 — 리포트가 오면 저절로 일어나요 (관리자는 눌러서 깨울 수도)':'리포트가 오면 저절로 일어나요'):'A report wakes it up';
-      return '<div class="sr-clcard sr-clcard-down'+(x.dust?' sr-clcard-dust':'')+'" data-ck="'+esc(x.key)+'" data-rest="1" onclick="_srClRestTap(&#39;'+esc(String(x.key).replace(/'/g,''))+'&#39;)" title="'+esc(tip)+'"><span class="sr-clcard-nm">'+esc(x.name)+((x.pc!=null&&String(x.pc)!=='')?' <span class="sr-clcard-pc" style="margin-left:6px">PC'+esc(String(x.pc))+'</span>':'')+'</span><span class="sr-clcard-quietline">'+(x.dust?(kl?'먼지 · ':'dust · '):'')+lbl+'</span></div>'; }).join('');
+      return '<div class="sr-clcard sr-clcard-down'+(x.dust?' sr-clcard-dust':'')+'" data-ck="'+esc(x.key)+'" data-rest="1" data-nm="'+esc(x.name)+'"'+((typeof _pcbRoleOk==='function'&&_pcbRoleOk())?' draggable="true"':'')+' onclick="_srClRestTap(&#39;'+esc(String(x.key).replace(/'/g,''))+'&#39;)" title="'+esc(tip)+'"><span class="sr-clcard-nm">'+esc(x.name)+((x.pc!=null&&String(x.pc)!=='')?' <span class="sr-clcard-pc" style="margin-left:6px">PC'+esc(String(x.pc))+'</span>':'')+'</span><span class="sr-clcard-quietline">'+(x.dust?(kl?'먼지 · ':'dust · '):'')+lbl+'</span></div>'; }).join('');
     var dustLink=_dustN?('<button class="sr-clhid" onclick="window._srClShowHidden=!window._srClShowHidden;try{_srRecReRender()}catch(_){renderRecords(true)}">'+(window._srClShowHidden?(kl?'먼지 쌓인 카드 접기':'Hide dusty cards'):(kl?('먼지 쌓인 카드 '+_dustN+'개 보기'):('Show '+_dustN+' dusty cards')))+'</button>'):'';
     var zone=(typeof _pcbRoleOk==='function'&&_pcbRoleOk())?('<div class="sr-clrest-zone">'+(kl?'카드를 여기로 끌면 미리 쉬러 가요':'Drag a card here to rest it')+'</div>'):'';
     if(!cards && !zone) return '';
@@ -41654,6 +41758,8 @@ async function renderRecords(silent){
   // [v365] roster + map-list enrichments run in the BACKGROUND — first paint waits only on the report fetch (was gated on the slow map sync)
   if(!silent){
     if(typeof loadTeamMembers==='function') Promise.resolve().then(loadTeamMembers).then(function(){ try{ if(window._srRecAll&&window._srRecMode!=='clock') _srRecReRender(); }catch(_){ } }).catch(function(){});   // [v313] roster → every player gets a tab (silent re-render when it lands)
+    /* [v1405] 겹치기 표 — 카드 키를 정하니 먼저 */
+    try{ if(typeof _clAliasLoad==='function' && !window._clAliasLoaded) Promise.resolve().then(_clAliasLoad).then(function(){ try{ if(window._srRecAll&&window._srRecMode!=='clock') _srRecReRender(); }catch(_){ } }).catch(function(){}); }catch(_){}
     /* [v1404] 클라 로스터(휴면·hiatus_at)도 — 쉬는 클라 줄이 이걸 본다 */
     try{ if(typeof syncClientStateFromCloud==='function' && typeof _clientSynced!=='undefined' && !_clientSynced) Promise.resolve().then(syncClientStateFromCloud).then(function(){ try{ if(window._srRecAll&&window._srRecMode!=='clock') _srRecReRender(); }catch(_){ } }).catch(function(){}); }catch(_){}
     if(typeof syncExpFromCloud==='function'){ if(typeof _expSynced!=='undefined') _expSynced=true; Promise.resolve().then(syncExpFromCloud).catch(function(){}); }   // [v325] master map list for the editor's picker
@@ -43670,7 +43776,7 @@ async function _pcbInqFileDel(iqId, fid){
 async function _pcbInqCrm(id){
   const iq = PCB_INQ.find(x=>x.id===id); if(!iq) return;
   if(iq.crmId){
-    try{ setActiveChannel('op-clients'); }catch(_){}
+    /* [v1405] 탭이 메뉴에서 빠졌다 — 상세 패널만 연다 */
     const cid = iq.crmId;
     setTimeout(()=>{ try{ if(typeof openClientDetail==='function' && CLIENT_ACCOUNTS.some(a=>a.id===cid)) openClientDetail(cid); }catch(_){} }, 500);
     return;
@@ -52726,7 +52832,7 @@ function visibleTree(){
       .filter(cat => canSee(cat.perms))
       .map(cat => ({
         ...cat,
-        channels: cat.channels.filter(ch => ch.id !== 'op-backup' && ch.id !== 'pl-calc-std' /* [v1391] 기준표 탭은 메뉴에서 뺀다 — 기록·통계 카드 뒷면이 같은 편집창을 연다 */ && ch.id !== 'op-pc-board' /* [v1394] boss "계정보드도 지워도 되지?" — 문의 파이프라인(카드·3단계·PC 연결·담당/테스터·확정 적용)이 전부 기록·통계 클라별로 옮겨졌다. 코드·경로는 남김 */ && (ch.kind === 'divider' || (canSee(ch.perms) && matrixAllows(ch.id))))
+        channels: cat.channels.filter(ch => ch.id !== 'op-backup' && ch.id !== 'pl-calc-std' /* [v1391] 기준표 탭은 메뉴에서 뺀다 — 기록·통계 카드 뒷면이 같은 편집창을 연다 */ && ch.id !== 'op-clients' && ch.id !== 'pl-clients' /* [v1405] boss 3번: 클라이언트 탭 둘은 메뉴에서 뺀다 — 클라별 카드(쉬는 줄·쪽지·겹치기)와 PC 현황 풀 칩 패널이 대신한다 */ && ch.id !== 'op-pc-board' /* [v1394] boss "계정보드도 지워도 되지?" — 문의 파이프라인(카드·3단계·PC 연결·담당/테스터·확정 적용)이 전부 기록·통계 클라별로 옮겨졌다. 코드·경로는 남김 */ && (ch.kind === 'divider' || (canSee(ch.perms) && matrixAllows(ch.id))))
       }))
       // [v290] hide a category header if the role ends up with no visible channels in it
       // (e.g. 운영 is open to all for PC 현황, but a role with PC 현황 disabled shows nothing there)
@@ -69840,6 +69946,16 @@ console.info('AUTO100 build applied',AUTO100_BUILD.version,v3Audit());
 #sr-app .sr-clcard.sr-clcard-dust::after{content:"";position:absolute;inset:0;border-radius:14px;background:repeating-linear-gradient(135deg,transparent 0 6px,rgba(255,255,255,.035) 6px 7px);pointer-events:none}
 #sr-app .sr-clrest-zone{grid-column:1/-1;border:1.5px dashed var(--br2,#2f2f33);border-radius:14px;min-height:52px;display:flex;align-items:center;justify-content:center;color:var(--tx3,#6c6b66);font-size:12px;transition:border-color .2s,background .2s}
 #sr-app .sr-clrest-zone.over{border-color:var(--ac,#c2a04a);background:var(--ac-bg,rgba(194,160,74,.13));color:var(--tx2,#989792)}
+/* [v1405] 쪽지 · 겹친 이름 · 겹치기 드롭 표시 */
+#sr-app .sr-clcard-top{flex-wrap:wrap}
+#sr-app .sr-clcard-note{flex:1 1 100%;order:9;background:#e9d88a;color:#3a2f08;font-size:11px;font-weight:600;padding:4px 8px;border-radius:3px;line-height:1.35;transform:rotate(-.6deg);box-shadow:0 2px 6px rgba(0,0,0,.35);white-space:normal;word-break:keep-all;margin-top:2px}
+#sr-app .sr-clcard-note[onclick]{cursor:pointer}
+#sr-app .sr-clcard-note.sr-clcard-note-empty{flex:none;order:0;background:transparent;box-shadow:none;transform:none;color:var(--tx3,#6c6b66);opacity:.45;padding:0 2px;font-size:11px;margin:0}
+#sr-app .sr-clcard:hover .sr-clcard-note-empty{opacity:.9}
+#sr-app .sr-clcard-alias{font-size:10px;font-weight:600;color:var(--tx3,#6c6b66);border:1px dashed var(--br2,#2f2f33);padding:1px 6px;border-radius:6px;white-space:nowrap}
+#sr-app .sr-clcard-alias[onclick]{cursor:pointer}
+#sr-app .sr-clcard-alias[onclick]:hover{color:var(--tx,#e6e5e2);border-color:var(--ac-bord,rgba(194,160,74,.4))}
+#sr-app .sr-clgrid > .sr-drop-stack{outline:2px dashed var(--ac,#c2a04a);outline-offset:3px;transform:scale(1.02)}
 #sr-app .sr-clcard.sr-clcard-idle{transform:translateY(3px) scale(.995);box-shadow:0 14px 28px rgba(0,0,0,.6)}
 #sr-app .sr-clcard.sr-clcard-idle > .sr-clflip{animation:mcBuzz .8s cubic-bezier(.2,.7,.3,1) both}
 @media (prefers-reduced-motion:reduce){#mc-layer .mc-card,#mc-layer .mc-draft,#mc-layer .mc-line,#mc-layer .mc-drop.has,#mc-layer .mc-card.mc-buzz > .mc-inner,#sr-app .sr-clcard.sr-clcard-idle > .sr-clflip{animation:none}}
@@ -69862,7 +69978,7 @@ console.info('AUTO100 build applied',AUTO100_BUILD.version,v3Audit());
   function hhmm(ms){ var d = new Date(Number(ms) + 9 * 3600000); return ('0' + d.getUTCHours()).slice(-2) + ':' + ('0' + d.getUTCMinutes()).slice(-2); }
   function toastK(k, e){ try{ toast(ko() ? k : e); }catch(_){} }
   /* 클라 키 — 기록·통계 클라별과 같은 규칙(번호 접두·존칭·공백 제거) */
-  function clKey(n){ n = String(n || '').trim(); n = n.replace(/^\s*\d+\s*[.)\-]\s*/, ''); n = n.replace(/선생님|사장님|형님|언니|누나|쌤|님|형|씨/g, '').replace(/\b(mr|ms|mrs)\.?\b/gi, '').replace(/[\s·.\-_'"]/g, '').toLowerCase(); var al = { namgang:'남강' }; return al[n] || n; }
+  function clKey(n){ n = String(n || '').trim(); n = n.replace(/^\s*\d+\s*[.)\-]\s*/, ''); n = n.replace(/선생님|사장님|형님|언니|누나|쌤|님|형|씨/g, '').replace(/\b(mr|ms|mrs)\.?\b/gi, '').replace(/[\s·.\-_'"]/g, '').toLowerCase(); var al = window._clAlias || { namgang:'남강' }; return al[n] || n; }
   function pcNum(p){ var n = Number(String(p == null ? '' : p).replace(/[^0-9]/g, '')); return n > 0 ? n : null; }
 
   /* ── 자료: 리포트 원본(서버 캐시 → 기록·통계 캐시) ───────────────────────── */
