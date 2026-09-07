@@ -4,7 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
 <title>ARASAKA Corp</title>
-<!-- BUILD: v1408 | 오늘 채운 칸 점은 카드 겉에서 빼고 상세에서만 -->
+<!-- BUILD: v1409 | 상세의 오늘 채운 칸이 세로로 쌓이던 것 — 가로 한 줄 -->
 <!-- v745 기록은 git 이력(v1302 이전 커밋)에 있다 — 100KB 변경사 주석을 배포에서 제거 -->
 <!-- [v677] a <link href> cannot read a CSS variable, so the favicon carries its own copy.
      64px: a browser tab draws it at 16-32px, so this is 2x-DPR sharp at 11KB. -->
@@ -69935,7 +69935,7 @@ console.info('AUTO100 build applied',AUTO100_BUILD.version,v3Audit());
 #sr-app .sr-clcard .sr-clcard-dots i.now{background:#3a3a40}
 /* [v1408] 상세 머리의 오늘 칸 */
 #sr-app .sr-focus-dots{display:flex;align-items:center;gap:10px;margin:6px 0 12px;font-size:11px;color:var(--tx3,#6c6b66)}
-#sr-app .sr-focus-dots .sr-clcard-dots{margin:0}
+#sr-app .sr-focus-dots .sr-clcard-dots{margin:0;display:flex;flex-wrap:wrap;gap:3px;align-items:center}   /* [v1409] 세로로 쌓이던 것 — 가로 한 줄 */
 #sr-app .sr-focus-dots .sr-clcard-dots i{display:block;width:16px;height:7px;border-radius:2px;background:rgba(95,191,138,.85)}
 #sr-app .sr-focus-dots .sr-clcard-dots i.hole{background:transparent;border:1px dashed rgba(224,90,77,.65);box-sizing:border-box}
 #sr-app .sr-focus-dots .sr-clcard-dots i.now{background:#3a3a40}
