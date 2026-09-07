@@ -4,7 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
 <title>ARASAKA Corp</title>
-<!-- BUILD: v1406 | 클라별 카드에 작업량(🌾 N쌀) — 클라이언트 탭이 빠지며 사라졌던 것 -->
+<!-- BUILD: v1407 | 작업량(쌀)은 카드 겉이 아니라 카드를 눌러 연 상세 머리 칩으로 -->
 <!-- v745 기록은 git 이력(v1302 이전 커밋)에 있다 — 100KB 변경사 주석을 배포에서 제거 -->
 <!-- [v677] a <link href> cannot read a CSS variable, so the favicon carries its own copy.
      64px: a browser tab draws it at 16-32px, so this is 2x-DPR sharp at 11KB. -->
@@ -39029,7 +39029,7 @@ function _srRecCardHTML(data){
         +'<div class="sr-focus-hd">'
           +'<div class="sr-focus-av" style="background:#3a6ea5">🎮</div>'
           +'<div style="min-width:0"><div class="sr-focus-nm">'+esc(co.client||curC)+((co.pc!=null&&String(co.pc)!=='')?'<span class="sr-focus-gb">PC'+esc(String(co.pc))+'</span>':'')+'</div>'
-            +'<div class="sr-focus-chips">'+chipC(_L?'평균 EXP%':'Average EXP%',(cst.avg!=null?cst.avg.toFixed(2)+'%':'—'))+chipC(_L?'기준 대비':'vs Standard',(cst.perf!=null?Math.round(cst.perf)+'%':'—'))+chipC(_L?'투입 직원':'Staff Deployed',cst.nStaff+(_L?'명':''))+chipC(_L?'보고':'Reports',(co.reps||0)+(_L?'건':''))+chipC(_L?'장비셋':'Gear Set',_L?'미수집':'Not collected')+'</div></div>'
+            +'<div class="sr-focus-chips">'+chipC(_L?'평균 EXP%':'Average EXP%',(cst.avg!=null?cst.avg.toFixed(2)+'%':'—'))+chipC(_L?'기준 대비':'vs Standard',(cst.perf!=null?Math.round(cst.perf)+'%':'—'))+(function(){ /* [v1407] boss "카드에 적지 말고 자세히 눌렀을 때" — 작업량(쌀)은 여기서만 */ try{ if(typeof clientSsal!=='function' || !(currentUserRole==='admin'||currentUserRole==='op')) return ''; var _s=clientSsal(co.client||curC); return _s?chipC('🌾 '+(_L?'작업량':'Workload'),esc(fmtSsal(_s))):''; }catch(_){ return ''; } })()+chipC(_L?'투입 직원':'Staff Deployed',cst.nStaff+(_L?'명':''))+chipC(_L?'보고':'Reports',(co.reps||0)+(_L?'건':''))+chipC(_L?'장비셋':'Gear Set',_L?'미수집':'Not collected')+'</div></div>'
         +'</div>'
         /* [v1398] boss "투입 타임라인도 기본값은 접어서, 펼쳐서 볼 수 있게" — 머리말을 누르면 펼침/접힘, 상태는 기억 */
         +'<div class="sr-sec-h sr-sec-tog'+(window._srTlOpen?' open':'')+'" onclick="window._srTlOpen=!window._srTlOpen;var w=document.getElementById(\'sr-tlwrap\');if(w){w.classList.toggle(\'collapsed\',!window._srTlOpen);}this.classList.toggle(\'open\',!!window._srTlOpen)" title="'+(_L?'눌러서 펼치기/접기':'Click to expand/collapse')+'"><span class="sr-sec-ca">'+(window._srTlOpen?'▾':'▸')+'</span>⏱ '+(_L?'투입 타임라인':'Deployment Timeline')+'<span class="ln"></span><span style="font-weight:700;color:var(--tx3)">'+tord.length+'</span></div>'
@@ -39271,9 +39271,7 @@ function _srRecCardHTML(data){
       +'<div class="sr-clcard-top"><span class="sr-clcard-nm">'+esc(o.client||c)+'</span>'+((o.pc!=null&&String(o.pc)!=='')?'<span class="sr-clcard-pc">PC'+esc(String(o.pc))+'</span>':'')
       +((typeof _mcHolderChip==='function')?_mcHolderChip(o.client||c,o.pc):'')   /* [v1401] 지금 이 카드를 들고 있는 사람 */
       +((typeof _srClAliasChip==='function')?_srClAliasChip(c):'')   /* [v1405] 겹친 이름 */
-      +(function(){ /* [v1406] boss "몇 쌀인지 나오는 건 어디 갔지" — 클라이언트 탭에 있던 작업량(캐릭터 시간 ÷ 10). 관리자·OP 만 */
-          try{ if(typeof clientSsal!=='function' || !(currentUserRole==='admin'||currentUserRole==='op')) return ''; var _s=clientSsal(o.client||c); if(!_s) return '';
-            return '<span class="sr-clcard-ssal" title="'+(_kl?'작업량 — 캐릭터 시간 합 ÷ 10':'workload — character hours ÷ 10')+'">🌾 '+esc(fmtSsal(_s))+'</span>'; }catch(_){ return ''; } })()
+      /* [v1406→v1407] 작업량(쌀)은 카드 겉이 아니라 카드를 눌러 연 상세 머리에 — boss "카드에 적지 말고" */
       +((typeof _srClNoteHTML==='function')?_srClNoteHTML(c):'')   /* [v1405] 쪽지 */
       +(function(){ /* [v1371] 배치완료 문의가 이 카드로 흡수됐으면 7일간 표시 */
           try{ if(typeof PCB_INQ==='undefined'||!Array.isArray(PCB_INQ)) return '';
