@@ -4,7 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
 <title>ARASAKA Corp</title>
-<!-- BUILD: v1411 | 레이스 급여 내역: 시간 줄에 "0.81 / 0.90 · 90%" 와 목표 아래 안내 한 줄, 마이너스엔 "목표 미달분" 라벨 -->
+<!-- BUILD: v1412 | 시급 차감 기준을 목표(target)에서 Goal 선(sh)으로 — Goal 이면 시급 100%, 아래일 때만 그 비율 -->
 <!-- v745 기록은 git 이력(v1302 이전 커밋)에 있다 — 100KB 변경사 주석을 배포에서 제거 -->
 <!-- [v677] a <link href> cannot read a CSS variable, so the favicon carries its own copy.
      64px: a browser tab draws it at 16-32px, so this is 2x-DPR sharp at 11KB. -->
@@ -40575,7 +40575,7 @@ function _rcBuildKbPlayers(reports, clients, settings, roster){
   var _wkMonP=(_lMs!=null)?(_lMs-((new Date(_lMs).getUTCDay()+6)%7)*86400000):null;   // [v591] Monday-start week — same window as weekly RP/King (was a rolling 7 days)
   var _wkShort={}, _moShort={};   // [v592] period wage-layer deficit (Σ per-hour (1−rate/100), same formula as today's raceShortfall) — so Week/Month RP can finally show MINUSES (boss: "7/1부터 마이너스 난 사람도 있을텐데 왜 전부 플러스지")
   rows.forEach(function(r){ var k=r.playerKey; if(!k||!r.date) return;
-    var _sf=(!r.dq && r.rate!=null && r.rate<100) ? (1-r.rate/100) : 0;
+    var _wr=(r.wageRate!=null?r.wageRate:r.rate); var _sf=(!r.dq && _wr!=null && _wr<100) ? (1-_wr/100) : 0;   /* [v1412] Goal 선 기준 */
     if(_mon && String(r.date).slice(0,7)===_mon){ _monthPts[k]=(_monthPts[k]||0)+(r.total||0); if(!r.dq)_monthHrs[k]=(_monthHrs[k]||0)+1; if(_sf)_moShort[k]=(_moShort[k]||0)+_sf; }
     if(_wkMonP!=null){ var d=Date.parse(r.date+'T00:00:00Z'); if(!isNaN(d) && d>=_wkMonP && d<=_lMs){ _weekPts[k]=(_weekPts[k]||0)+(r.total||0); if(!r.dq)_weekHrs[k]=(_weekHrs[k]||0)+1; if(_sf)_wkShort[k]=(_wkShort[k]||0)+_sf; } } });
   // [v538] finalized race payouts (PAID money) per player from race_payouts \u2014 one formula everywhere.
@@ -40673,14 +40673,14 @@ function _rcBuildKbPlayers(reports, clients, settings, roster){
     var pts = rs.reduce(function(s,r){return s+r.total;},0);
     var g=0,st=0,cu=0,dq=0,shortfall=0;
     rs.forEach(function(r){ if(r.dq){dq++; return;} if(r.result==='Goal')g++; else if(r.result==='Stable')st++; else if(r.result==='Cut')cu++;
-      if(r.rate!=null && r.rate<100) shortfall+=(1-r.rate/100); });   // [v544] wage-proportional deficit: each sub-100% hour cuts that fraction of the hourly wage
+      var _wr2=(r.wageRate!=null?r.wageRate:r.rate); if(_wr2!=null && _wr2<100) shortfall+=(1-_wr2/100); });   /* [v1412] Goal 선 기준 */   // [v544] wage-proportional deficit: each sub-100% hour cuts that fraction of the hourly wage
     var group = rs[0].group, mode = rs[0].mode;
     var prize = (mode==='1212')?Number(settings.shift_prize_1212):Number(settings.shift_prize_888);
     var st_total = shiftTotals[group]||0;
     var rate=Number(settings.point_rate)||1300; var bounty=Math.floor(pts*rate);   // [v539] POINT-RATE system: bounty = points × rate (earn-only; a weak month simply pays out less)
     var toKST=function(ms){ if(ms==null)return ''; var d=new Date(ms+9*3600000); return ('0'+d.getUTCHours()).slice(-2)+':'+('0'+d.getUTCMinutes()).slice(-2); };
     var recs = rs.map(function(r){ var t=toKST(r.ms); var _sp=(r.spanH>1)?(' ('+r.spanH+'시간치)'):'';   /* [v610] multi-hour catch-up rows say WHY: "0.94% (2시간치) Cut" reads right, "0.94% Cut" looked like a bug (boss 7/12) */
-      return [t, (r.map||'')+_sp, Number((r.actual||0).toFixed(2)), (r.dq?('DQ ('+r.dqReason+')'):(r.result==='NoStd'?'No Std':r.result)), (r.rate!=null&&!r.dq?Math.round(r.rate):null), (r.target!=null&&!r.dq?Number(Number(r.target).toFixed(2)):null)]; });   /* [v1411] 목표 대비 %·목표값 — 팝업 줄에 "0.81 / 0.90 · 90%" */
+      return [t, (r.map||'')+_sp, Number((r.actual||0).toFixed(2)), (r.dq?('DQ ('+r.dqReason+')'):(r.result==='NoStd'?'No Std':r.result)), ((r.wageRate!=null?r.wageRate:r.rate)!=null&&!r.dq?Math.round(r.wageRate!=null?r.wageRate:r.rate):null), (r.sh!=null&&r.sh>0&&!r.dq?Number((Number(r.sh)*(r.spanH||1)).toFixed(2)):(r.target!=null&&!r.dq?Number(Number(r.target).toFixed(2)):null))]; });   /* [v1411] 목표 대비 %·목표값 — 팝업 줄에 "0.81 / 0.90 · 90%" */
     overlay[k] = { todayHours:hrs, todayAvgPct:Number(avg.toFixed(3)), todayPerfPct:Number(todayPerfPct.toFixed(2)), actualRecords:recs, todayDelta:bounty, raceShortfall:Number(shortfall.toFixed(3)), racePtsPerHour:(hrs>0?Number((pts/hrs).toFixed(2)):0),   /* [v540] daily rank = points per hour (quality), money stays cumulative */
       racePoints:pts, raceGoal:g, raceStable:st, raceCut:cu, raceDq:dq, raceGroup:group, raceMode:mode,
       raceShiftTotal:st_total, raceBounty:bounty };
@@ -41453,6 +41453,7 @@ function _rcScoreReports(reports, clients, settings, dqSet){
       var _g2=Math.round(gain*1e6)/1e6; var _gH=_g2/_spanH;
       row.target=t*_spanH; row.sh=sh; row.sl=sl; row.spanH=_spanH;
       row.rate=t>0?(Math.round(gain/(t*_spanH)*100*1e6)/1e6):null;
+      row.wageRate=(sh>0)?(Math.round(gain/(sh*_spanH)*100*1e6)/1e6):row.rate;   /* [v1412] boss "스테이블 넘어 Goal 이면 돈은 안 깎여야" — 시급은 Goal 선(sh) 기준. Goal 이상 = 100%, 아래면 그 비율 */
       if(_gH>=sh) row.result='Goal'; else if(_gH>=sl) row.result='Stable'; else row.result='Cut';
     }
     var eligible=(!row.dq)&&(row.result==='Goal'||row.result==='Stable');
@@ -68714,11 +68715,11 @@ showPlayer=function(name){const p=byName[name];if(!p)return;const tw=$('toastWra
     <div class="pdm-hero">
       <div class="pdm-big">${pr.ok?money(pr.month):tr('noEstimate')}</div>
       <div class="pdm-cap">${LANG==='ko'?'이번 달 현재 합계':'Month to date'}</div>
-      ${pr.ok?`<div class="pdm-split"><span>${LANG==='ko'?'기본급':'Base'} ${money(pr.monthBase)}</span><em class="${cls(pr.monthAdj)}" title="${LANG==='ko'?'레이스 상금 + 점수판 반영 − 목표 아래 시간의 시급 미달분':'race bounty + scoreboard − below-target hourly shortfall'}">${pr.monthAdj<0?(LANG==='ko'?'목표 미달분 ':'below target '):''}${signed(pr.monthAdj)}</em></div>`:''}
+      ${pr.ok?`<div class="pdm-split"><span>${LANG==='ko'?'기본급':'Base'} ${money(pr.monthBase)}</span><em class="${cls(pr.monthAdj)}" title="${LANG==='ko'?'레이스 상금 + 점수판 반영 − Goal 선 아래 시간의 시급 미달분':'race bounty + scoreboard − below-Goal hourly shortfall'}">${pr.monthAdj<0?(LANG==='ko'?'Goal 미달분 ':'below Goal '):''}${signed(pr.monthAdj)}</em></div>`:''}
     </div>
     <div class="pd-rev" style="grid-template-columns:repeat(2,1fr)">
       <div class="rev"><span>${LANG==='ko'?'오늘':'Today'}</span><b>${p.todayHours?money(p.todayPay||0):'—'}</b><small class="${cls(p.todayDelta)}">${p.todayHours?signed(p.todayDelta):(LANG==='ko'?'기록 없음':'no record')}</small></div>
-      <div class="rev"><span>${LANG==='ko'?'이번 주':'This week'}</span><b>${pr.ok?money(pr.week):'—'}</b><small class="${cls(pr.weekAdj)}">${pr.ok?((pr.weekAdj<0?(LANG==='ko'?'목표 미달분 ':'below target '):'')+signed(pr.weekAdj)):'—'}</small></div>
+      <div class="rev"><span>${LANG==='ko'?'이번 주':'This week'}</span><b>${pr.ok?money(pr.week):'—'}</b><small class="${cls(pr.weekAdj)}">${pr.ok?((pr.weekAdj<0?(LANG==='ko'?'Goal 미달분 ':'below Goal '):'')+signed(pr.weekAdj)):'—'}</small></div>
     </div>
     <details class="pdm-more">
       <summary>${LANG==='ko'?'상세 내역':'Details'}</summary>
@@ -69155,9 +69156,9 @@ console.info('AUTO100 build applied',AUTO100_BUILD.version,v3Audit());
     /* [v1411] boss (Guwon 씨 질문 "Goal인데 컷 적용?"): Goal 은 점수 선(0.75) 얘기고, 시급은 목표(0.90) 대비로 들어온다.
        두 잣대가 한 줄에 있는데 한 단어만 보여서 오류처럼 읽혔다 — 줄마다 "0.81 / 0.90 · 90%" 를 같이 적고, 목표 아래 줄이 있으면 한 줄로 알린다. */
     const anyBelow=rows.some(r=>r[4]!=null&&r[4]<100);
-    const tgtNote=anyBelow?`<div class="pd-rec-note">${LANG==='ko'?'목표 아래 시간은 그만큼 시급이 덜 들어와요 · Goal/Stable/Cut 은 레이스 점수 기준(별개)':'Hours below target earn that share of the hourly wage · Goal/Stable/Cut are race-point labels (separate)'}</div>`:'';
+    const tgtNote=anyBelow?`<div class="pd-rec-note">${LANG==='ko'?'Goal 선 아래 시간만 그만큼 시급이 덜 들어와요 · Goal 이면 시급 100%':'Only hours below the Goal line earn less · Goal = full hourly wage'}</div>`:'';
     return `<div class="pd-records"><div class="pd-records-head"><span>${head}</span><b>${esc(p.todayNote||'')} · ${note}</b></div>`+sum+tgtNote+
-      rows.map(r=>{const cls=String(r[3]||'').toLowerCase();const tgt=(r[5]!=null)?`<small>/ ${(+r[5]).toFixed(2)}</small>`:'';const pct=(r[4]!=null&&r[4]<100)?`<small>${r[4]}%</small>`:'';const tip=(r[4]!=null)?` title="${LANG==='ko'?('목표 '+(+r[5]).toFixed(2)+' 의 '+r[4]+'% → 이 시간 시급의 '+Math.min(100,r[4])+'%'):('target '+(+r[5]).toFixed(2)+' · '+r[4]+'% → '+Math.min(100,r[4])+'% of hourly wage')}"`:'';return `<div class="pd-rec ${cls}"${tip}><span>${esc(r[0])}</span><span class="map">${esc(r[1])}</span><span class="exp">${(+r[2]).toFixed(2)}%${tgt}</span><span class="res">${esc(r[3])}${pct}</span></div>`;}).join('')+
+      rows.map(r=>{const cls=String(r[3]||'').toLowerCase();const tgt=(r[5]!=null)?`<small>/ ${(+r[5]).toFixed(2)}</small>`:'';const pct=(r[4]!=null&&r[4]<100)?`<small>${r[4]}%</small>`:'';const tip=(r[4]!=null)?` title="${LANG==='ko'?('Goal 선 '+(+r[5]).toFixed(2)+' 의 '+r[4]+'% → 이 시간 시급의 '+Math.min(100,r[4])+'%'):('Goal line '+(+r[5]).toFixed(2)+' · '+r[4]+'% → '+Math.min(100,r[4])+'% of hourly wage')}"`:'';return `<div class="pd-rec ${cls}"${tip}><span>${esc(r[0])}</span><span class="map">${esc(r[1])}</span><span class="exp">${(+r[2]).toFixed(2)}%${tgt}</span><span class="res">${esc(r[3])}${pct}</span></div>`;}).join('')+
       `</div>`;
   }
   const prevShow=showPlayer;
