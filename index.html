@@ -4,7 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
 <title>ARASAKA Corp</title>
-<!-- BUILD: v1410 | 오늘 채운 칸 표시 완전히 뺌 -->
+<!-- BUILD: v1411 | 레이스 급여 내역: 시간 줄에 "0.81 / 0.90 · 90%" 와 목표 아래 안내 한 줄, 마이너스엔 "목표 미달분" 라벨 -->
 <!-- v745 기록은 git 이력(v1302 이전 커밋)에 있다 — 100KB 변경사 주석을 배포에서 제거 -->
 <!-- [v677] a <link href> cannot read a CSS variable, so the favicon carries its own copy.
      64px: a browser tab draws it at 16-32px, so this is 2x-DPR sharp at 11KB. -->
@@ -40680,7 +40680,7 @@ function _rcBuildKbPlayers(reports, clients, settings, roster){
     var rate=Number(settings.point_rate)||1300; var bounty=Math.floor(pts*rate);   // [v539] POINT-RATE system: bounty = points × rate (earn-only; a weak month simply pays out less)
     var toKST=function(ms){ if(ms==null)return ''; var d=new Date(ms+9*3600000); return ('0'+d.getUTCHours()).slice(-2)+':'+('0'+d.getUTCMinutes()).slice(-2); };
     var recs = rs.map(function(r){ var t=toKST(r.ms); var _sp=(r.spanH>1)?(' ('+r.spanH+'시간치)'):'';   /* [v610] multi-hour catch-up rows say WHY: "0.94% (2시간치) Cut" reads right, "0.94% Cut" looked like a bug (boss 7/12) */
-      return [t, (r.map||'')+_sp, Number((r.actual||0).toFixed(2)), (r.dq?('DQ ('+r.dqReason+')'):(r.result==='NoStd'?'No Std':r.result))]; });
+      return [t, (r.map||'')+_sp, Number((r.actual||0).toFixed(2)), (r.dq?('DQ ('+r.dqReason+')'):(r.result==='NoStd'?'No Std':r.result)), (r.rate!=null&&!r.dq?Math.round(r.rate):null), (r.target!=null&&!r.dq?Number(Number(r.target).toFixed(2)):null)]; });   /* [v1411] 목표 대비 %·목표값 — 팝업 줄에 "0.81 / 0.90 · 90%" */
     overlay[k] = { todayHours:hrs, todayAvgPct:Number(avg.toFixed(3)), todayPerfPct:Number(todayPerfPct.toFixed(2)), actualRecords:recs, todayDelta:bounty, raceShortfall:Number(shortfall.toFixed(3)), racePtsPerHour:(hrs>0?Number((pts/hrs).toFixed(2)):0),   /* [v540] daily rank = points per hour (quality), money stays cumulative */
       racePoints:pts, raceGoal:g, raceStable:st, raceCut:cu, raceDq:dq, raceGroup:group, raceMode:mode,
       raceShiftTotal:st_total, raceBounty:bounty };
@@ -68714,11 +68714,11 @@ showPlayer=function(name){const p=byName[name];if(!p)return;const tw=$('toastWra
     <div class="pdm-hero">
       <div class="pdm-big">${pr.ok?money(pr.month):tr('noEstimate')}</div>
       <div class="pdm-cap">${LANG==='ko'?'이번 달 현재 합계':'Month to date'}</div>
-      ${pr.ok?`<div class="pdm-split"><span>${LANG==='ko'?'기본급':'Base'} ${money(pr.monthBase)}</span><em class="${cls(pr.monthAdj)}">${signed(pr.monthAdj)}</em></div>`:''}
+      ${pr.ok?`<div class="pdm-split"><span>${LANG==='ko'?'기본급':'Base'} ${money(pr.monthBase)}</span><em class="${cls(pr.monthAdj)}" title="${LANG==='ko'?'레이스 상금 + 점수판 반영 − 목표 아래 시간의 시급 미달분':'race bounty + scoreboard − below-target hourly shortfall'}">${pr.monthAdj<0?(LANG==='ko'?'목표 미달분 ':'below target '):''}${signed(pr.monthAdj)}</em></div>`:''}
     </div>
     <div class="pd-rev" style="grid-template-columns:repeat(2,1fr)">
       <div class="rev"><span>${LANG==='ko'?'오늘':'Today'}</span><b>${p.todayHours?money(p.todayPay||0):'—'}</b><small class="${cls(p.todayDelta)}">${p.todayHours?signed(p.todayDelta):(LANG==='ko'?'기록 없음':'no record')}</small></div>
-      <div class="rev"><span>${LANG==='ko'?'이번 주':'This week'}</span><b>${pr.ok?money(pr.week):'—'}</b><small class="${cls(pr.weekAdj)}">${pr.ok?signed(pr.weekAdj):'—'}</small></div>
+      <div class="rev"><span>${LANG==='ko'?'이번 주':'This week'}</span><b>${pr.ok?money(pr.week):'—'}</b><small class="${cls(pr.weekAdj)}">${pr.ok?((pr.weekAdj<0?(LANG==='ko'?'목표 미달분 ':'below target '):'')+signed(pr.weekAdj)):'—'}</small></div>
     </div>
     <details class="pdm-more">
       <summary>${LANG==='ko'?'상세 내역':'Details'}</summary>
@@ -69123,13 +69123,14 @@ console.info('AUTO100 build applied',AUTO100_BUILD.version,v3Audit());
   .pd-records{border:.5px solid rgba(255,255,255,.08);border-radius:13px;background:rgba(255,255,255,.035);overflow:hidden}
   .pd-records-head{display:flex;justify-content:space-between;gap:8px;align-items:center;padding:8px 10px;border-bottom:.5px solid rgba(255,255,255,.07);font-size:10px;font-weight:900;color:rgba(235,235,245,.58);letter-spacing:.06em;text-transform:uppercase}
   .pd-records-head b{color:var(--gold);font-variant-numeric:tabular-nums;text-transform:none;letter-spacing:0}
-  .pd-rec{display:grid;grid-template-columns:70px minmax(0,1fr) 44px 48px;gap:7px;align-items:center;padding:6px 10px;border-top:.5px solid rgba(255,255,255,.055);font-size:10.5px;font-weight:800;color:rgba(235,235,245,.68)}
+  .pd-rec{display:grid;grid-template-columns:64px minmax(0,1fr) 84px 72px;gap:7px;align-items:center;padding:6px 10px;border-top:.5px solid rgba(255,255,255,.055);font-size:10.5px;font-weight:800;color:rgba(235,235,245,.68)}
+  .pd-rec .exp small{color:rgba(235,235,245,.45);font-weight:600;margin-left:3px;font-size:9.5px}.pd-rec .res small{margin-left:4px;opacity:.8;font-weight:800}.pd-rec-note{padding:4px 10px 6px;font-size:9.5px;font-weight:700;color:rgba(235,235,245,.5);line-height:1.4}   /* [v1411] */
   .pd-rec:first-of-type{border-top:none}.pd-rec .map{white-space:nowrap;overflow:hidden;text-overflow:ellipsis}.pd-rec .exp{text-align:right;color:#fff;font-variant-numeric:tabular-nums}.pd-rec .res{text-align:right;border-radius:999px;padding:1px 5px;font-size:9px;font-weight:950}
   .pd-rec.goal .res{color:var(--green);background:rgba(48,209,88,.12)}.pd-rec.stable .res{color:var(--gold);background:rgba(229,181,103,.12)}.pd-rec.cut .res{color:var(--red);background:rgba(255,69,58,.13)}
   .pd-rec-sum{display:flex;flex-wrap:wrap;align-items:center;gap:6px;padding:8px 10px;border-bottom:.5px solid rgba(255,255,255,.07);background:rgba(229,181,103,.05);font-size:10.5px;font-weight:800;color:rgba(235,235,245,.62);font-variant-numeric:tabular-nums}
   .pd-rec-sum b{color:#fff;font-weight:900}.pd-rec-sum .arr{color:rgba(235,235,245,.35)}.pd-rec-sum .tot{margin-left:auto;color:var(--green);font-weight:950}.pd-rec-sum .tot.dn{color:var(--red)}
   .row[data-p="ERICSON"] .av,.row[data-p="EL"] .av,.row[data-p="JEFF"] .av,.row[data-p="VICI"] .av,.row[data-p="KAIJI"] .av{box-shadow:0 0 0 1px rgba(255,69,58,.65),0 0 12px rgba(255,69,58,.12)}
-  @media(max-width:560px){.pd-rec{grid-template-columns:60px minmax(0,1fr) 38px 42px;font-size:9.5px;padding:6px 8px}}
+  @media(max-width:560px){.pd-rec{grid-template-columns:52px minmax(0,1fr) 78px 64px;font-size:9.5px;padding:6px 8px}}
   `;
   document.head.appendChild(css);
   function esc(s){return String(s==null?'':s).replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));}
@@ -69151,8 +69152,12 @@ console.info('AUTO100 build applied',AUTO100_BUILD.version,v3Audit());
       const gS=(g!=null)?((g>=0?'+':'')+g.toFixed(2)+'%'):'';
       sum=`<div class="pd-rec-sum"><span>${LANG==='ko'?'체크인':'Check-in'} <b>${fromS}</b></span><span class="arr">→</span><span>${toLab} <b>${toS}</b></span>${g!=null?`<span class="tot${g<0?' dn':''}">${LANG==='ko'?'총':'Total'} ${gS}</span>`:''}</div>`;
     }
-    return `<div class="pd-records"><div class="pd-records-head"><span>${head}</span><b>${esc(p.todayNote||'')} · ${note}</b></div>`+sum+
-      rows.map(r=>{const cls=String(r[3]||'').toLowerCase();return `<div class="pd-rec ${cls}"><span>${esc(r[0])}</span><span class="map">${esc(r[1])}</span><span class="exp">${(+r[2]).toFixed(2)}%</span><span class="res">${esc(r[3])}</span></div>`;}).join('')+
+    /* [v1411] boss (Guwon 씨 질문 "Goal인데 컷 적용?"): Goal 은 점수 선(0.75) 얘기고, 시급은 목표(0.90) 대비로 들어온다.
+       두 잣대가 한 줄에 있는데 한 단어만 보여서 오류처럼 읽혔다 — 줄마다 "0.81 / 0.90 · 90%" 를 같이 적고, 목표 아래 줄이 있으면 한 줄로 알린다. */
+    const anyBelow=rows.some(r=>r[4]!=null&&r[4]<100);
+    const tgtNote=anyBelow?`<div class="pd-rec-note">${LANG==='ko'?'목표 아래 시간은 그만큼 시급이 덜 들어와요 · Goal/Stable/Cut 은 레이스 점수 기준(별개)':'Hours below target earn that share of the hourly wage · Goal/Stable/Cut are race-point labels (separate)'}</div>`:'';
+    return `<div class="pd-records"><div class="pd-records-head"><span>${head}</span><b>${esc(p.todayNote||'')} · ${note}</b></div>`+sum+tgtNote+
+      rows.map(r=>{const cls=String(r[3]||'').toLowerCase();const tgt=(r[5]!=null)?`<small>/ ${(+r[5]).toFixed(2)}</small>`:'';const pct=(r[4]!=null&&r[4]<100)?`<small>${r[4]}%</small>`:'';const tip=(r[4]!=null)?` title="${LANG==='ko'?('목표 '+(+r[5]).toFixed(2)+' 의 '+r[4]+'% → 이 시간 시급의 '+Math.min(100,r[4])+'%'):('target '+(+r[5]).toFixed(2)+' · '+r[4]+'% → '+Math.min(100,r[4])+'% of hourly wage')}"`:'';return `<div class="pd-rec ${cls}"${tip}><span>${esc(r[0])}</span><span class="map">${esc(r[1])}</span><span class="exp">${(+r[2]).toFixed(2)}%${tgt}</span><span class="res">${esc(r[3])}${pct}</span></div>`;}).join('')+
       `</div>`;
   }
   const prevShow=showPlayer;
