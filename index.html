@@ -35632,7 +35632,24 @@ function _srFirstOk(promises){
     });
   });
 }
+/* [2026-09-08] 리포트 서버 쓰기 잠금 대응.
+   서버가 PUT /api/calc-data/:key 와 클라 추가·삭제에 로그인 토큰을 요구하게 됐다.
+   지금 로그인한 사람의 Supabase 액세스 토큰을 Authorization 헤더로 붙인다.
+   읽기(GET)에도 붙지만 서버가 무시하므로 문제 없다. 로그인 전이면 헤더 없이 그냥 보낸다
+   (그 경우 읽기는 되고 쓰기만 401 이 되는데, 앱은 로그인해야 쓰기 화면에 들어갈 수 있다). */
+async function _srAuthOpts(opts){
+  var o={}; for(var k in (opts||{})) o[k]=opts[k];
+  try{
+    if(sb && sb.auth && sb.auth.getSession){
+      var s=await sb.auth.getSession();
+      var tok=s && s.data && s.data.session && s.data.session.access_token;
+      if(tok){ var h={}; for(var hk in (o.headers||{})) h[hk]=o.headers[hk]; h['Authorization']='Bearer '+tok; o.headers=h; }
+    }
+  }catch(_){ }
+  return o;
+}
 async function _srFetchRetry(url, opts){
+  opts = await _srAuthOpts(opts);
   var fb=_srFallbackUrl(url);
   if(!fb){   // non-calc-data endpoints (e.g. /api/report) — original sequential retry, no fallback exists
     for(var i=0;i<6;i++){
