@@ -4,7 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
 <title>ARASAKA Corp</title>
-<!-- BUILD: v1421 | PC 현황 명령바에 전자시계 — 보고 있는 시간대의 지금 시각, 초까지 -->
+<!-- BUILD: v1422 | 내 성적에서 오렌 시간이 빠지던 것 · 손잡이 글자 · 로그 점프 -->
 <!-- v745 기록은 git 이력(v1302 이전 커밋)에 있다 — 100KB 변경사 주석을 배포에서 제거 -->
 <!-- [v677] a <link href> cannot read a CSS variable, so the favicon carries its own copy.
      64px: a browser tab draws it at 16-32px, so this is 2x-DPR sharp at 11KB. -->
@@ -49788,7 +49788,15 @@ async function renderMyPerformance(){
   const MAX_LV_JUMP = 20; // [v293] see renderShiftAdmin — bad LV data (typo) can't blow up gains
   const gainedPct = (r) => { const dLv=(Number(r.lvAfter)||0)-(Number(r.lvBefore)||0); const dExp=(Number(r.expAfter)||0)-(Number(r.expBefore)||0); return Math.abs(dLv)>MAX_LV_JUMP ? dExp : dLv*100+dExp; };
   const reportMs = (r) => { if(!r) return null; if(typeof r.createdAt==='number' && r.createdAt>1e12) return r.createdAt; const m=String(r.id||'').match(/^rpt-(\d+)/); return m?Number(m[1]):null; };
-  const zoneKey = (s) => { s=(s||'').toLowerCase(); if(s.includes('orc')) return 'orc'; if(s.includes('ant')) return 'ant'; if(s.includes('dragon')) return 'dragon'; if(s.includes('blessed')||s.includes('ats')) return 'ats'; if(s.includes('gludio')||s.includes('giran')||s.includes('desert')||s.includes('dessert')) return 'dgg'; return s; };
+  /* ═══ [v1422] 직원이 보는 '내 성적'에서만 오렌 시간이 빠지고 있었다 ═══════════
+     존 감지 사본이 셋인데(37267 · 38519 · 여기) 여기에만 orc·drc·ivory·oren·snow
+     분기가 없었다. 그러면 오렌 계열은 존으로 안 묶이고 맵 이름이 글자까지 똑같아야만
+     붙는다. 기준표에 'Oren -3 Hour Map' 한 줄만 있는 카드에서 'Oren Snow Field' 나
+     'Oren - 3 Hour Map'(띄어쓰기 다름) 으로 찍힌 시간은 통째로 사라진다.
+     실측: 최근 14일 217시간 · 부주 10명. 주 사본은 멀쩡히 세는 시간이므로 직원은
+     제 성적만 실제보다 낮게 본다 — 가장 나쁜 종류의 오차다.
+     주 사본(37267)과 한 글자도 다르지 않게 맞춘다. 앞으로 이 셋은 같이 고칠 것. */
+  const zoneKey = (s) => { s=(s||'').toLowerCase(); if(s.indexOf('orc')>=0||s.indexOf('오크')>=0||s.indexOf('totem')>=0||s.indexOf('토템')>=0)return'orc'; if(s.indexOf('dream')>=0||s.indexOf('ivory')>=0||s.indexOf('드림')>=0||s.indexOf('상아')>=0||s.indexOf('아일랜드')>=0)return'dream'; if(s.indexOf('oren')>=0||s.indexOf('snow')>=0||s.indexOf('오렌')>=0||s.indexOf('설원')>=0)return'oren'; if(s.indexOf('ant')>=0)return'ant'; if(s.indexOf('dragon')>=0||s.indexOf('드래곤')>=0)return'dragon'; if(s.indexOf('blessed')>=0||s.indexOf('ats')>=0)return'ats'; if(s.indexOf('gludio')>=0||s.indexOf('giran')>=0||s.indexOf('desert')>=0||s.indexOf('dessert')>=0)return'dgg'; return s; };
   const _stdNorm = (x) => String(x||'').replace(/[\s\u00b7.\-_'"’]/g,'').replace(/(쌤|선생님|님|씨|형님|형|누님|누나|언니|오빠)$/,'').toLowerCase();
   // [v597] name-aware same-zone pick — see the main copy's comment (순수쌤 오렌 3시간 vs 오렌 설원)
   const _pkTok=(s)=>String(s||'').toLowerCase().split(/[^a-z0-9가-힣]+/).filter(Boolean);
@@ -53160,8 +53168,11 @@ function _rawChannelBadge(channelId){
 const _NAV_CHG_MAP = [
   [/배정 (뺌|추가)|자리 옮김|새로 배정|예정 배치|백업(으로 넣음|에서 뺌)/, 'pc-status'],
   [/added PC|deleted PC/i,                                                   'pc-status'],
-  [/added client|deleted client|deleted pool client|renamed client|client on hiatus|set client passive/i, 'op-pc-board'],
-  [/pipeline apply/i,                                                        'op-pc-board'],
+  /* [v1422] 계정 보드(op-pc-board)는 v1419 에서 메뉴에서 뺐다. 클라 관련 로그 줄을
+     누르면 없는 탭으로 보내고 있어서 아무 일도 안 일어났다 — 기록·통계 클라별이
+     그 일을 대신 하므로 그리로 보낸다. */
+  [/added client|deleted client|deleted pool client|renamed client|client on hiatus|set client passive/i, 'pl-records'],
+  [/pipeline apply/i,                                                        'pl-records'],
   [/set shift|marked staff resigned|reactivated staff/i,                     'op-hr'],
   [/warning [+-]|trust [+-]|connecting issue/i,                              'op-trust'],
   [/attendance →/,                                                           'attendance'],
@@ -70392,7 +70403,10 @@ console.info('AUTO100 build applied',AUTO100_BUILD.version,v3Audit());
     if(last && last.tag !== 'checkin' && !last.ignored && last.target > 0){ var pct = Math.round(last.gain / last.target * 100); var ok = last.gain >= (last.sl > 0 ? last.sl : last.target * 0.8); pill = '<span class="mc-pill ' + (ok ? 'ok' : 'bad') + '">' + (_k ? '지난 줄 ' : 'last ') + pct + '%</span>'; }
     else if(std) pill = '<span class="mc-pill">' + (_k ? '기준 ' : 'std ') + fmt2(std.target) + '%/h</span>';
     var first = null; for(var i = 0; i < ls.length; i++){ if(ls[i].tag === 'checkin' && nmKey(ls[i].name) === meKey()){ first = ls[i]; } }
-    var h = '<div class="mc-push" id="mc-push">▲ ' + (_k ? '클라별로 · 쉬러 갈 때 위로 밀기' : 'Back to clients · push up to rest') + '</div>'
+    /* [v1422] v1417 부터 카드를 접으면 '쉬는 중이냐 퇴근이냐'를 묻는다. 손잡이 글자는
+       아직 '쉬러 갈 때' 라고만 해서, 퇴근하려는 사람이 여기를 안 밀고 딴 데를 찾았다.
+       손잡이는 그 손짓이 무엇을 하는지 그대로 말해야 한다. */
+    var h = '<div class="mc-push" id="mc-push">▲ ' + (_k ? '클라별로 · 위로 밀면 쉬거나 퇴근' : 'Back to clients · push up to rest or clock out') + '</div>'
       + '<div class="mc-hd"><span class="mc-nm">' + esc(MC.client || ('PC' + MC.pc)) + '</span>' + (pcNum(MC.pc) ? '<span class="mc-pc">PC' + pcNum(MC.pc) + '</span>' : '') + '</div>'
       + '<div class="mc-hero"><div class="mc-big" id="mc-big">' + (isFinite(lastExp) ? fmt2(lastExp) + '<small>%</small>' : '—') + '</div><div class="mc-side">' + pill + '<span class="mc-meta">' + (isFinite(lastLv) ? 'Lv ' + Math.round(lastLv) + ' · ' : '') + (holder ? esc(holder) + (_k ? ' 들고 있음' : ' holding') : (_k ? '아무도 없음' : 'nobody')) + '</span></div></div>'
       + '<div class="mc-today"><span>' + (first ? (_k ? '내 시작 ' : 'my start ') + hhmm(first.ms) : (sess ? (_k ? '내 시프트 진행 중' : 'my shift running') : (_k ? '오늘 아직 안 잡음' : 'not picked up yet'))) + '</span><span>' + ls.filter(function(x){ return x.tag !== 'checkin'; }).length + (_k ? '줄' : ' lines') + '</span></div>'
