@@ -4,7 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
 <title>ARASAKA Corp</title>
-<!-- BUILD: v1419 | 계정 보드 탭을 메뉴에서 뺀다 (기록·통계 클라별이 대신한다) -->
+<!-- BUILD: v1420 | 인니 시간 전환이 배정 격자에도 먹는다 — 막대가 통째로 2시간 당겨진다 -->
 <!-- v745 기록은 git 이력(v1302 이전 커밋)에 있다 — 100KB 변경사 주석을 배포에서 제거 -->
 <!-- [v677] a <link href> cannot read a CSS variable, so the favicon carries its own copy.
      64px: a browser tab draws it at 16-32px, so this is 2x-DPR sharp at 11KB. -->
@@ -56002,7 +56002,9 @@ function pcv2Tidy(){
   try{ toast(n ? ('⊞ 카드 ' + n + '장을 Rimo 순서로 정렬했습니다') : '이미 정렬돼 있습니다'); }catch(_){}
 }
 function _pcv2Bar(list, nowH, hours){
-  const seg = (st, ln) => { st=((Number(st)||0)%24+24)%24; ln=Math.max(0,Math.min(24,Number(ln)||0));
+  /* [v1420] PC 카드 안의 작은 막대도 격자와 같은 규칙 — 시각을 옮기고 나서 자정 토막을 낸다.
+     예전엔 눈금 글자만 _tzH 로 돌고 막대는 제자리라, 카드와 격자가 서로 다른 말을 했다. */
+  const seg = (st, ln) => { st=(typeof _tzH==='function')?_tzH(st):((Number(st)||0)%24+24)%24; ln=Math.max(0,Math.min(24,Number(ln)||0));
     return !ln ? [] : (st+ln<=24 ? [[st,ln]] : [[st,24-st],[0,st+ln-24]]); };
   let bars = '';
   (list||[]).forEach(r => {
@@ -56012,10 +56014,10 @@ function _pcv2Bar(list, nowH, hours){
     });
   });
   let ticks = '';
-  [0,6,12,18].forEach(h2 => { ticks += '<u style="left:'+(h2/24*100)+'%">'+pad2(_tzH(h2))+'</u>'; });
+  [0,6,12,18].forEach(h2 => { ticks += '<u style="left:'+(h2/24*100)+'%">'+pad2(h2)+'</u>'; });   /* [v1420] 축은 언제나 00-06-12-18 */
   return '<div class="pcv2-bar">'
     + '<div class="pcv2-btrack">' + bars
-    +   '<i class="pcv2-bnow" style="left:'+(nowH/24*100).toFixed(2)+'%"></i>'
+    +   '<i class="pcv2-bnow" style="left:'+((typeof _tzH==='function'?_tzH(nowH):nowH)/24*100).toFixed(2)+'%"></i>'   /* [v1420] '지금' 도 같이 옮긴다 */
     + '</div>'
     + '<div class="pcv2-bticks">'+ticks+'</div>'
     + '<div class="pcv2-bsum">'+hours+'<span>h /24</span></div>'
@@ -57485,6 +57487,15 @@ function render(){
   try{ pcPoolBoxes(); }catch(_){}   /* [v1065] 풀을 화면 박스로 */
   try{ loadStaffPool().then(()=>{ try{ renderPCs(); if(document.getElementById('staff-pool')) renderPools(); }catch(_){} }); }catch(_){}
   try{ renderTimeline(); }catch(e){ console.warn('renderTimeline failed:', e); }
+  /* ═══ [v1420] 배정 격자를 여기서 같이 그린다 ═══════════════════════════════════
+     boss "인도네시아 시간대로 바꿉시다! 라고 눌러도 아무런 변경이 없어 배정격자에"
+     원인은 시간대가 아니라 이 줄이 없었던 것이다. render() 는 여태 PC 카드·풀·
+     타임라인·지표만 다시 그리고 배정 격자(_agRender)는 한 번도 안 불렀다.
+     _agRender 는 각 조작 함수가 끝에서 따로 부르거나, 판을 펼칠 때(_pbPromote)만
+     돌았다. 그래서 시간대 토글처럼 '자료는 그대로인데 보는 방식만 바뀌는' 일은
+     격자에 전혀 닿지 않았다. 요일 바꾸기·휴일 무시도 같은 이유로 반쪽이었다.
+     끌고 있는 중에는 _agRender 가 스스로 돌아 나가므로(ag-dragging) 손을 놓칠 일은 없다. */
+  try{ if(typeof _agRender === 'function') _agRender(); }catch(e){ console.warn('_agRender failed:', e); }
   try{ renderMetrics(); }catch(e){ console.warn('renderMetrics failed:', e); }
   // [v281] savePCState() is now SAFE to call here: it refuses to write an empty PCS
   // (the old data-loss bug) and is blocked entirely until a clean load sets _pcLoaded.
@@ -59229,10 +59240,28 @@ function _agHourAt(track, clientX){
   if(!r.width) return 0;
   let h = ((clientX - r.left) / r.width) * 24;
   h = Math.max(0, Math.min(24, h));
-  return Math.round(h / AG_SNAP) * AG_SNAP;
+  h = Math.round(h / AG_SNAP) * AG_SNAP;
+  /* ═══ [v1420] 되돌리는 쪽 ═══════════════════════════════════════════════════
+     여기서 나온 값은 곧바로 a.start 로 저장된다. 축은 '보는 시간대' 이므로
+     저장 전에 KST 로 되돌린다 — 안 그러면 WIB 로 보면서 놓은 사람의 배정만
+     2시간씩 틀리게 들어간다(자료는 언제나 KST 하나여야 한다).
+     KST 모드에서는 손대지 않는다 — 끝자리 24 를 0 으로 바꾸지 않기 위해서다. */
+  return (typeof pcTZ!=='undefined' && pcTZ !== 'kst' && typeof _tzBackVal==='function')
+    ? _tzBackVal(h) : h;
 }
 function _agSegs(st, len){                // 자정을 넘으면 두 토막
-  st = ((Number(st)||0)%24+24)%24; len = Math.max(0, Math.min(24, Number(len)||0));
+  /* ═══ [v1420] 시간대 변환은 여기 한 곳에서만 한다 ═══════════════════════════
+     boss "한국시간이 인도네시아 시간보다 2시간 빠르니까 배정격자에서도 오류없이
+           딱 2시간 땡겨줘야지"
+     격자의 가로축은 '보는 사람의 하루'다. 자료(a.start)는 언제나 KST 로 저장되므로,
+     KST → 화면 시각으로 옮기는 자리가 딱 한 군데여야 두 번 옮기거나 안 옮기는 일이
+     안 생긴다. 그 자리가 여기다 — 이 함수의 결과는 전부 x 좌표(%)로만 쓰인다:
+     막대 · 클라 요청 고스트 · 대타 구멍 · 실시간 중계 그림. 저장·계산은 어디서도
+     이 값을 안 쓴다. WIB 면 22시로 시작하는 막대가 20시 자리로 통째로 2시간 당겨지고,
+     자정을 넘는 토막 나누기도 옮긴 뒤에 하므로 오른쪽 끝에서 왼쪽으로 제대로 돈다.
+     KST 모드에서는 _tzH 가 그냥 mod 24 라 예전과 한 글자도 다르지 않다. */
+  st = (typeof _tzH==='function') ? _tzH(st) : ((Number(st)||0)%24+24)%24;
+  len = Math.max(0, Math.min(24, Number(len)||0));
   if(!len) return [];
   return (st + len <= 24) ? [[st, len]] : [[st, 24-st], [0, st+len-24]];
 }
@@ -59378,6 +59407,9 @@ function _agRender(){
   }catch(_){}
   const kst = new Date(Date.now()+9*3600000);
   const nowH = kst.getUTCHours() + kst.getUTCMinutes()/60;
+  /* [v1420] '지금' 도 축 위에 놓이는 것이므로 막대와 같은 자로 잰다.
+     nowH = 한국시간(계산·비교용) · nowD = 화면 시각(주황 세로줄·live 판정용) */
+  const nowD = (typeof _tzH==='function') ? _tzH(nowH) : nowH;
   const kl = (typeof _uiLang!=='function') || _uiLang()==='ko';
   const pcs = (typeof pcsShown==='function' ? pcsShown() : []).slice().sort((a,b)=>a.id-b.id);
   let head = '<div class="ag-row ag-head"><div class="ag-lab"></div><div class="ag-track">';
@@ -59389,7 +59421,10 @@ function _agRender(){
        0시에 있는데 글자 '00' 은 그 오른쪽에 붙어 반 글자만큼 밀려 보인다.
        글자를 그 지점 '가운데' 에 놓는다(translateX(-50%)).
        맨 왼쪽(00)·맨 오른쪽은 화면 밖으로 나가니 그때만 안 민다. */
-    head += '<span class="ag-h'+(h%6===0?' big':' mid')+(h===0?' first':'')+'" style="left:'+(h/24*100)+'%">'+pad2(_tzH(h))+'</span>';
+    /* [v1420] 눈금은 이제 그냥 그 자리의 시각이다. 예전엔 막대는 안 움직이고 눈금
+       글자만 _tzH 로 돌려서, WIB 로 바꾸면 축이 22-01-04… 로 시작하는 이상한 자가
+       됐다. 이제 막대 쪽(_agSegs)이 옮겨 오므로 축은 언제나 00-03-06… 이다. */
+    head += '<span class="ag-h'+(h%6===0?' big':' mid')+(h===0?' first':'')+'" style="left:'+(h/24*100)+'%">'+pad2(h)+'</span>';
   }
   head += '</div></div>';
   let rows = '';
@@ -59518,7 +59553,7 @@ function _agRender(){
            시프트 막대들, 지금 돌아가고 있습니다~ 이런 느낌으로”
            세로줄은 ‘지금’ 이 어디인지만 말하고, 그 줄에 걸린 막대가 무엇인지는
            눈으로 짚어야 했다. 걸린 막대 스스로가 말하게 한다. */
-        var _live = (nowH >= bs && nowH < bs + bl);
+        var _live = (nowD >= bs && nowD < bs + bl);   /* [v1420] bs 는 화면 시각 — 같은 자로 잰다 */
         /* [v1261] 초록 이발소 줄무늬(v1193)는 cover 표식이 붙은 막대에만 걸려 있었다.
            백업으로 들어간 자리는 보통 그냥 시간을 끌어다 넣으므로 그 표식이 없고,
            그러면 남의 정규 시프트와 똑같이 보인다.
@@ -59551,11 +59586,13 @@ function _agRender(){
                 const p2 = n2 => String(Math.floor(n2)).padStart(2,'0') + ':' + String(Math.round((n2%1)*60)).padStart(2,'0');
                 return _agBrksOf(a2.staff, nm2).filter(function(bk){ return _agKstDay(bk.s) === _t; })
                   .map(function(bk){
-                    const h = _agKstH(bk.s); if(h == null) return '';
+                    const _h0 = _agKstH(bk.s); if(_h0 == null) return '';
+                    const h = _tzH(_h0);   /* [v1420] 툴팁 시각도 화면 시간대로 — 막대 제목의 다른 시각들과 같이 */
+                    const _e0 = bk.e ? _agKstH(bk.e) : null;
                     const mins = bk.e ? Math.max(0, Math.round((new Date(bk.e) - new Date(bk.s))/60000))
                                       : Math.max(0, Math.round((Date.now() - new Date(bk.s)) / 60000));
-                    return kl ? (' · ☕ 휴식 ' + p2(h) + (bk.e ? ('–' + p2(_agKstH(bk.e))) : '~ 지금') + ' ' + mins + '분')
-                              : (' · break ' + p2(h) + (bk.e ? ('–' + p2(_agKstH(bk.e))) : '~ now') + ' ' + mins + 'm');
+                    return kl ? (' · ☕ 휴식 ' + p2(h) + (bk.e ? ('–' + p2(_tzH(_e0))) : '~ 지금') + ' ' + mins + '분')
+                              : (' · break ' + p2(h) + (bk.e ? ('–' + p2(_tzH(_e0))) : '~ now') + ' ' + mins + 'm');
                   }).join('');
               }catch(_){ return ''; }
             })()
@@ -59580,16 +59617,19 @@ function _agRender(){
                 const trackW = _agTrackW();
                 return bks.map(function(bk){
                   if(_agKstDay(bk.s) !== _today) return '';
-                  const h = _agKstH(bk.s); if(h == null) return '';
-                  let e = bk.e ? _agKstH(bk.e) : nowH;
+                  /* [v1420] 중단 띠는 막대 위에 얹히므로 막대와 같은 자(화면 시각)로 잰다 */
+                  const _h0 = _agKstH(bk.s); if(_h0 == null) return '';
+                  const h = _tzH(_h0);
+                  const _e0 = bk.e ? _agKstH(bk.e) : null;
+                  let e = bk.e ? _tzH(_e0) : nowD;
                   if(e < h) e = 24;
                   const a0 = Math.max(h, bs), a1 = Math.min(e, bs + bl);
                   if(!(a1 > a0)) return '';
                   const mins = bk.e ? Math.max(0, Math.round((new Date(bk.e) - new Date(bk.s))/60000))
                                     : Math.max(0, Math.round((Date.now() - new Date(bk.s))/60000));
                   const tip = kl
-                    ? ('⚠ 중단 · ' + (bk.r && typeof _dtLabel==='function' ? _dtLabel(bk.r)+' · ' : '') + p2(h) + (bk.e ? ('–' + p2(_agKstH(bk.e))) : '~ 지금') + ' · ' + mins + '분' + (bk.cv ? (' · 대신 '+bk.cv) : ''))
-                    : ('PAUSED · ' + (bk.r && typeof _dtLabel==='function' ? _dtLabel(bk.r)+' · ' : '') + p2(h) + (bk.e ? ('–' + p2(_agKstH(bk.e))) : '~ now') + ' · ' + mins + 'm' + (bk.cv ? (' · cover '+bk.cv) : ''));
+                    ? ('⚠ 중단 · ' + (bk.r && typeof _dtLabel==='function' ? _dtLabel(bk.r)+' · ' : '') + p2(h) + (bk.e ? ('–' + p2(_tzH(_e0))) : '~ 지금') + ' · ' + mins + '분' + (bk.cv ? (' · 대신 '+bk.cv) : ''))
+                    : ('PAUSED · ' + (bk.r && typeof _dtLabel==='function' ? _dtLabel(bk.r)+' · ' : '') + p2(h) + (bk.e ? ('–' + p2(_tzH(_e0))) : '~ now') + ' · ' + mins + 'm' + (bk.cv ? (' · cover '+bk.cv) : ''));
                   /* 태그는 들어갈 자리가 있을 때만 — 넣고 자르면 글자 반쪽이 남는다 */
                   const showTag = (trackW * ((a1 - a0) / 24)) >= 46;
                   return '<i class="ag-brk' + (bk.e ? '' : ' open') + '" style="left:'
@@ -59681,7 +59721,7 @@ function _agRender(){
       +   ghost + bars + '</div></div>';
   });
   host.innerHTML = head + '<div class="ag-body">' + rows + '</div>';
-  host.style.setProperty('--now', (nowH/24*100).toFixed(3)+'%');
+  host.style.setProperty('--now', (nowD/24*100).toFixed(3)+'%');   /* [v1420] 주황 세로줄도 축과 같이 옮긴다 */
   try{ _agBind(host); }catch(_){}
 }
 /* [v1083] 대타 사유 고르기 — 작게, 그 자리에서. 폼을 띄우면 배치 흐름이 끊긴다. */
@@ -60522,8 +60562,8 @@ function _agOver(e, pcId){
     if(_cb && !_cb.classList.contains('cover')){ _cb.classList.add('ag-covtgt'); return; }
     var _ctr = e.currentTarget;
     _ctr.classList.add('over');
-    var _chh = _agHourAt(_ctr, e.clientX);
-    _ctr.style.setProperty('--ghost-l', (_chh/24*100)+'%');
+    var _chh = _agHourAt(_ctr, e.clientX);   /* KST */
+    _ctr.style.setProperty('--ghost-l', (_tzH(_chh)/24*100)+'%');   /* [v1420] 미리보기는 화면 시각 자리에 */
     _ctr.style.setProperty('--ghost-w', ((Number(typeof dragHours!=='undefined'?dragHours:1)||1)/24*100)+'%');
     return;
   }
@@ -60533,8 +60573,8 @@ function _agOver(e, pcId){
   try{ _pcRTAim(_pcHeldMine||'pool', pcId); }catch(_){}   /* [v1342] 풀→격자 조준 중계 */
   const tr = e.currentTarget;
   tr.classList.add('over');
-  const hh = _agHourAt(tr, e.clientX);
-  tr.style.setProperty('--ghost-l', (hh/24*100)+'%');
+  const hh = _agHourAt(tr, e.clientX);   /* KST */
+  tr.style.setProperty('--ghost-l', (_tzH(hh)/24*100)+'%');   /* [v1420] 미리보기는 화면 시각 자리에 */
   tr.style.setProperty('--ghost-w', ((typeof dragHours==='number'?dragHours:1)/24*100)+'%');
 }
 function _agLeave(e){ const tr=e.currentTarget; if(tr && !tr.contains(e.relatedTarget)){ tr.classList.remove('over'); _agCovClear(); } }
