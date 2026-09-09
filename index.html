@@ -4,7 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
 <title>ARASAKA Corp</title>
-<!-- BUILD: v1413 | Goal = 목표(target) 도달로 통일 — 레이스 줄·기록 통과·하루 GOAL 셋 다; 시급 비율은 목표 대비(Goal=100%) -->
+<!-- BUILD: v1415 | PC 현황 직원 슬롯 클릭 → 기본 정보 팝업(근무시간·지금·온 지·보호 7일·수습 30일) -->
 <!-- v745 기록은 git 이력(v1302 이전 커밋)에 있다 — 100KB 변경사 주석을 배포에서 제거 -->
 <!-- [v677] a <link href> cannot read a CSS variable, so the favicon carries its own copy.
      64px: a browser tab draws it at 16-32px, so this is 2x-DPR sharp at 11KB. -->
@@ -60744,7 +60744,7 @@ function staffSlotHTML(p, a, idx){
   /* [v1231] 격자와 같은 사람 색을 실어 보낸다(--bc). 격자에선 한 사람이 한 색인데
      여기선 등급 색이라, 같은 사람을 두 화면에서 다른 색으로 보고 있었다. */
   const _bc = (typeof _pcv2Col === 'function') ? _pcv2Col(dispName) : rc;
-  return `<div class="slot staff filled pc-draggable${a.planned?' is-planned':''}" style="--rank-color:${rc};--bc:${_bc}" ${dragAttr}>
+  return `<div class="slot staff filled pc-draggable${a.planned?' is-planned':''}" style="--rank-color:${rc};--bc:${_bc}" ${dragAttr} onclick="event.stopPropagation();_spOpen('${a.staff}',${p.id},${idx})">
     <span class="slot-av" style="${avatarBg(dispName, initials(dispName), rc)}">${initials(dispName)}</span>
     <span class="slot-nm">${dispName}</span>
     ${(()=>{ const st=_pcShiftTag(_tzH(a.start), a.len);
@@ -70564,6 +70564,170 @@ console.info('AUTO100 build applied',AUTO100_BUILD.version,v3Audit());
   try{ if(typeof resetAll === 'function' && !window._pchResetWrapped){ window._pchResetWrapped = true; var _or = resetAll; resetAll = function(){ var r = _or.apply(this, arguments); try{ logAction('delete', '데모 초기화', 'PC 현황'); }catch(_){} return r; }; } }catch(_){}
   /* 새 로그가 들어오면 열려 있는 서랍도 따라 바뀐다 */
   try{ if(typeof logAction === 'function' && !window._pchLogWrapped){ window._pchLogWrapped = true; var _ol = logAction; logAction = function(){ var r = _ol.apply(this, arguments); try{ if(H.open) draw(); }catch(_){} return r; }; } }catch(_){}
+})();
+</script>
+<style id="sp-style">
+/* [v1415] PC 현황 직원 팝업 — 눌렀을 때 그 사람의 기본 정보 한 장. 몇 시부터 몇 시까지, 지금 어디, 온 지 며칠,
+   보호 7일·수습 30일이 끝났는지. 숫자를 늘어놓지 않고 한 줄에 하나씩. */
+#sp-back{position:fixed;inset:0;z-index:199;background:rgba(6,6,8,.55);-webkit-backdrop-filter:blur(3px);backdrop-filter:blur(3px);opacity:0;pointer-events:none;transition:opacity .22s ease}
+#sp-back.open{opacity:1;pointer-events:auto}
+#sp-card{position:fixed;left:50%;top:50%;width:360px;max-width:calc(100vw - 28px);z-index:200;
+  background:var(--bg-c,var(--bg,#161616));border:1px solid var(--br2,#33363d);border-radius:18px;
+  box-shadow:0 30px 80px rgba(0,0,0,.5),0 2px 10px rgba(0,0,0,.35);
+  transform:translate(-50%,calc(-50% + 16px)) scale(.94);opacity:0;pointer-events:none;
+  transition:opacity .18s ease,transform .42s cubic-bezier(.16,1,.3,1);overflow:hidden}
+#sp-card.open{opacity:1;pointer-events:auto;transform:translate(-50%,-50%) scale(1)}
+#sp-card .sp-hd{display:flex;align-items:center;gap:12px;padding:18px 18px 12px;position:relative}
+#sp-card .sp-av{width:44px;height:44px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-weight:700;font-size:15px;color:#fff;flex:none;box-shadow:0 0 0 3px color-mix(in srgb,var(--sp-c,#888) 28%,transparent)}
+#sp-card .sp-nm{font-size:17px;font-weight:700;letter-spacing:-.01em;line-height:1.2}
+#sp-card .sp-sub{font-size:12px;color:var(--tx3);margin-top:3px;display:flex;gap:6px;align-items:center;flex-wrap:wrap}
+#sp-card .sp-sub b{font-weight:600;color:var(--tx2)}
+#sp-card .sp-pc{font-variant-numeric:tabular-nums;background:var(--bg-a);border-radius:6px;padding:1px 7px;color:var(--tx2);font-weight:600}
+#sp-card .sp-x{position:absolute;right:10px;top:10px;width:30px;height:30px;border-radius:50%;border:0;background:transparent;color:var(--tx3);font-size:16px;cursor:pointer;display:flex;align-items:center;justify-content:center}
+#sp-card .sp-x:hover{background:var(--bg-a);color:var(--tx)}
+#sp-card .sp-rows{padding:2px 18px 16px;display:flex;flex-direction:column}
+#sp-card .sp-row{display:flex;align-items:baseline;gap:12px;padding:10px 0;border-top:1px solid var(--br,rgba(128,128,128,.14));
+  opacity:0;transform:translateY(6px);transition:opacity .28s ease,transform .38s cubic-bezier(.16,1,.3,1)}
+#sp-card.open .sp-row{opacity:1;transform:none}
+#sp-card .sp-row:nth-child(1){transition-delay:.06s}#sp-card .sp-row:nth-child(2){transition-delay:.11s}#sp-card .sp-row:nth-child(3){transition-delay:.16s}#sp-card .sp-row:nth-child(4){transition-delay:.21s}#sp-card .sp-row:nth-child(5){transition-delay:.26s}
+#sp-card .sp-k{flex:none;width:64px;font-size:12px;color:var(--tx3)}
+#sp-card .sp-v{flex:1;font-size:14px;color:var(--tx);font-variant-numeric:tabular-nums;line-height:1.35}
+#sp-card .sp-v small{font-size:12px;color:var(--tx3);margin-left:6px}
+#sp-card .sp-v.dim{color:var(--tx3)}
+#sp-card .sp-time{font-size:22px;font-weight:700;letter-spacing:-.01em}
+#sp-card .sp-time i{font-style:normal;color:var(--tx3);font-weight:400;margin:0 6px}
+#sp-card .sp-dot{display:inline-block;width:8px;height:8px;border-radius:50%;margin-right:7px;vertical-align:1px;background:var(--tx3)}
+#sp-card .sp-dot.on{background:#3aa05a;box-shadow:0 0 0 3px rgba(58,160,90,.18)}
+#sp-card .sp-dot.brk{background:#e0a040}
+#sp-card .sp-dot.off{background:#7d7a72}
+#sp-card .sp-ok{color:#3aa05a;font-weight:600}
+#sp-card .sp-left{color:var(--ac);font-weight:600}
+#sp-card .sp-ft{display:flex;justify-content:flex-end;gap:14px;padding:0 18px 14px}
+#sp-card .sp-ft a{font-size:12px;color:var(--tx3);cursor:pointer;text-decoration:none}
+#sp-card .sp-ft a:hover{color:var(--tx)}
+.slot.staff.filled{cursor:pointer}
+@media (max-width:520px){#sp-card{width:calc(100vw - 20px)}}
+@media (prefers-reduced-motion:reduce){#sp-card,#sp-back,#sp-card .sp-row{transition:opacity .12s linear}#sp-card{transform:translate(-50%,-50%) scale(1)}#sp-card .sp-row{transform:none}}
+</style>
+<script>
+/* [v1415] PC 현황 직원 팝업 */
+(function(){
+  var open = false, token = 0;
+  function el(){ var b = document.getElementById('sp-back'), c = document.getElementById('sp-card');
+    if(!b){ b = document.createElement('div'); b.id = 'sp-back'; b.addEventListener('click', close); document.body.appendChild(b); }
+    if(!c){ c = document.createElement('div'); c.id = 'sp-card'; document.body.appendChild(c); }
+    return { b: b, c: c }; }
+  function esc(s){ return String(s == null ? '' : s).replace(/[&<>"']/g, function(ch){ return { '&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;' }[ch]; }); }
+  function p2(n){ n = Number(n) || 0; return (n < 10 ? '0' : '') + n; }
+  function kst(iso){ if(!iso) return null; var d = new Date(iso); if(isNaN(d)) return null; return new Date(d.getTime() + 9*3600*1000); }
+  function hm(iso){ var d = kst(iso); return d ? p2(d.getUTCHours()) + ':' + p2(d.getUTCMinutes()) : ''; }
+  function md(ymd){ return String(ymd || '').slice(5, 10).replace('-', '/'); }
+  function today(){ return (typeof _todayKST === 'function') ? _todayKST() : new Date().toISOString().slice(0,10); }
+  function daysBetween(a, b){ return Math.floor((new Date(b + 'T00:00:00Z') - new Date(a + 'T00:00:00Z')) / 86400000); }
+  function ko(){ try{ return (typeof _uiLang === 'function' ? _uiLang() : 'ko') === 'ko'; }catch(_){ return true; } }
+
+  function row(k, v, extra){ return '<div class="sp-row"><div class="sp-k">' + k + '</div><div class="sp-v' + (extra || '') + '">' + v + '</div></div>'; }
+
+  /* 시프트 이름 — 수동 배정(STAFF_PROFILE.manual_shift)이 있으면 그 이름, 없으면 시각으로 추정 */
+  function shiftName(s, a){
+    var L = ko();
+    try{ var k = (typeof STAFF_PROFILE !== 'undefined' && STAFF_PROFILE[s.id] && STAFF_PROFILE[s.id].manual_shift) || '';
+      if(k && typeof SHIFT_SCHEDULE !== 'undefined' && SHIFT_SCHEDULE[k]){ var d = SHIFT_SCHEDULE[k]; return (d.icon ? d.icon + ' ' : '') + (d.type || '') + ' ' + (L ? d.label : (d.label === '야간' ? 'Night' : d.label === '주간' ? 'Day' : d.label)); } }catch(_){}
+    try{ if(a && typeof _pcShiftTag === 'function'){ return _pcShiftTag(_tzH(a.start), a.len).t; } }catch(_){}
+    return '';
+  }
+
+  function build(s, p, a, live){
+    var L = ko();
+    var name = (typeof _pcFriendlyStaffName === 'function') ? _pcFriendlyStaffName(s.full_name || s.name) : (s.full_name || s.name);
+    var ini = (typeof initials === 'function') ? initials(name) : String(name).slice(0,2).toUpperCase();
+    var col = (typeof _pcv2Col === 'function') ? _pcv2Col(name) : ((typeof rankColor === 'function') ? rankColor(s.position) : 'var(--ac)');
+    var pos = ''; try{ pos = (typeof POSITIONS !== 'undefined' && POSITIONS[s.position] && (L ? (POSITIONS[s.position].ko || POSITIONS[s.position].label || POSITIONS[s.position].name) : (POSITIONS[s.position].label || POSITIONS[s.position].name))) || s.position || ''; }catch(_){ pos = s.position || ''; }
+    var game = ''; try{ var g = (typeof shiftGame === 'function' && a) ? shiftGame(a, p) : (p && p.game); game = g === 'maple' ? 'Maple' : g === 'lineage' ? 'Lineage' : ''; }catch(_){}
+
+    /* 1. 근무 시간 */
+    var timeV;
+    if(a){ var st = _tzH(a.start), en = _tzH((a.start + a.len) % 24);
+      timeV = '<span class="sp-time">' + p2(st) + ':00<i>→</i>' + p2(en) + ':00</span><small>' + a.len + 'h' + (shiftName(s, a) ? ' · ' + esc(shiftName(s, a)) : '') + '</small>'; }
+    else timeV = '<span class="dim">' + (L ? '배정 없음' : 'Not assigned') + '</span>';
+
+    /* 2. 지금 */
+    var nowV = '<span class="sp-dot"></span>' + (L ? '불러오는 중…' : 'Loading…');
+    if(live && live.att !== undefined){
+      var r = live.att;
+      if(!r) nowV = '<span class="sp-dot off"></span><span class="dim">' + (L ? '출근 기록 없음' : 'No clock-in yet') + '</span>';
+      else if(!r.clock_out){
+        if(r.break_start && !r.break_end) nowV = '<span class="sp-dot brk"></span>' + (L ? '휴식 중' : 'On break') + '<small>' + hm(r.break_start) + (L ? ' 부터' : '') + '</small>';
+        else nowV = '<span class="sp-dot on"></span>' + (L ? '출근 중' : 'Working') + '<small>' + hm(r.clock_in) + (L ? ' 출근' : ' in') + '</small>';
+      }
+      else if(r.date === today()) nowV = '<span class="sp-dot off"></span>' + (L ? '오늘 퇴근' : 'Clocked out') + '<small>' + hm(r.clock_in) + ' → ' + hm(r.clock_out) + '</small>';
+      else nowV = '<span class="sp-dot off"></span><span class="dim">' + (L ? '아직 안 옴' : 'Not in yet') + '</span><small>' + (L ? '마지막 ' : 'last ') + md(r.date) + '</small>';
+    }
+
+    /* 3~5. 온 지 · 보호 7일 · 수습 30일 */
+    var start = ''; try{ start = (STAFF_PROFILE[s.id] && STAFF_PROFILE[s.id].personal && STAFF_PROFILE[s.id].personal.start_work) || ''; }catch(_){}
+    var startSrc = start ? (L ? '입사일' : 'start') : '';
+    if(!start && live && live.created){ start = String(live.created).slice(0,10); startSrc = L ? '가입일 기준' : 'since sign-up'; }
+    var sinceV, protV, probV;
+    var t = null; try{ t = TRUST_DATA[s.id] || TRUST_DATA[String(s.name || '').toLowerCase().split(' ')[0]] || null; }catch(_){}
+    if(start){
+      var n = daysBetween(start, today());
+      sinceV = (n >= 0 ? (L ? (n + 1) + '일째' : 'Day ' + (n + 1)) : (L ? '아직 시작 전' : 'Not started')) + '<small>' + md(start) + (startSrc ? ' · ' + startSrc : '') + '</small>';
+      var protEnd = (t && t.protected_until) ? String(t.protected_until).slice(0,10) : null;
+      var pl = protEnd ? daysBetween(today(), protEnd) : (7 - n - 1);
+      protV = pl > 0 ? '<span class="sp-left">D-' + pl + '</span><small>' + (protEnd ? md(protEnd) : md(addDays(start, 7))) + (L ? ' 까지' : '') + '</small>' : '<span class="sp-ok">' + (L ? '끝남 ✓' : 'Done ✓') + '</span>';
+      var ql = 30 - n - 1;
+      probV = ql > 0 ? '<span class="sp-left">D-' + ql + '</span><small>' + md(addDays(start, 30)) + (L ? ' 까지' : '') + '</small>' : '<span class="sp-ok">' + (L ? '끝남 ✓' : 'Done ✓') + '</span>';
+    } else {
+      sinceV = '<span class="dim">' + (L ? '입사일 없음' : 'No start date') + '</span><small>' + (L ? '직원 목록에서 적어주세요' : 'add it in Staff') + '</small>';
+      var pl2 = (t && typeof protectionDaysLeft === 'function') ? protectionDaysLeft(t) : 0;
+      protV = pl2 > 0 ? '<span class="sp-left">D-' + pl2 + '</span>' : '<span class="sp-ok">' + (L ? '끝남 ✓' : 'Done ✓') + '</span>';
+      probV = '<span class="dim">' + (L ? '입사일이 있어야 알 수 있음' : 'Needs start date') + '</span>';
+    }
+
+    var canMore = false; try{ canMore = (currentUserRole === 'admin' || currentUserRole === 'op' || currentUserRole === 'hr' || currentUserRole === 'manager'); }catch(_){}
+    return '<div class="sp-hd" style="--sp-c:' + col + '">'
+      + '<div class="sp-av" style="background:' + col + '">' + esc(ini) + '</div>'
+      + '<div><div class="sp-nm">' + esc(name) + '</div><div class="sp-sub">' + (pos ? '<b>' + esc(pos) + '</b>' : '') + (p ? '<span class="sp-pc">PC-' + p2(p.id) + '</span>' : '') + (game ? '<span>' + game + '</span>' : '') + '</div></div>'
+      + '<button class="sp-x" type="button" aria-label="close" onclick="_spClose()">✕</button></div>'
+      + '<div class="sp-rows">'
+      + row(L ? '근무' : 'Hours', timeV)
+      + row(L ? '지금' : 'Now', nowV)
+      + row(L ? '온 지' : 'Since', sinceV)
+      + row(L ? '보호 7일' : 'Shield 7d', protV)
+      + row(L ? '수습 30일' : 'Trial 30d', probV)
+      + '</div>'
+      + (canMore ? '<div class="sp-ft"><a onclick="_spClose();try{openStaffDetail(\'' + esc(s.id) + '\')}catch(_){}">' + (L ? '자세히 →' : 'Details →') + '</a></div>' : '<div style="height:6px"></div>');
+  }
+  function addDays(ymd, n){ var d = new Date(ymd + 'T00:00:00Z'); d.setUTCDate(d.getUTCDate() + n); return d.toISOString().slice(0,10); }
+
+  window._spOpen = function(staffId, pcId, idx){
+    var s = (typeof staffById === 'function') ? staffById(staffId) : null; if(!s) return;
+    var p = null, a = null;
+    try{ p = PCS.find(function(x){ return x.id === pcId; }); a = p && p.assignments ? p.assignments[idx] : null; }catch(_){}
+    var E = el(); var my = ++token; open = true;
+    E.c.innerHTML = build(s, p, a, null);
+    requestAnimationFrame(function(){ E.b.classList.add('open'); E.c.classList.add('open'); });
+    /* 살아 있는 두 가지는 뒤에서 채운다 — 출근 기록, 가입일 */
+    (async function(){
+      var live = { att: null, created: null };
+      try{ if(typeof sb !== 'undefined' && sb){
+        var q1 = sb.from('attendance').select('date,clock_in,clock_out,break_start,break_end').eq('user_id', s.id).order('clock_in', { ascending:false }).limit(1);
+        var q2 = sb.from('user_profiles').select('created_at').eq('id', s.id).maybeSingle();
+        var rs = await Promise.all([q1, q2]);
+        live.att = (rs[0] && rs[0].data && rs[0].data[0]) || null;
+        live.created = (rs[1] && rs[1].data && rs[1].data.created_at) || null;
+      } }catch(_){}
+      if(my !== token || !open) return;
+      var rows = E.c.querySelector('.sp-rows'); if(!rows) return;
+      var tmp = document.createElement('div'); tmp.innerHTML = build(s, p, a, live);
+      var nr = tmp.querySelector('.sp-rows'); if(nr) rows.innerHTML = nr.innerHTML;
+    })();
+  };
+  function close(){ if(!open) return; open = false; token++; var E = el(); E.b.classList.remove('open'); E.c.classList.remove('open'); }
+  window._spClose = close;
+  document.addEventListener('keydown', function(e){ if(e.key === 'Escape' && open) close(); });
+  try{ if(typeof setActiveChannel === 'function' && !window._spNavWrapped){ window._spNavWrapped = true; var _o = setActiveChannel; setActiveChannel = function(){ try{ close(); }catch(_){} return _o.apply(this, arguments); }; } }catch(_){}
 })();
 </script>
 </body>
