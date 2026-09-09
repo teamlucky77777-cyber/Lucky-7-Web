@@ -4,7 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
 <title>ARASAKA Corp</title>
-<!-- BUILD: v1430 | 적응 기간을 배정된 날부터 센다 -->
+<!-- BUILD: v1431 | 온보딩 화면 — 구원씨 19단계를 한 사람씩 한 화면에서 -->
 <!-- v745 기록은 git 이력(v1302 이전 커밋)에 있다 — 100KB 변경사 주석을 배포에서 제거 -->
 <!-- [v677] a <link href> cannot read a CSS variable, so the favicon carries its own copy.
      64px: a browser tab draws it at 16-32px, so this is 2x-DPR sharp at 11KB. -->
@@ -3914,6 +3914,52 @@ html[data-theme=light] .sfx-cut::after{background:linear-gradient(90deg,rgba(0,0
 .ap-pill-reg-done{
   font-size:12px;flex-shrink:0;margin-left:auto;
 }
+
+/* ═══ [v1431] 온보딩 화면 — 한 사람을 처음부터 끝까지 ═══════════════════════
+   읽는 순서가 곧 일의 순서다. 번호는 왼쪽에 세로로 흐르고, 끝난 줄은 조용해지고,
+   안 끝난 줄만 눈에 남는다. '해야 할 일' 이 아니라 '아직 안 된 것' 이 보여야 한다. */
+.ob-wrap{max-width:760px;margin:0 auto;padding:22px 18px 60px}
+.ob-head h2{font-size:19px;font-weight:700;margin:0 0 4px;color:var(--tx)}
+.ob-sub{font-size:12.5px;color:var(--tx3);margin-bottom:16px}
+.ob-sub b{color:var(--tx2)}
+.ob-load{padding:40px;text-align:center;color:var(--tx3);font-size:13px}
+.ob-bar{display:flex;align-items:center;gap:12px;margin-bottom:16px;flex-wrap:wrap}
+.ob-sel{font:inherit;font-size:13px;font-weight:600;padding:7px 11px;border-radius:9px;
+  background:var(--bg-c);color:var(--tx);border:1px solid var(--br);min-width:190px;cursor:pointer}
+.ob-prog{flex:1 1 120px;height:6px;border-radius:99px;background:var(--bg-h);overflow:hidden;min-width:100px}
+.ob-prog i{display:block;height:100%;background:var(--ac);border-radius:99px;transition:width .35s cubic-bezier(.2,.9,.3,1)}
+.ob-pct{font-size:13px;font-weight:700;color:var(--tx2);font-variant-numeric:tabular-nums;white-space:nowrap}
+.ob-g{font-size:10.5px;font-weight:700;letter-spacing:.1em;color:var(--tx3);
+  text-transform:uppercase;margin:16px 0 7px;padding-left:2px}
+.ob-g:first-child{margin-top:0}
+.ob-row{display:grid;grid-template-columns:26px 1fr auto;gap:11px;align-items:start;
+  padding:10px 12px;border:1px solid var(--br2);border-radius:10px;margin-bottom:6px;background:var(--bg-c)}
+.ob-row.ok{opacity:.58;border-color:transparent;background:transparent}
+.ob-row.live{border-color:var(--ac);box-shadow:0 0 0 3px var(--ac-bg)}
+.ob-row.live.ok{box-shadow:none}
+.ob-n{font-style:normal;font-size:11px;font-weight:700;color:var(--tx3);
+  width:26px;height:22px;display:flex;align-items:center;justify-content:center;
+  border-radius:6px;background:var(--bg-h);font-variant-numeric:tabular-nums}
+.ob-row.ok .ob-n{background:transparent}
+.ob-t{font-size:13.5px;font-weight:600;color:var(--tx);line-height:1.4}
+.ob-d{font-size:11.5px;color:var(--tx3);margin-top:1px}
+.ob-w{font-size:11.5px;color:var(--tx2);margin-top:4px;font-variant-numeric:tabular-nums}
+.ob-row.ok .ob-w{color:var(--tx3)}
+.ob-a{display:flex;align-items:center;gap:6px;padding-top:2px}
+.ob-auto{font-size:14px;font-weight:700;color:var(--tx3);width:22px;text-align:center}
+.ob-row.ok .ob-auto{color:var(--gr,#3aa05a)}
+.ob-mk{font:inherit;font-size:11px;font-weight:600;padding:4px 10px;border-radius:99px;
+  border:1px solid var(--br);background:transparent;color:var(--tx3);cursor:pointer;white-space:nowrap;
+  transition:background .14s ease,color .14s ease,border-color .14s ease}
+.ob-mk:hover{border-color:var(--tx3);color:var(--tx2)}
+.ob-mk.on{background:var(--ac);border-color:var(--ac);color:var(--bg)}
+.ob-mk:focus-visible,.ob-go:focus-visible{outline:2px solid var(--ac);outline-offset:2px}
+.ob-go{font:inherit;font-size:11px;font-weight:700;padding:4px 10px;border-radius:99px;
+  border:0;background:var(--ac);color:var(--bg);cursor:pointer;white-space:nowrap}
+.ob-foot{margin-top:20px;padding:12px 14px;border-radius:10px;background:var(--bg-h);
+  font-size:12px;color:var(--tx3);line-height:1.75}
+.ob-foot b{color:var(--tx2)}
+@media (max-width:520px){.ob-row{grid-template-columns:26px 1fr}.ob-a{grid-column:2;justify-content:flex-start}}
 
 /* 온보딩 패널 */
 #onboard-panel{
@@ -46838,6 +46884,172 @@ function _staffAttBgRefresh(){
    실패하면 거절은 아무도 받지 않고 흘러가고, 원을 덮을 사람이 없으니 화면은 영원히 원만 돈다.
    고장 났다는 말조차 못 하고 계속 도는 것이 지금까지의 모습이었다.
    실패는 실패라고 말한다 — 무엇이 안 됐는지 적고, 다시 눌러볼 수 있게 한다. */
+/* ═══════════════════════════════════════════════════════════════════════════
+   [v1431] 온보딩 — 한 사람을 처음부터 끝까지 한 화면에서
+   boss "지금 급한게 구원씨 온보딩 만들어주는거 그것부터 진행하자"
+
+   구원씨 문서의 19단계를 그대로 세로로 세운다. 다만 **체크리스트가 아니다.**
+   열아홉 개 중 열세 개는 시스템이 이미 답을 안다 — 개인정보가 찼는지, 디스코드
+   아이디가 있는지, 출퇴근이 진짜 찍히는지. 그걸 사람에게 다시 누르라고 하면
+   화면은 '한 일' 이 아니라 '했다고 말한 것' 을 보게 된다. 둘은 다르다.
+
+   그래서 규칙은 하나다: **알 수 있는 것은 시스템이 답하고, 사람만 아는 것만 묻는다.**
+   사람만 아는 여섯 개(근무조건 동의·게임 테스트·최종 동의·캐릭터·Role·안내)만
+   눌러서 표시한다. 나머지 열셋은 눌러도 안 바뀐다 — 자료를 채워야 바뀐다.
+
+   18번 '최종 연동 확인' 이 이 화면의 심장이다. 앞의 열여덟 개가 진짜로 됐는지는
+   출퇴근이 찍히고 리포트가 들어오는 것으로만 증명된다. 그래서 그 셋을 직접 본다.
+   ═══════════════════════════════════════════════════════════════════════════ */
+const OB_STEPS = [
+  { n:1,  g:'채용',   t:'왓츠앱 서류 스크리닝',        d:'CV · PC 사양 · 와이파이 속도 · 랜 케이블', k:'spec' },
+  { n:2,  g:'채용',   t:'1차 메시지 면접',             d:'경력 · 가능 시간 · 게임 경험',            k:'stage:first_int' },
+  { n:3,  g:'채용',   t:'근무 조건 안내 · 동의 확인',   d:'급여 · 수습 90% · 시프트 · 기본 규칙',    k:'mark' },
+  { n:4,  g:'채용',   t:'2차 디스코드 캠 면접',         d:'PC·와이파이 재확인 · 태도',              k:'stage:second_int' },
+  { n:5,  g:'채용',   t:'Remote T · AnyDesk 설치',      d:'설치가 됐는지 확인',                     k:'p:anydesk' },
+  { n:6,  g:'채용',   t:'Remote 게임 테스트',           d:'렉 · 딜레이 · PC 성능 · 회선 안정성',    k:'mark' },
+  { n:7,  g:'채용',   t:'최종 면접 · 세부사항 설명',    d:'업무 · 회사 규칙',                       k:'stage:pass' },
+  { n:8,  g:'채용',   t:'최종 상호 동의',               d:'양측 동의 → 채용 확정',                  k:'mark' },
+  { n:9,  g:'채용',   t:'공식 입사 등록',               d:'직원 풀에 올라갔나',                     k:'staff' },
+  { n:10, g:'온보딩', t:'메이플 캐릭터 · 디스코드 프로필', d:'담당 캐릭터 정하기',                  k:'mark' },
+  { n:11, g:'온보딩', t:'디스코드 Role 부여',           d:'시프트·포지션에 맞는 Role',              k:'mark' },
+  { n:12, g:'온보딩', t:'개인정보 · 입사일 등록',       d:'실명 · 은행 · 계좌 · 전화 · 입사일',     k:'personal' },
+  { n:13, g:'온보딩', t:'HR BOT 등록',                  d:'디스코드 아이디 — 없으면 출퇴근이 안 찍힌다', k:'p:discord_id' },
+  { n:14, g:'온보딩', t:'데일리보드 생성 · 태그',       d:'전용 보드 링크',                         k:'p:discord_thread' },
+  { n:15, g:'온보딩', t:'웹사이트 가입',                d:'링크 전달 → 직접 가입',                  k:'login' },
+  { n:16, g:'온보딩', t:'초대 코드 전달',               d:'가입에 필요한 코드',                     k:'invite' },
+  { n:17, g:'온보딩', t:'직원 목록 정보 등록',          d:'보드 링크 · 디스코드 아이디',            k:'both' },
+  { n:18, g:'온보딩', t:'최종 연동 확인',               d:'출퇴근 · 리포트 · PC 배정이 진짜 되나',  k:'live' },
+  { n:19, g:'온보딩', t:'안내 · PDF 매뉴얼',            d:'스레드 사용법 · 규율 · 처우',            k:'mark' }
+];
+function _obMarks(id){ try{ return (STAFF_PROFILE[id] && STAFF_PROFILE[id].onboard) || {}; }catch(_){ return {}; } }
+function _obCanEdit(){ try{ return currentUserRole==='admin' || currentUserRole==='op' || (currentUser && currentUser.role==='hr'); }catch(_){ return false; } }
+window._obMark = function(id, n){
+  if(!_obCanEdit()){ toast('권한이 없습니다', true); return; }
+  try{
+    if(!STAFF_PROFILE[id]) STAFF_PROFILE[id] = {};
+    if(!STAFF_PROFILE[id].onboard) STAFF_PROFILE[id].onboard = {};
+    var m = STAFF_PROFILE[id].onboard;
+    m[n] = !m[n];
+    saveStaffState();
+    var st = (OB_STEPS.find(function(s){ return s.n===Number(n); })||{}).t || ('단계 '+n);
+    logAction('update', (m[n]?'온보딩 확인 · ':'온보딩 확인 해제 · ')+st, id);
+    renderOnboarding(id);
+  }catch(e){ console.warn('ob mark:', e); }
+};
+window._obPick = function(id){ renderOnboarding(id); };
+async function renderOnboarding(pickId){
+  var host = document.getElementById('ch-other'); if(!host) return;
+  var esc = (typeof _mtcEsc==='function') ? _mtcEsc : function(s){ return String(s==null?'':s); };
+  /* 사람 목록 — 재직자를 새로 온 순서로. 온보딩은 늘 '최근에 온 사람' 을 본다. */
+  var people = [];
+  try{
+    people = (typeof STAFF!=='undefined' && Array.isArray(STAFF) ? STAFF : []).filter(function(s){ return s && s.id; })
+      .map(function(s){
+        var p = (STAFF_PROFILE[s.id] && STAFF_PROFILE[s.id].personal) || {};
+        return { id:s.id, name:s.name || p.full_name || '?', start:String(p.start_work||'') };
+      })
+      .sort(function(a,b){ return (b.start||'').localeCompare(a.start||'') || String(a.name).localeCompare(String(b.name)); });
+  }catch(_){}
+  var cur = pickId || window._obCur || (people[0] && people[0].id) || '';
+  window._obCur = cur;
+  var me = people.find(function(x){ return String(x.id)===String(cur); }) || people[0] || null;
+
+  host.innerHTML = '<div class="ob-wrap"><div class="ob-head"><h2>🎓 온보딩</h2>'
+    + '<div class="ob-sub">구원씨 절차 19단계 · <b>알 수 있는 것은 시스템이 답하고, 사람만 아는 것만 묻습니다</b></div></div>'
+    + '<div class="ob-load">불러오는 중…</div></div>';
+  if(!me){ host.querySelector('.ob-load').textContent = '직원이 없습니다.'; return; }
+
+  /* 살아 있는 확인 — 이 사람에 대해서만, 한 번에 */
+  var live = { att:0, lastAtt:'', rep:0, lastRep:'', login:false, invite:false, pc:0 };
+  try{
+    if(typeof sb !== 'undefined' && sb){
+      var q = await Promise.all([
+        sb.from('attendance').select('date').eq('user_id', me.id).order('date',{ascending:false}).limit(1),
+        sb.from('attendance').select('id', {count:'exact', head:true}).eq('user_id', me.id),
+        sb.from('user_profiles').select('id,email').eq('id', me.id).maybeSingle()
+      ]);
+      live.lastAtt = (q[0] && q[0].data && q[0].data[0] && q[0].data[0].date) || '';
+      live.att = (q[1] && q[1].count) || 0;
+      live.login = !!(q[2] && q[2].data && q[2].data.id);
+      var em = (q[2] && q[2].data && q[2].data.email) || '';
+      if(em){ var iv = await sb.from('invite_codes').select('id').eq('used_by', em).limit(1);
+              live.invite = !!(iv && iv.data && iv.data.length); }
+    }
+  }catch(_){}
+  try{
+    var nm = String(me.name||'').toLowerCase().split(' ')[0];
+    var rr = (typeof _rcGetCache==='function' ? (_rcGetCache()||{}).reports : null) || [];
+    for(var i=0;i<rr.length;i++){ var r=rr[i]; if(!r) continue;
+      if(String(r.booster||'').toLowerCase().split(' ')[0] !== nm) continue;
+      live.rep++; var dt=String(r.date||''); if(dt > live.lastRep) live.lastRep = dt; }
+  }catch(_){}
+  try{ (typeof PCS!=='undefined'?PCS:[]).forEach(function(p){ (p.assignments||[]).forEach(function(a){
+        if(a && String(a.staff)===String(me.id)) live.pc++; }); }); }catch(_){}
+
+  var P = (STAFF_PROFILE[me.id] && STAFF_PROFILE[me.id].personal) || {};
+  var marks = _obMarks(me.id);
+  var app = null;
+  try{ var k1 = String(me.name||'').toLowerCase().split(' ')[0];
+       app = (typeof APPLICANTS!=='undefined'?APPLICANTS:[]).find(function(a){
+         return a && String(a.name||'').toLowerCase().split(' ')[0] === k1; }) || null; }catch(_){}
+  var stageIdx = {}; try{ RECRUIT_STAGES.forEach(function(s,i){ stageIdx[s.id]=i; }); }catch(_){}
+  var appAt = app ? (stageIdx[app.stage]!=null ? stageIdx[app.stage] : -1) : -1;
+  var has = function(v){ return String(v==null?'':v).trim() !== ''; };
+
+  function state(s){
+    switch(s.k){
+      case 'mark':    return { ok:!!marks[s.n], human:true, why: marks[s.n] ? '확인함' : '사람이 확인해야 합니다' };
+      case 'spec':    var sp=(app&&app.spec)||{}; var n=['cpu','ram','gpu','ssd','lan','down','up'].filter(function(x){ return has(sp[x]); }).length;
+                      return { ok:n>=3, why: app ? (n+'/7 칸 채움') : '지원자 기록 없음' };
+      case 'staff':   return { ok:true, why:'직원 풀에 있음' };
+      case 'personal':var need=['full_name','bank','account','phone','start_work'];
+                      var got=need.filter(function(x){ return has(P[x]); });
+                      return { ok:got.length===need.length, why: got.length+'/5 · 빈칸: '+(need.filter(function(x){ return !has(P[x]); }).map(function(x){
+                        return {full_name:'실명',bank:'은행',account:'계좌',phone:'전화',start_work:'입사일'}[x]; }).join(' · ')||'없음') };
+      case 'login':   return { ok:live.login, why: live.login ? '웹 계정 있음' : '아직 가입 안 함' };
+      case 'invite':  return { ok:live.invite, why: live.invite ? '코드로 가입함' : '코드 사용 기록 없음' };
+      case 'both':    return { ok:has(P.discord_thread)&&has(P.discord_id), why:(has(P.discord_id)?'':'디스코드 아이디 없음 ')+(has(P.discord_thread)?'':'보드 링크 없음')||'둘 다 있음' };
+      case 'live':    var a=live.att>0, b=live.rep>0, c=live.pc>0;
+                      return { ok:a&&b&&c, live:true,
+                        why:'출퇴근 '+(a?('○ '+live.att+'일'):'✗ 없음')+' · 리포트 '+(b?('○ '+live.rep+'건'):'✗ 없음')+' · PC 배정 '+(c?('○ '+live.pc+'개'):'✗ 없음') };
+      default:
+        if(s.k.indexOf('stage:')===0){ var want=s.k.slice(6); var wi=stageIdx[want];
+          return { ok: appAt>=0 && wi!=null && appAt>=wi, why: app ? ('지원자 단계: '+(_rsName(RECRUIT_STAGES[appAt])||'?')) : '지원자 기록 없음' }; }
+        if(s.k.indexOf('p:')===0){ var f=s.k.slice(2);
+          return { ok:has(P[f]), why: has(P[f]) ? String(P[f]).slice(0,40) : '비어 있음' }; }
+        return { ok:false, why:'' };
+    }
+  }
+  var rows='', doneN=0, lastG='';
+  OB_STEPS.forEach(function(s){
+    var st = state(s); if(st.ok) doneN++;
+    if(s.g !== lastG){ lastG = s.g; rows += '<div class="ob-g">'+s.g+'</div>'; }
+    rows += '<div class="ob-row'+(st.ok?' ok':'')+(st.live?' live':'')+'">'
+      + '<i class="ob-n">'+s.n+'</i>'
+      + '<div class="ob-b"><div class="ob-t">'+esc(s.t)+'</div>'
+      +   '<div class="ob-d">'+esc(s.d)+'</div>'
+      +   '<div class="ob-w">'+esc(st.why)+'</div></div>'
+      + '<div class="ob-a">'
+      +   (st.human
+            ? ('<button class="ob-mk'+(st.ok?' on':'')+'" onclick="_obMark(\''+esc(String(me.id))+'\','+s.n+')">'+(st.ok?'확인함':'확인')+'</button>')
+            : ('<span class="ob-auto">'+(st.ok?'○':'✗')+'</span>'))
+      +   ((s.k==='personal'||s.k==='p:discord_id'||s.k==='p:discord_thread'||s.k==='both'||s.k==='p:anydesk')&&!st.ok&&_obCanEdit()
+            ? ('<button class="ob-go" onclick="openStaffInfoEditor(\''+esc(String(me.id))+'\')">채우기</button>') : '')
+      + '</div></div>';
+  });
+  var pct = Math.round(doneN/OB_STEPS.length*100);
+  var opts = people.map(function(x){ return '<option value="'+esc(String(x.id))+'"'+(String(x.id)===String(cur)?' selected':'')+'>'+esc(x.name)+(x.start?(' · '+esc(x.start)):'')+'</option>'; }).join('');
+  host.innerHTML = '<div class="ob-wrap">'
+    + '<div class="ob-head"><h2>🎓 온보딩</h2>'
+    +   '<div class="ob-sub">구원씨 절차 19단계 · <b>알 수 있는 것은 시스템이 답하고, 사람만 아는 것만 묻습니다</b></div></div>'
+    + '<div class="ob-bar"><select class="ob-sel" onchange="_obPick(this.value)">'+opts+'</select>'
+    +   '<div class="ob-prog"><i style="width:'+pct+'%"></i></div>'
+    +   '<b class="ob-pct">'+doneN+' / '+OB_STEPS.length+'</b></div>'
+    + '<div class="ob-list">'+rows+'</div>'
+    + '<div class="ob-foot">○ 는 시스템이 자료를 보고 스스로 답한 것입니다 — 눌러도 안 바뀝니다. 자료를 채우면 바뀝니다.<br>'
+    +   '<b>18번</b>이 이 화면의 심장입니다. 앞의 열여덟 개가 진짜로 됐는지는 <b>출퇴근이 찍히고 리포트가 들어오는 것</b>으로만 증명됩니다.</div>'
+    + '</div>';
+}
 async function renderStaff(){
   try{
     return await _renderStaffBody();
@@ -53665,6 +53877,12 @@ function routeContent(){
     _mtSynced = false;
     _mtcWantMyScreen = true;   /* 화면 목록을 받은 뒤에 고른다 — 지금은 아직 모른다 */
     renderMTSystem('manage');
+    if(rightSb) rightSb.style.display = 'none';
+  } else if(ch && ch.module === 'onboarding'){
+    /* [v1431] 여태 메뉴에만 있고 그리는 코드가 없어 빈 탭이었다 */
+    pcView.style.display = 'none';
+    otherView.style.display = '';
+    renderOnboarding();
     if(rightSb) rightSb.style.display = 'none';
   } else if(ch && ch.module === 'staff'){
     pcView.style.display = 'none';
