@@ -4,7 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
 <title>ARASAKA Corp</title>
-<!-- BUILD: v1429 | 메이플 적응 기간 — 첫 리포트로부터 7일은 목표 4500 -->
+<!-- BUILD: v1430 | 적응 기간을 배정된 날부터 센다 -->
 <!-- v745 기록은 git 이력(v1302 이전 커밋)에 있다 — 100KB 변경사 주석을 배포에서 제거 -->
 <!-- [v677] a <link href> cannot read a CSS variable, so the favicon carries its own copy.
      64px: a browser tab draws it at 16-32px, so this is 2x-DPR sharp at 11KB. -->
@@ -59448,6 +59448,34 @@ function _agHourAt(track, clientX){
   return (typeof pcTZ!=='undefined' && pcTZ !== 'kst' && typeof _tzBackVal==='function')
     ? _tzBackVal(h) : h;
 }
+/* ═══ [v1430] 메이플 배정에 '언제부터' 를 찍는다 ═══════════════════════════════
+   boss "실제 메이플 플래닛 PC에 딱 배정되서 스케줄 들어간날부터 세야지"
+
+   v1429 는 '첫 리포트 날' 을 기준점으로 썼는데 사장님 말씀이 맞다 — 배정이 먼저다.
+   배정된 날부터 세야 첫 며칠 헤매는 시간이 적응 기간 안에 들어간다.
+
+   그 날짜가 어디에도 안 남아 있었다. 배정 로그(app_logs)를 뒤져 봤지만 PC-23 에
+   관한 줄이 하나도 없다 — 지금 배정이 로그 기능보다 먼저 만들어졌다.
+   그래서 배정 자체에 찍는다. 배정 막대를 옮기거나 길이를 늘려도 같은 객체라 날짜는
+   살아남는다. 뺐다가 다시 넣으면 새 배정이므로 다시 찍힌다 — 그게 맞다.
+
+   찍는 자리를 한 곳(_agRender)으로 뒀다. 사람을 꽂는 길이 여럿이라(끌어놓기·빈칸
+   클릭·백업 투입·PC 카드) 각각에 끼워 넣으면 언젠가 한 길이 빠진다. 격자는 어느
+   길로 들어와도 다시 그려지므로 여기 한 줄이면 전부 걸린다.
+
+   주의: 이미 배정돼 있던 사람은 'PC 현황을 처음 여는 날' 이 찍힌다. 그 전 날짜는
+   어디에도 없어서 만들어낼 수 없다 — 필요하면 사장님이 고치면 된다. */
+function _mpStampSince(pcs){
+  if(!Array.isArray(pcs)) return;
+  var today = new Date(Date.now() + 9*3600000).toISOString().slice(0,10), dirty = false;
+  pcs.forEach(function(p){
+    if(!p || String(p.game||'') !== 'maple') return;
+    (p.assignments||[]).forEach(function(a){
+      if(a && a.staff && !a.since){ a.since = today; dirty = true; }
+    });
+  });
+  if(dirty){ try{ if(typeof savePCState === 'function') savePCState(); }catch(_){} }
+}
 function _agSegs(st, len){                // 자정을 넘으면 두 토막
   /* ═══ [v1420] 시간대 변환은 여기 한 곳에서만 한다 ═══════════════════════════
      boss "한국시간이 인도네시아 시간보다 2시간 빠르니까 배정격자에서도 오류없이
@@ -59611,6 +59639,8 @@ function _agRender(){
   const nowD = (typeof _tzH==='function') ? _tzH(nowH) : nowH;
   const kl = (typeof _uiLang!=='function') || _uiLang()==='ko';
   const pcs = (typeof pcsShown==='function' ? pcsShown() : []).slice().sort((a,b)=>a.id-b.id);
+  /* [v1430] 메이플 PC 의 배정에는 '언제부터' 를 찍어 둔다 — 적응 기간을 여기서 센다 */
+  try{ _mpStampSince(pcs); }catch(_){}
   let head = '<div class="ag-row ag-head"><div class="ag-lab"></div><div class="ag-track">';
   for(let h=0; h<24; h++){
     if(h%3) continue;                               /* 3시간마다만 — 24개는 촘촘해서 못 읽는다 */
@@ -70691,7 +70721,25 @@ console.info('AUTO100 build applied',AUTO100_BUILD.version,v3Audit());
      해보고 정식 목표를 받는다). 사장님이 근무일 기준을 원하면 그때 바꾼다. */
   function _mpToday(){ var d = new Date(Date.now() + 9*3600000); return d.toISOString().slice(0,10); }
   function _mpDaysBetween(a, b){ try{ return Math.floor((new Date(b+'T00:00:00Z') - new Date(a+'T00:00:00Z')) / 86400000); }catch(_){ return 0; } }
-  /* 내가 이 카드에서 처음 리포트를 낸 날 — 없으면 오늘이 첫날이다 */
+  /* [v1430] 내가 이 PC 스케줄에 들어간 날 — 배정에 찍힌 날짜(a.since). 이게 첫 기준이다. */
+  function _mpAssignDay(){
+    try{
+      var pcN = pcNum(MC.pc); if(!pcN || typeof PCS === 'undefined' || !Array.isArray(PCS)) return null;
+      var me = meKey(), best = null;
+      PCS.forEach(function(p){
+        if(!p || Number(p.id) !== pcN) return;
+        (p.assignments||[]).forEach(function(a){
+          if(!a || !a.staff || !a.since) return;
+          var s = (typeof staffById === 'function') ? staffById(a.staff) : null;
+          if(nmKey(s ? s.name : '') !== me) return;
+          var dt = String(a.since).slice(0,10);
+          if(!best || dt < best) best = dt;
+        });
+      });
+      return best;
+    }catch(_){ return null; }
+  }
+  /* 내가 이 카드에서 처음 리포트를 낸 날 — 배정 날짜가 없을 때만 쓴다 */
   function _mpFirstDay(){
     try{
       var me = meKey(), k = MC.key, first = null;
@@ -70717,7 +70765,10 @@ console.info('AUTO100 build applied',AUTO100_BUILD.version,v3Audit());
       var full = Number(row.killGoal); if(!(isFinite(full) && full > 0)) return null;
       var soft = Number(row.killGoalNew), days = Number(row.newDays);
       if(!(isFinite(soft) && soft > 0) || !(isFinite(days) && days > 0)) return { goal:full, full:full, isNew:false, dleft:0 };
-      var today = _mpToday(), first = _mpFirstDay() || today;
+      /* [v1430] 세는 기준점 — ① 배정된 날(사장님 지정) ② 없으면 첫 리포트 날 ③ 둘 다 없으면 오늘.
+         ②는 배정 날짜가 안 찍힌 옛 배정을 위한 그물이다. 리포트는 배정 뒤에 나오므로
+         ②로 떨어져도 적응 기간이 짧아지지 않는다(오히려 조금 길어진다 — 안전한 쪽). */
+      var today = _mpToday(), first = _mpAssignDay() || _mpFirstDay() || today;
       var used = _mpDaysBetween(first, today);      /* 0 = 오늘이 첫날 */
       if(used < 0) used = 0;
       if(used < days) return { goal:soft, full:full, isNew:true, dleft:days - used };
