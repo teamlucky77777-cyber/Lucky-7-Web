@@ -4,7 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
 <title>ARASAKA Corp</title>
-<!-- BUILD: v1428 | 메이플 사냥터 Bugi · 판정을 마릿수(목표 6500)로 -->
+<!-- BUILD: v1429 | 메이플 적응 기간 — 첫 리포트로부터 7일은 목표 4500 -->
 <!-- v745 기록은 git 이력(v1302 이전 커밋)에 있다 — 100KB 변경사 주석을 배포에서 제거 -->
 <!-- [v677] a <link href> cannot read a CSS variable, so the favicon carries its own copy.
      64px: a browser tab draws it at 16-32px, so this is 2x-DPR sharp at 11KB. -->
@@ -70670,14 +70670,58 @@ console.info('AUTO100 build applied',AUTO100_BUILD.version,v3Audit());
     }catch(_){}
     return null;
   }
-  /* [v1428] 지금 고른 사냥터의 시간당 목표 마릿수 (없으면 null) */
+  /* ═══ [v1429] 적응 기간 — 스스로 시작하고 스스로 끝난다 ═══════════════════════
+     boss "플래닛에 처음 배정되는 직원들은 골을 좀 낮게 잡아줘야지 적응 기간이 있으니까
+           일주일정도로? 4500마리 정도로 · 근데 이걸 어떻게 시스템에 반영할 것인지는
+           생각을 좀 해봐야돼"
+
+     사람이 켜고 끄는 스위치로 만들지 않았다. 끄는 걸 잊으면 그 사람은 영원히 4500 이
+     목표가 되고, 그건 화면 어디에도 안 보이므로 아무도 모른 채 돈이 틀린다.
+     대신 시각이 스스로 답하게 한다 — **그 사람이 이 카드에서 낸 첫 리포트 날짜**부터
+     7일. 아무도 안 눌러도 시작하고, 아무도 안 눌러도 끝난다.
+
+     '첫 리포트' 를 기준점으로 고른 이유: 배정일은 사람이 격자에서 옮기면 흔들리고,
+     입사일은 메이플과 상관이 없다. 실제로 그 게임을 처음 만진 순간은 리포트뿐이다.
+     오래전에 하다가 돌아온 사람은 첫 날짜가 옛날이라 자동으로 적응 대상이 아니다.
+
+     숫자(4500 · 6500 · 7일)는 전부 기준표에 있다 — 사장님이 기준 EXP 화면에서 고친다.
+     여기 코드에는 숫자가 하나도 안 박혀 있다.
+
+     주의: 달력 7일이다. '일한 지 7일' 이 아니다(주 2일만 나온 사람은 실제로는 이틀
+     해보고 정식 목표를 받는다). 사장님이 근무일 기준을 원하면 그때 바꾼다. */
+  function _mpToday(){ var d = new Date(Date.now() + 9*3600000); return d.toISOString().slice(0,10); }
+  function _mpDaysBetween(a, b){ try{ return Math.floor((new Date(b+'T00:00:00Z') - new Date(a+'T00:00:00Z')) / 86400000); }catch(_){ return 0; } }
+  /* 내가 이 카드에서 처음 리포트를 낸 날 — 없으면 오늘이 첫날이다 */
+  function _mpFirstDay(){
+    try{
+      var me = meKey(), k = MC.key, first = null;
+      rawReports().forEach(function(r){
+        if(!r || !r.date) return;
+        if(clKey(r.client) !== k) return;
+        if(nmKey(r.booster) !== me) return;
+        var dt = String(r.date).slice(0,10);
+        if(!first || dt < first) first = dt;
+      });
+      return first;
+    }catch(_){ return null; }
+  }
+  /* 지금 이 사냥터에서 나에게 적용되는 목표. { goal, full, isNew, dleft } · 목표가 없으면 null */
   function _mpGoal(mapName){
     try{
       var c = _mpCard(); if(!c || !Array.isArray(c.maps)) return null;
-      var want = String(mapName||'').trim().toLowerCase();
+      var want = String(mapName||'').trim().toLowerCase(), row = null;
       for(var i=0;i<c.maps.length;i++){ var m=c.maps[i]; if(!m) continue;
         var en=String(m.en||'').trim().toLowerCase(), ko=String(m.ko||'').trim().toLowerCase();
-        if((en && en===want) || (ko && ko===want)){ var g=Number(m.killGoal); return isFinite(g)&&g>0 ? g : null; } }
+        if((en && en===want) || (ko && ko===want)){ row = m; break; } }
+      if(!row) return null;
+      var full = Number(row.killGoal); if(!(isFinite(full) && full > 0)) return null;
+      var soft = Number(row.killGoalNew), days = Number(row.newDays);
+      if(!(isFinite(soft) && soft > 0) || !(isFinite(days) && days > 0)) return { goal:full, full:full, isNew:false, dleft:0 };
+      var today = _mpToday(), first = _mpFirstDay() || today;
+      var used = _mpDaysBetween(first, today);      /* 0 = 오늘이 첫날 */
+      if(used < 0) used = 0;
+      if(used < days) return { goal:soft, full:full, isNew:true, dleft:days - used };
+      return { goal:full, full:full, isNew:false, dleft:0 };
     }catch(_){}
     return null;
   }
@@ -70716,11 +70760,12 @@ console.info('AUTO100 build applied',AUTO100_BUILD.version,v3Audit());
          셋을 나란히 놓으면 반드시 잘린다 — 자릿수가 잘리는 칸은 오히려 오타를 부른다. */
       h += '<div class="mc-nums mp"><div class="mc-num"><label>' + (_k ? '획득 경험치' : 'EXP gained') + '</label><div class="mc-field">'
          + '<input class="wide" id="mc-exp" inputmode="decimal" placeholder="1.24"><span class="unit">%</span></div></div>'
-         /* [v1428] 목표를 칸 이름에 붙인다 — 치면서 얼마나 남았는지 알아야 한다 */
+         /* [v1428·v1429] 목표를 칸 이름에 붙인다 — 치면서 얼마나 남았는지 알아야 한다.
+            적응 기간이면 낮춘 목표를 보여 준다(아래 판정줄이 왜 낮은지 설명한다). */
          + '<div class="mc-num"><label>' + (function(){ var g=_mpGoal(d.map);
-             return _k ? ('처치 ' + (g>0 ? '<b style="color:#e58e51">/ '+g.toLocaleString()+'</b>' : '(마리)'))
-                       : ('Monsters' + (g>0 ? ' / '+g.toLocaleString() : '')); })() + '</label><div class="mc-field">'
-         + '<input class="ade" id="mc-kills" inputmode="numeric" placeholder="' + ((_mpGoal(d.map)>0) ? String(_mpGoal(d.map)) : '1240') + '"></div></div>'
+             return _k ? ('처치 ' + (g ? '<b style="color:#e58e51">/ '+g.goal.toLocaleString()+'</b>' : '(마리)'))
+                       : ('Monsters' + (g ? ' / '+g.goal.toLocaleString() : '')); })() + '</label><div class="mc-field">'
+         + '<input class="ade" id="mc-kills" inputmode="numeric" placeholder="' + (function(){ var g=_mpGoal(d.map); return g ? String(g.goal) : '1240'; })() + '"></div></div>'
          + '<div class="mc-num wide2"><label>' + (_k ? '획득 메소' : 'Meso gained') + '</label><div class="mc-field">'
          + '<input class="ade" id="mc-ade" inputmode="numeric" placeholder="12,400,000"></div></div></div>';
     } else {
@@ -70851,12 +70896,16 @@ console.info('AUTO100 build applied',AUTO100_BUILD.version,v3Audit());
           var _kv2 = String((document.getElementById('mc-kills') || {}).value || '').replace(/[^0-9]/g, '');
           if(!_kv2){ msg += ' <span class="tag warn">' + (_k ? '처치 몬스터를 적어요' : 'monsters killed?') + '</span>'; ready = false; }
           else {
-            var _kn = Number(_kv2), _goal = _mpGoal(d.map);
+            var _kn = Number(_kv2), _g = _mpGoal(d.map);
             var _ex = '<b>' + _kn.toLocaleString() + (_k ? '마리' : '') + '</b>';
-            if(_goal > 0){
-              var _pc2 = Math.round(_kn / _goal * 100), _ok2 = _kn >= _goal * 0.8;
+            if(_g){
+              var _pc2 = Math.round(_kn / _g.goal * 100), _ok2 = _kn >= _g.goal * 0.8;
               msg = '<span class="tag ' + (_ok2 ? 'ok' : 'bad') + '">' + (_ok2 ? (_k ? '통과' : 'pass') : (_k ? '미달' : 'below')) + '</span>'
-                  + _ex + ' · ' + (_k ? '목표 ' : 'goal ') + _goal.toLocaleString() + ' · <b>' + _pc2 + '%</b>'
+                  + _ex + ' · ' + (_k ? '목표 ' : 'goal ') + _g.goal.toLocaleString() + ' · <b>' + _pc2 + '%</b>'
+                  /* [v1429] 낮은 목표를 쓰는 중이면 반드시 말한다 — 왜 낮은지, 언제 끝나는지.
+                     안 적으면 목표가 6500 으로 올라가는 날 본인은 이유도 모르고 '미달' 을 본다. */
+                  + (_g.isNew ? ' <span class="tag warn">' + (_k ? ('적응 기간 D-' + _g.dleft) : ('settling in · ' + _g.dleft + 'd')) + '</span>'
+                              + '<span style="color:#6f6f6a">' + (_k ? ' 그 뒤 ' : ' then ') + _g.full.toLocaleString() + '</span>' : '')
                   + (calc.leveledUp ? ' · <span class="tag warn">LEVEL UP</span>' : '')
                   + ' <span style="color:#6f6f6a">· EXP +' + fmt2(calc.gain) + '%</span>';
             } else {
