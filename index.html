@@ -4,7 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
 <title>ARASAKA Corp</title>
-<!-- BUILD: v1422 | 내 성적에서 오렌 시간이 빠지던 것 · 손잡이 글자 · 로그 점프 -->
+<!-- BUILD: v1423 | PC23 메이플 플래닛 — 자체 계정 카드와 메이플 전용 리포트 -->
 <!-- v745 기록은 git 이력(v1302 이전 커밋)에 있다 — 100KB 변경사 주석을 배포에서 제거 -->
 <!-- [v677] a <link href> cannot read a CSS variable, so the favicon carries its own copy.
      64px: a browser tab draws it at 16-32px, so this is 2x-DPR sharp at 11KB. -->
@@ -35414,6 +35414,24 @@ function _srIsTrainingClient(nm){
   if(nm == null && typeof _srSession !== 'undefined' && _srSession) nm = _srSession.client;
   return /training|훈련|연습/i.test(String(nm == null ? '' : nm));
 }
+/* ═══ [v1423] 메이플 플래닛 (PC23) ═══════════════════════════════════════════
+   boss "PC 23번이 우리 자체적으로 메이플플래닛이라는 게임이 돌아가고 있으니까 …
+         리니지 클래식 클라이언트 카드들과는 차별화"
+   이건 손님 계정이 아니라 우리 계정이다. 그래서 리포트에 적는 것도 다르다 —
+   사냥터 · 현재 레벨 · 처치 몬스터 · 획득 경험치 · 획득 메소 · 사망 · 거짓말 탐지기.
+   판별은 두 갈래로 본다. 클라 풀에 game:'maple' 이 있으면 그것이 진짜이고,
+   못 찾으면 이름으로 본다(로그인 전·자료 도착 전에도 폼이 맞게 뜨도록). */
+function _srIsMapleClient(nm){
+  if(nm == null && typeof _srSession !== 'undefined' && _srSession) nm = _srSession.client;
+  nm = String(nm == null ? '' : nm).trim();
+  if(!nm) return false;
+  try{
+    var pool = (typeof CLIENTS !== 'undefined' && Array.isArray(CLIENTS)) ? CLIENTS : null;
+    if(pool){ for(var i=0;i<pool.length;i++){ var c=pool[i];
+      if(c && String(c.name||'').trim() === nm) return String(c.game||'') === 'maple'; } }
+  }catch(_){}
+  return /메이플|maple/i.test(nm);
+}
 function _srTypoMax(lv, clientName){
   /* [v842] boss 8/21 (WILD 전달): "jeff and ron got more than 2.5% exp, and cannot report".
      Ron=인천남자쌤 Lv51 'Oren -3 Hour Map', Jeff=검쌤 Lv41 'Dragon Valley F3-4' — 버프/이벤트 맵에서
@@ -35424,6 +35442,10 @@ function _srTypoMax(lv, clientName){
      되면 이 숫자만 올리면 된다 — 가드 자체는 지우지 말 것. */
   lv = Number(lv)||0;
   if(_srIsTrainingClient(clientName)) return _SR_TRAIN_MAX;
+  /* [v1423] 메이플은 리니지와 게인 크기가 다르다 — 아직 실측이 없으므로 훈련과 같은 12 로 둔다.
+     가드의 목적은 10배 오타(4.5 칠 걸 45)를 잡는 것이고 12 는 그걸 여전히 전부 잡는다.
+     메이플 리포트가 쌓여 정상 게인이 보이면 이 숫자를 그때 조인다 — 지우지는 말 것. */
+  if(_srIsMapleClient(clientName)) return _SR_TRAIN_MAX;
   /* [v843] boss 8/21: "if ATS MAP detected in report -> there is no exp limit" — ATS(Blessed)는
      게인 천장이 사실상 없는 맵이라 상한 자체를 뺀다. 맵 감지는 기존 존 감지(_rcZone)와 같은
      규칙(blessed/ats 부분일치), 세션의 현재 맵에서 읽는다. 다른 맵은 8 유지 — 오타 방어 계속. */
@@ -35948,7 +35970,20 @@ async function _srSubmitReport(kind,screen){
         booster:(sess?sess.booster:_srBooster()), client:name, no:gear.no, pc:pc,
         threadId:((sess&&sess.threadId)?sess.threadId:_srThread()), weapon:gear.weapon, armor:gear.armor, ac:gear.ac, classJob:gear.classJob,
         date:date, map:mapFull, dead:0, potion:0, drop:0, note:'' };
-      for(var k in o) r[k]=o[k]; return r;
+      for(var k in o) r[k]=o[k];
+      /* [v1423] 메이플 전용 칸을 얹는다 — 리니지 줄에는 절대 안 붙는다.
+         EXP·메소는 리니지와 같은 모양(before/after)으로 이미 계산돼 들어와 있고,
+         여기 붙는 것은 메이플에만 있는 것들이다: 처치 몬스터 · 거짓말 탐지기 · 직원이
+         실제로 친 증가분(kills/mesoGain/expGain). 증가분을 따로 남기는 이유는
+         나중에 "직원이 뭘 봤나" 를 되짚을 수 있어야 하기 때문이다 — 계산값만 남기면
+         화면에 뭐가 떠 있었는지는 영영 알 수 없다. */
+      try{
+        if(window._mpExtra && r.tag !== 'checkin'){
+          r.game = 'maple';
+          for(var mk in window._mpExtra) if(r[mk] === undefined) r[mk] = window._mpExtra[mk];
+        } else if(window._mpExtra){ r.game = 'maple'; }
+      }catch(_){}
+      return r;
     }
     if(kind==='checkin'){
       _srLastCard={sig:'',t:0};   // [v404] new shift starts clean so a check-out can only match THIS shift's reports
@@ -70154,6 +70189,34 @@ console.info('AUTO100 build applied',AUTO100_BUILD.version,v3Audit());
 #mc-layer .mc-draft .mc-dh{display:flex;align-items:center;gap:10px;margin-bottom:10px;font-size:12px;font-weight:700;color:#c9963a}
 #mc-layer .mc-draft .mc-dh .mc-dx{margin-left:auto;font-weight:500;color:#6f6f6a;cursor:pointer;font-size:11.5px}
 #mc-layer .mc-draft .mc-dh .mc-dx:hover{color:#a9a9a3}
+/* ═══ [v1423] 메이플 판 — 리니지 금색과 눈으로 갈린다 ═════════════════════════
+   boss "리니지 클래식 클라이언트 카드들과는 차별화 · 인터페이스는 좀 퀄리티 좋게"
+   색만 바꾸는 게 아니라 '무엇을 재는 판인지'가 달라 보여야 한다. 리니지 판은
+   화면 숫자를 옮겨 적는 판(금색·뺄셈)이고, 메이플 판은 이번 시간에 얻은 것을
+   세는 판(단풍색·덧셈)이다. 그래서 칸 셋이 나란히 서고 단위가 크게 붙는다. */
+#mc-layer .mc-draft:has(.mc-nums.mp){border-color:#d97a3a;background:#1e1a17}
+#mc-layer .mc-draft:has(.mc-nums.mp) .mc-dh{color:#e58e51}
+#mc-layer .mc-nums.mp{display:grid;grid-template-columns:1fr 1fr;gap:8px}
+#mc-layer .mc-nums.mp .wide2{grid-column:1 / -1}   /* 메소 — 여덟 자리가 통째로 보이게 한 줄 */
+#mc-layer .mc-nums.mp .mc-num label{color:#b78a67;letter-spacing:.01em}
+#mc-layer .mc-nums.mp .mc-field{border-color:rgba(217,122,58,.45);background:rgba(217,122,58,.07)}
+#mc-layer .mc-nums.mp .mc-field:focus-within{border-color:#e58e51;background:rgba(217,122,58,.13)}
+#mc-layer .mc-nums.mp .mc-field .unit{color:#b78a67}
+/* 여덟 자리 메소가 칸을 넘지 않게 — 숫자가 길수록 글자를 줄이는 게 아니라 칸에 맞춘다 */
+#mc-layer .mc-nums.mp input{font-variant-numeric:tabular-nums;font-size:15px;min-width:0;width:100%}
+#mc-layer .mc-nums.mp .mc-field{min-width:0;overflow:hidden}
+#mc-layer .mc-nums.mp .unit{flex:0 0 auto;white-space:nowrap}
+@media (max-width:340px){#mc-layer .mc-nums.mp{grid-template-columns:1fr}}
+/* 거짓말 탐지기 — 안 걸린 것이 정상이므로 꺼진 모습이 기본값처럼 조용해야 한다 */
+#mc-layer .mc-ld{display:flex;align-items:center;gap:7px;margin-top:10px;flex-wrap:wrap}
+#mc-layer .mc-ld-t{font-size:11px;font-weight:700;color:#b78a67;letter-spacing:.02em}
+#mc-layer .mc-ldb{font:inherit;font-size:11px;font-weight:600;padding:4px 11px;border-radius:999px;
+  border:1px solid rgba(217,122,58,.35);background:transparent;color:#8c8880;cursor:pointer;
+  transition:background .14s ease,color .14s ease,border-color .14s ease}
+#mc-layer .mc-ldb:hover{border-color:rgba(217,122,58,.6);color:#c9c6c0}
+#mc-layer .mc-ldb.on{background:#c0472f;border-color:#c0472f;color:#fff}   /* 걸림 = 사고 신호라 붉게 */
+#mc-layer .mc-ldb:focus-visible{outline:2px solid #e58e51;outline-offset:2px}
+#mc-layer .mc-ld-n{font-size:10.5px;color:#6f6f6a;margin-left:auto}
 #mc-layer .mc-drop{position:relative;height:74px;border:1.5px dashed #3a3a40;border-radius:12px;display:flex;align-items:center;justify-content:center;color:#6f6f6a;font-size:12.5px;cursor:pointer;user-select:none;transition:border-color .2s,background .2s;overflow:hidden}
 #mc-layer .mc-drop:hover,#mc-layer .mc-drop.over{border-color:#c9963a;color:#a9a9a3}
 #mc-layer .mc-drop.has{border-style:solid;border-color:#5cc8be;background:rgba(92,200,190,.08);color:#5cc8be;animation:mcSuck .5s cubic-bezier(.2,.9,.3,1.1) both}
@@ -70514,6 +70577,8 @@ console.info('AUTO100 build applied',AUTO100_BUILD.version,v3Audit());
     else drawDraft();
   }
   function closeDraft(){ MC.draft = null; try{ _srShots.update = null; _srShots.checkin = null; }catch(_){} var d = document.getElementById('mc-draft'); if(d) d.innerHTML = ''; var hd = document.getElementById('mc-handle'); if(hd) hd.classList.remove('hidden'); }
+  /* [v1423] 이 카드가 메이플이냐 — 카드 이름으로 클라 풀을 본다(_srIsMapleClient) */
+  function isMp(){ try{ return typeof _srIsMapleClient === 'function' && _srIsMapleClient(MC.client); }catch(_){ return false; } }
   function drawDraft(){
     var d = MC.draft, host = document.getElementById('mc-draft'); if(!d || !host) return;
     var _k = ko(), scr = d.first ? 'checkin' : 'update';
@@ -70524,16 +70589,43 @@ console.info('AUTO100 build applied',AUTO100_BUILD.version,v3Audit());
     var h = '<div class="mc-draft"><div class="mc-dh"><span>' + title + '</span><span class="mc-dx" id="mc-dx">' + (_k ? '접기' : 'close') + '</span></div>';
     if(d.first && typeof _srSession !== 'undefined' && _srSession && _srSession.client) h += '<div class="mc-note">' + (_k ? esc(_srSession.client) + ' 시프트가 열려 있어요. 이 줄을 앉히면 이 카드에서 새로 시작합니다.' : esc(_srSession.client) + ' shift is open — seating this line starts fresh on this card.') + '</div>';
     h += '<div class="mc-drop" id="sr-drop-' + scr + '"><input type="file" id="mc-file" accept="image/*" style="display:none"><span class="idle">🖼 ' + (_k ? '여기에 사진 던지기 · 붙여넣기(Ctrl+V) · 눌러서 고르기' : 'Drop a screenshot · paste (Ctrl+V) · tap to pick') + '</span><span class="done">📷 ' + (_k ? '사진 붙음' : 'photo attached') + '</span><div class="sr-shot-prev" id="sr-prevshot-' + scr + '"></div></div>';
+    if(isMp() && !d.first){
+      /* ═══ [v1423] 메이플 판 — 리니지와 재는 방식 자체가 다르다 ═══════════════
+         리니지는 '화면에 뜬 숫자'를 적고 앞 줄과 빼서 증가분을 만든다. 메이플은
+         사장님 지정대로 직원이 '이번 시간에 얻은 것'을 그대로 적는다. 그래서 칸이
+         뺄셈이 아니라 덧셈이다 — 앞자리 붙이기(mc-pre)도, 두 자리 치기도 없다.
+         저장은 리니지와 같은 모양(before/after)으로 바꿔서 넣는다. 그래야 채점·
+         레이스·기록·통계가 손대지 않고 그대로 돈다 (사장님 "리니지와 똑같이 채점").
+         id 는 mc-exp · mc-ade 를 그대로 쓴다 — 아래 이벤트 연결이 공용이라 이름을
+         바꾸면 두 벌을 관리하게 된다. 뜻만 바뀐다: 절대값이 아니라 획득분. */
+      /* 짧은 둘(경험치·처치)을 나란히, 긴 하나(메소)를 그 아래 한 줄로. 메소는 여덟 자리라
+         셋을 나란히 놓으면 반드시 잘린다 — 자릿수가 잘리는 칸은 오히려 오타를 부른다. */
+      h += '<div class="mc-nums mp"><div class="mc-num"><label>' + (_k ? '획득 경험치' : 'EXP gained') + '</label><div class="mc-field">'
+         + '<input class="wide" id="mc-exp" inputmode="decimal" placeholder="1.24"><span class="unit">%</span></div></div>'
+         + '<div class="mc-num"><label>' + (_k ? '처치 (마리)' : 'Monsters') + '</label><div class="mc-field">'
+         + '<input class="ade" id="mc-kills" inputmode="numeric" placeholder="1240"></div></div>'
+         + '<div class="mc-num wide2"><label>' + (_k ? '획득 메소' : 'Meso gained') + '</label><div class="mc-field">'
+         + '<input class="ade" id="mc-ade" inputmode="numeric" placeholder="12,400,000"></div></div></div>';
+    } else {
     h += '<div class="mc-nums"><div class="mc-num"><label>EXP' + (d.first ? (_k ? ' · 지금 화면 그대로' : ' · as on screen') : '') + '</label><div class="mc-field">'
        + (d.first ? '<input class="wide" id="mc-exp" inputmode="decimal" placeholder="' + (isFinite(d.prev.exp) ? fmt2(d.prev.exp) : '0.00') + '" value="' + (isFinite(d.prev.exp) ? fmt2(d.prev.exp) : '') + '">'
                   : '<span class="pre" id="mc-pre">' + esc(preExp) + '</span><input id="mc-exp" inputmode="decimal" maxlength="6" placeholder="' + (isFinite(d.prev.exp) ? ('0' + String(Math.round((d.prev.exp % 1) * 100))).slice(-2) : '00') + '">')
        + '<span class="unit">%</span></div></div>'
-       + '<div class="mc-num"><label>' + (_k ? '아데나' : 'Adena') + '</label><div class="mc-field"><input class="ade" id="mc-ade" inputmode="numeric" placeholder="' + (isFinite(d.prev.adena) ? String(Math.round(d.prev.adena)) : '0') + '" value="' + (isFinite(d.prev.adena) ? String(Math.round(d.prev.adena)) : '') + '"></div></div></div>';
+       + '<div class="mc-num"><label>' + (isMp() ? (_k ? '메소' : 'Meso') : (_k ? '아데나' : 'Adena')) + '</label><div class="mc-field"><input class="ade" id="mc-ade" inputmode="numeric" placeholder="' + (isFinite(d.prev.adena) ? String(Math.round(d.prev.adena)) : '0') + '" value="' + (isFinite(d.prev.adena) ? String(Math.round(d.prev.adena)) : '') + '"></div></div></div>';
+    }
     h += '<div class="mc-first"><span class="mc-chip" id="mc-lvchip">Lv <b id="mc-lvv">' + (isFinite(d.prev.lv) ? Math.round(d.prev.lv) : '?') + '</b>' + (d.first ? '<input id="mc-lv" inputmode="numeric" style="display:none;width:4ch;background:transparent;border:none;border-bottom:1px solid #c9963a;color:#ecebe6;font:inherit;outline:none" value="' + (isFinite(d.prev.lv) ? Math.round(d.prev.lv) : '') + '">' : '') + '</span>'
        + '<span class="mc-chip" id="mc-mapchip" title="' + (_k ? '사냥터' : 'map') + '">🗺 <b>' + esc((typeof _mapDisp === 'function' ? _mapDisp(d.map) : d.map) || (_k ? '사냥터 고르기' : 'pick a map')) + '</b></span></div>';
     if(d.showMaps) h += '<div class="mc-maps">' + d.maps.map(function(m){ return '<button data-m="' + esc(m) + '"' + (m === d.map ? ' class="sel"' : '') + '>' + esc(typeof _mapDisp === 'function' ? _mapDisp(m) : m) + '</button>'; }).join('') + '</div>';
+    /* [v1423] 거짓말 탐지기 — 메이플에만 있다. 안 걸린 것이 정상이므로 기본은 꺼짐이고,
+       걸렸을 때만 누른다. 안 뜬 시간에는 아무것도 안 눌러도 되게(빈 칸 강요 금지). */
+    if(isMp() && !d.first){
+      h += '<div class="mc-ld"><span class="mc-ld-t">' + (_k ? '거짓말 탐지기' : 'Lie detector') + '</span>'
+         + '<button type="button" class="mc-ldb' + (d.ldShape ? ' on' : '') + '" id="mc-ld-shape" aria-pressed="' + (d.ldShape ? 'true' : 'false') + '">' + (_k ? '도형' : 'Shape') + '</button>'
+         + '<button type="button" class="mc-ldb' + (d.ldWhite ? ' on' : '') + '" id="mc-ld-white" aria-pressed="' + (d.ldWhite ? 'true' : 'false') + '">' + (_k ? '흰색' : 'White') + '</button>'
+         + '<span class="mc-ld-n">' + (_k ? '걸렸으면 누르기' : 'tap if caught') + '</span></div>';
+    }
     h += '<div class="mc-judge" id="mc-judge"></div>'
-       + (d.first ? '' : '<label style="display:flex;align-items:center;gap:6px;font-size:11.5px;color:#6f6f6a;margin-top:8px;cursor:pointer"><input type="checkbox" id="mc-death"> ' + (_k ? '이 시간에 죽었어요 (화면 숫자 그대로 입력)' : 'Died this hour (type what the bar shows)') + '</label>')
+       + (d.first ? '' : '<label style="display:flex;align-items:center;gap:6px;font-size:11.5px;color:#6f6f6a;margin-top:8px;cursor:pointer"><input type="checkbox" id="mc-death"> ' + (isMp() ? (_k ? '이 시간에 죽었어요' : 'Died this hour') : (_k ? '이 시간에 죽었어요 (화면 숫자 그대로 입력)' : 'Died this hour (type what the bar shows)')) + '</label>')
        + '<button class="mc-seat" id="mc-seat" disabled>' + (d.first ? (_k ? '앉히기 · 시작' : 'Seat · start') : (ending ? (_k ? '앉히기 · 오늘 끝' : 'Seat · end today') : (_k ? '앉히기' : 'Seat'))) + '</button></div>';
     host.innerHTML = h;
     var drop = document.getElementById('sr-drop-' + scr), file = document.getElementById('mc-file');
@@ -70550,6 +70642,27 @@ console.info('AUTO100 build applied',AUTO100_BUILD.version,v3Audit());
     var pre = document.getElementById('mc-pre'); if(pre) pre.addEventListener('click', function(){ var i = document.getElementById('mc-exp'); i.value = preExp + i.value; i.maxLength = 6; i.classList.add('wide'); pre.style.display = 'none'; i.focus(); judge(); });
     var lvc = document.getElementById('mc-lvchip'), lvi = document.getElementById('mc-lv'); if(lvc && lvi) lvc.addEventListener('click', function(){ document.getElementById('mc-lvv').style.display = 'none'; lvi.style.display = ''; lvi.focus(); });
     if(lvi) lvi.addEventListener('input', judge);
+    /* [v1423] 메이플 전용 칸의 연결 — 없으면 조용히 지나간다(리니지 카드는 영향 없음) */
+    var kEl = document.getElementById('mc-kills'); if(kEl) kEl.addEventListener('input', judge);
+    /* [v1423] 메소는 여덟 자리다. 1,240만을 124만으로 잘못 읽는 것이 이 칸에서 가장 흔한
+       사고이므로, 치는 동안 세 자리마다 쉼표를 넣어 자릿수가 눈에 보이게 한다.
+       저장할 때는 어차피 숫자만 뽑으므로(쉼표는 걸러진다) 값에는 영향이 없다. */
+    if(isMp() && !d.first){
+      var aEl = document.getElementById('mc-ade');
+      if(aEl) aEl.addEventListener('input', function(){
+        var digits = String(aEl.value || '').replace(/[^0-9]/g, '');
+        aEl.value = digits ? digits.replace(/\B(?=(\d{3})+(?!\d))/g, ',') : '';
+      });
+    }
+    [['mc-ld-shape','ldShape'],['mc-ld-white','ldWhite']].forEach(function(p){
+      var b = document.getElementById(p[0]); if(!b) return;
+      b.addEventListener('click', function(){                 /* 다시 그리지 않는다 — 치던 숫자에서 손이 안 튕기게 */
+        d[p[1]] = !d[p[1]];
+        b.classList.toggle('on', !!d[p[1]]);
+        b.setAttribute('aria-pressed', d[p[1]] ? 'true' : 'false');
+        judge();
+      });
+    });
     document.getElementById('mc-mapchip').addEventListener('click', function(){ d.showMaps = !d.showMaps; drawDraft(); });
     document.querySelectorAll('#mc-draft .mc-maps button').forEach(function(b){ b.addEventListener('click', function(){ d.map = b.getAttribute('data-m'); d.showMaps = false; drawDraft(); }); });
     document.getElementById('mc-seat').addEventListener('click', seat);
@@ -70565,6 +70678,18 @@ console.info('AUTO100 build applied',AUTO100_BUILD.version,v3Audit());
     if(!raw) return null;
     var death = !!(document.getElementById('mc-death') && document.getElementById('mc-death').checked);
     if(d.first) return { raw:raw, val:parseFloat(raw), death:false };
+    /* [v1423] 메이플은 '이번 시간에 얻은 %' 를 친다. 저장·채점은 리니지와 같은 절대값
+       사슬로 가야 하므로 여기서 앞 줄에 더해 절대값으로 바꾼다. 100 을 넘으면 레벨업이라
+       한 바퀴 빼고 새 레벨의 소수부만 남긴다 — _srApplyExp 가 그걸 레벨업으로 읽는다.
+       사망이면 얻은 게 아니라 잃은 것이므로 음수를 그대로 받는다. */
+    if(isMp()){
+      var g = parseFloat(raw); if(!isFinite(g)) return null;
+      var base = isFinite(d.prev.exp) ? d.prev.exp : 0;
+      var v = base + g;
+      while(v >= 100) v -= 100;
+      if(v < 0) v = 0;
+      return { raw:fmt2(v), val:v, death:death, gain:g };
+    }
     var full = raw, preEl = document.getElementById('mc-pre');
     if(preEl && preEl.style.display !== 'none' && /^\d{1,2}$/.test(raw) && isFinite(d.prev.exp)){
       var ip = Math.floor(d.prev.exp), dec = parseInt(raw, 10) / 100, v = ip + dec;
@@ -70597,6 +70722,12 @@ console.info('AUTO100 build applied',AUTO100_BUILD.version,v3Audit());
         else msg = '<b>+' + fmt2(g) + '%</b> · ' + (_k ? '기준 없음' : 'no standard') + (calc.leveledUp ? ' · <span class="tag warn">LEVEL UP</span>' : '');
         if(calc.hot) msg += ' <span class="tag warn">' + (_k ? '높음 — 확인 물어봄' : 'high — will ask') + '</span>';
         ready = true;
+        /* [v1423] 메이플은 처치 몬스터도 받아야 채운 줄이다. 안 받으면 그 칸은 영원히
+           비어 있게 된다 — 쓰이지 않는 칸은 아무도 안 채운다(개인정보 폼에서 배운 것). */
+        if(isMp()){
+          var _kv2 = String((document.getElementById('mc-kills') || {}).value || '').replace(/[^0-9]/g, '');
+          if(!_kv2){ msg += ' <span class="tag warn">' + (_k ? '처치 몬스터를 적어요' : 'monsters killed?') + '</span>'; ready = false; }
+        }
       }
     }
     if(ready && !photo){ msg += ' <span style="color:#6f6f6a">· ' + (_k ? '사진이 없어요' : 'no photo') + '</span>'; ready = false; }
@@ -70611,6 +70742,24 @@ console.info('AUTO100 build applied',AUTO100_BUILD.version,v3Audit());
     var ok = false;
     try{
       var ade = String((document.getElementById('mc-ade') || {}).value || '').replace(/[^0-9.\-]/g, '');
+      /* ═══ [v1423] 메이플 — 친 것은 '획득분', 저장은 리니지와 같은 '누적' ═════════
+         메소 칸도 EXP 와 같다. 앞 줄의 누적에 이번에 얻은 만큼을 더해 넣는다.
+         그리고 메이플에만 있는 것(처치 몬스터·거탐·직원이 실제로 친 획득분)을
+         _mpExtra 에 담아 둔다 — mkRec 가 그 줄에만 얹는다.
+         획득분을 따로 남기는 이유: 계산된 누적만 남기면 나중에 직원 화면에 뭐가
+         떠 있었는지 되짚을 방법이 없다. 사람이 친 숫자는 사람이 친 그대로 남긴다. */
+      if(isMp() && !d.first){
+        var _mg = parseFloat(ade); if(!isFinite(_mg)) _mg = 0;
+        ade = String(Math.round((isFinite(d.prev.adena) ? d.prev.adena : 0) + _mg));
+        var _kv = parseFloat(String((document.getElementById('mc-kills') || {}).value || '').replace(/[^0-9]/g, ''));
+        window._mpExtra = {
+          kills:    isFinite(_kv) ? Math.round(_kv) : null,
+          mesoGain: Math.round(_mg),
+          expGain:  (r && isFinite(r.gain)) ? Number(r.gain.toFixed(2)) : null,
+          ldShape:  d.ldShape ? 1 : 0,
+          ldWhite:  d.ldWhite ? 1 : 0
+        };
+      } else { window._mpExtra = null; }
       if(d.first){
         /* 스텁 채우기 → _srCheckIn 이 읽는다 */
         var lv = parseFloat((document.getElementById('mc-lv') || {}).value || d.prev.lv);
@@ -70638,6 +70787,8 @@ console.info('AUTO100 build applied',AUTO100_BUILD.version,v3Audit());
         ok = await _srFinishSubmit(kind, 'update');
       }
     }catch(e){ try{ console.error('[mc] seat', e); }catch(_){} try{ _srToast((e && e.message) || 'error'); }catch(_){} ok = false; }
+    /* [v1423] 메이플 칸은 이 줄에서만 쓰고 반드시 치운다 — 남겨 두면 다음 리니지 줄에 얹힌다 */
+    try{ window._mpExtra = null; }catch(_){}
     if(!ok){ seatB.disabled = false; seatB.textContent = _k ? '앉히기' : 'Seat'; seatB.classList.add('ready'); return; }
     MC.draft = null;
     try{ _srShots.update = null; _srShots.checkin = null; }catch(_){}
