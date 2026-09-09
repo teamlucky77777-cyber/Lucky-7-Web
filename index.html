@@ -4,7 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
 <title>ARASAKA Corp</title>
-<!-- BUILD: v1427 | 문의 카드가 놓는 즉시 그 자리로 (새로고침 필요 없음) -->
+<!-- BUILD: v1428 | 메이플 사냥터 Bugi · 판정을 마릿수(목표 6500)로 -->
 <!-- v745 기록은 git 이력(v1302 이전 커밋)에 있다 — 100KB 변경사 주석을 배포에서 제거 -->
 <!-- [v677] a <link href> cannot read a CSS variable, so the favicon carries its own copy.
      64px: a browser tab draws it at 16-32px, so this is 2x-DPR sharp at 11KB. -->
@@ -70641,8 +70641,45 @@ console.info('AUTO100 build applied',AUTO100_BUILD.version,v3Audit());
     var push = function(full){ full = String(full || '').trim(); if(!full || seen[full]) return; seen[full] = 1; out.push(full); };
     try{ var ls = lines(); for(var i = ls.length - 1; i >= 0; i--) push(ls[i].map); }catch(_){}
     try{ var all = window._srRecAll; if(all && Array.isArray(all.sessions)){ var cnt = {}; all.sessions.forEach(function(s){ if(s && clKey(s.client) === MC.key && s.map) cnt[s.map] = (cnt[s.map] || 0) + 1; }); Object.keys(cnt).sort(function(a, b){ return cnt[b] - cnt[a]; }).forEach(push); } }catch(_){}
+    /* ═══ [v1428] 메이플 카드에는 메이플 사냥터만 ═══════════════════════════════
+       boss "메이플 사냥터는 현재 하나밖에 없어 · 이름 Bugi 임"
+       아래 _srMapGroups 는 리니지 사냥터 목록이다. 메이플 카드에서 그걸 채워 주면
+       직원이 리니지 사냥터를 고르게 되고, 그 시간은 어느 기준에도 안 붙는다.
+       메이플은 제 기준표 카드(기준 EXP 화면에서 고칠 수 있다)에서만 가져온다 —
+       사냥터가 늘면 거기 한 줄 추가하면 화면에 바로 뜬다. */
+    if(isMp()){
+      try{
+        var mc = _mpCard();
+        (mc && Array.isArray(mc.maps) ? mc.maps : []).forEach(function(m){ push(m && (m.en || m.ko)); });
+      }catch(_){}
+      return out;
+    }
     try{ if(out.length < 3 && typeof _srMapGroups === 'function') _srMapGroups().forEach(function(g){ (g.maps || []).forEach(function(m){ if(!m.excl && out.length < 8) push(m.full); }); }); }catch(_){}
     return out;
+  }
+  /* [v1428] 이 메이플 카드의 기준표 — 사냥터와 시간당 목표 마릿수가 여기 있다 */
+  function _mpCard(){
+    try{
+      /* 기준표(calc_data 'clients')는 _rcGetCache 가 들고 있다 — 기록·통계가 쓰는 그 자료 그대로 */
+      var cz = (typeof _rcGetCache === 'function') ? _rcGetCache() : null;
+      var all = (cz && Array.isArray(cz.clients)) ? cz.clients : null;
+      if(!all && Array.isArray(window._csClients)) all = window._csClients;
+      if(!Array.isArray(all)) return null;
+      var k = clKey(MC.client);
+      for(var i=0;i<all.length;i++){ if(all[i] && clKey(all[i].name) === k) return all[i]; }
+    }catch(_){}
+    return null;
+  }
+  /* [v1428] 지금 고른 사냥터의 시간당 목표 마릿수 (없으면 null) */
+  function _mpGoal(mapName){
+    try{
+      var c = _mpCard(); if(!c || !Array.isArray(c.maps)) return null;
+      var want = String(mapName||'').trim().toLowerCase();
+      for(var i=0;i<c.maps.length;i++){ var m=c.maps[i]; if(!m) continue;
+        var en=String(m.en||'').trim().toLowerCase(), ko=String(m.ko||'').trim().toLowerCase();
+        if((en && en===want) || (ko && ko===want)){ var g=Number(m.killGoal); return isFinite(g)&&g>0 ? g : null; } }
+    }catch(_){}
+    return null;
   }
   function openDraft(endDay){
     if(MC.draft) { if(endDay){ MC.draft.end = true; drawDraft(); } return; }
@@ -70679,8 +70716,11 @@ console.info('AUTO100 build applied',AUTO100_BUILD.version,v3Audit());
          셋을 나란히 놓으면 반드시 잘린다 — 자릿수가 잘리는 칸은 오히려 오타를 부른다. */
       h += '<div class="mc-nums mp"><div class="mc-num"><label>' + (_k ? '획득 경험치' : 'EXP gained') + '</label><div class="mc-field">'
          + '<input class="wide" id="mc-exp" inputmode="decimal" placeholder="1.24"><span class="unit">%</span></div></div>'
-         + '<div class="mc-num"><label>' + (_k ? '처치 (마리)' : 'Monsters') + '</label><div class="mc-field">'
-         + '<input class="ade" id="mc-kills" inputmode="numeric" placeholder="1240"></div></div>'
+         /* [v1428] 목표를 칸 이름에 붙인다 — 치면서 얼마나 남았는지 알아야 한다 */
+         + '<div class="mc-num"><label>' + (function(){ var g=_mpGoal(d.map);
+             return _k ? ('처치 ' + (g>0 ? '<b style="color:#e58e51">/ '+g.toLocaleString()+'</b>' : '(마리)'))
+                       : ('Monsters' + (g>0 ? ' / '+g.toLocaleString() : '')); })() + '</label><div class="mc-field">'
+         + '<input class="ade" id="mc-kills" inputmode="numeric" placeholder="' + ((_mpGoal(d.map)>0) ? String(_mpGoal(d.map)) : '1240') + '"></div></div>'
          + '<div class="mc-num wide2"><label>' + (_k ? '획득 메소' : 'Meso gained') + '</label><div class="mc-field">'
          + '<input class="ade" id="mc-ade" inputmode="numeric" placeholder="12,400,000"></div></div></div>';
     } else {
@@ -70799,11 +70839,31 @@ console.info('AUTO100 build applied',AUTO100_BUILD.version,v3Audit());
         else msg = '<b>+' + fmt2(g) + '%</b> · ' + (_k ? '기준 없음' : 'no standard') + (calc.leveledUp ? ' · <span class="tag warn">LEVEL UP</span>' : '');
         if(calc.hot) msg += ' <span class="tag warn">' + (_k ? '높음 — 확인 물어봄' : 'high — will ask') + '</span>';
         ready = true;
-        /* [v1423] 메이플은 처치 몬스터도 받아야 채운 줄이다. 안 받으면 그 칸은 영원히
-           비어 있게 된다 — 쓰이지 않는 칸은 아무도 안 채운다(개인정보 폼에서 배운 것). */
+        /* ═══ [v1428] 메이플은 마릿수로 잰다 ═══════════════════════════════════
+           boss "사냥터별 시간당 목표 Goal이 마릿수 6500 마리임 · Bugi가 그래"
+           리니지는 EXP % 로 재고 메이플은 처치 마릿수로 잰다. 재는 것이 다르니
+           판정 문장도 EXP 가 아니라 마릿수로 다시 쓴다 — 화면이 실제로 무엇을
+           보고 통과·미달을 말하는지 숨기지 않는다.
+           EXP·메소는 그대로 적고 저장되지만 통과 여부를 가르지는 않는다.
+           통과선은 리니지와 같은 규칙(목표의 80%)을 쓴다 — 사장님이 안정/컷 값을
+           따로 주시면 그때 기준표에서 읽는다. */
         if(isMp()){
           var _kv2 = String((document.getElementById('mc-kills') || {}).value || '').replace(/[^0-9]/g, '');
           if(!_kv2){ msg += ' <span class="tag warn">' + (_k ? '처치 몬스터를 적어요' : 'monsters killed?') + '</span>'; ready = false; }
+          else {
+            var _kn = Number(_kv2), _goal = _mpGoal(d.map);
+            var _ex = '<b>' + _kn.toLocaleString() + (_k ? '마리' : '') + '</b>';
+            if(_goal > 0){
+              var _pc2 = Math.round(_kn / _goal * 100), _ok2 = _kn >= _goal * 0.8;
+              msg = '<span class="tag ' + (_ok2 ? 'ok' : 'bad') + '">' + (_ok2 ? (_k ? '통과' : 'pass') : (_k ? '미달' : 'below')) + '</span>'
+                  + _ex + ' · ' + (_k ? '목표 ' : 'goal ') + _goal.toLocaleString() + ' · <b>' + _pc2 + '%</b>'
+                  + (calc.leveledUp ? ' · <span class="tag warn">LEVEL UP</span>' : '')
+                  + ' <span style="color:#6f6f6a">· EXP +' + fmt2(calc.gain) + '%</span>';
+            } else {
+              msg = _ex + ' · <span style="color:#6f6f6a">' + (_k ? '이 사냥터 목표가 아직 없어요' : 'no goal for this map') + '</span>'
+                  + ' <span style="color:#6f6f6a">· EXP +' + fmt2(calc.gain) + '%</span>';
+            }
+          }
         }
       }
     }
