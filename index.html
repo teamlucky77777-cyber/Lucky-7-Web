@@ -4,7 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
 <title>ARASAKA Corp</title>
-<!-- BUILD: v1425 | 문의 카드를 PC 에 놓으면 단계 그대로 · 단계 바꾸기는 더블클릭 -->
+<!-- BUILD: v1426 | PC 붙은 문의 카드가 그 PC 자리로 옮겨간다 -->
 <!-- v745 기록은 git 이력(v1302 이전 커밋)에 있다 — 100KB 변경사 주석을 배포에서 제거 -->
 <!-- [v677] a <link href> cannot read a CSS variable, so the favicon carries its own copy.
      64px: a browser tab draws it at 16-32px, so this is 2x-DPR sharp at 11KB. -->
@@ -39676,7 +39676,8 @@ function _srRecCardHTML(data){
         var whoBits = [];
         if((iq.staff||[]).length) whoBits.push('👥 '+iq.staff.map(function(s){ return _pcbEsc(_pcbStaffName(s)); }).slice(0,3).join(' · ')+(iq.staff.length>3?' 외':''));
         if(iq.tester) whoBits.push('🧪 '+_pcbEsc(_pcbStaffName(iq.tester)));
-        return '<div class="sr-iqwrap st-'+st+'" data-iqid="'+iq.id+'" draggable="true"'
+        var _cardHTML = '<div class="sr-iqwrap st-'+st+'" data-iqid="'+iq.id+'"'
+          + (pcIt ? ' data-pc="'+_pcbEsc(String(pcIt.pc))+'"' : '') + ' draggable="true"'
           + ' onclick="_srIqPop(event,\''+iq.id+'\')" ondblclick="_srIqCycle(event,\''+iq.id+'\')"'
           + ' title="클릭 — 세부 정보 · 더블클릭 — 단계 전환">'
           + '<div class="sr-iqmini">'
@@ -39691,6 +39692,15 @@ function _srRecCardHTML(data){
           +   (chips.length ? '<div class="sr-iqchips">'+chips.map(function(c){ return '<span class="sr-iqchip">'+c+'</span>'; }).join('')+'</div>' : '')
           +   (whoBits.length ? '<div class="sr-iqmini-who">'+whoBits.join('&nbsp;&nbsp;')+'</div>' : '')
           + '</div></div>';
+        /* [v1426] PC 가 붙어 있고 그 PC 에 클라 카드가 없으면 — 그 PC 자리로 보낸다.
+           여기서 '' 를 돌려주면 맨 뒤 줄에서는 빠지고, 격자가 블랭크 대신 이 카드를 그린다. */
+        try{
+          var _pn = pcIt ? Number(pcIt.pc) : 0;
+          if(_pn > 0 && window._srIqByPc && !(window._srSeenPc && window._srSeenPc[_pn]) && !window._srIqByPc[_pn]){
+            window._srIqByPc[_pn] = _cardHTML; return '';
+          }
+        }catch(_){}
+        return _cardHTML;
       }).join('');
     }catch(e){ console.warn('iq cards:', e); return ''; }
   };
@@ -39906,13 +39916,32 @@ function _srRecCardHTML(data){
   var _boardPcs=[]; try{ var _lst=(typeof pcsShown==='function')?pcsShown():((typeof PCS!=='undefined'&&Array.isArray(PCS))?PCS:[]); _lst.forEach(function(p){ if(!p||p.status==='offline'||p.hidden) return; var pn=Number(p.id); if(isFinite(pn)&&pn>0) _boardPcs.push(pn); }); }catch(_){} _boardPcs.sort(function(a,b){ return a-b; });
   var _seenPc={}; clKeys.forEach(function(c){ var pn=Number(byClient[c]&&byClient[c].pc); if(isFinite(pn)&&pn>0) _seenPc[pn]=1; });
   var _blankI=0;
-  var _blankCard=function(pn){ return '<div class="sr-clcard sr-clcard-blank" aria-hidden="true" draggable="true" data-pc="'+pn+'"><div class="sr-clcard-top"><span class="sr-clcard-nm">—</span><span class="sr-clcard-pc">PC'+pn+'</span></div><div class="sr-clcard-blank-body">'+(_uiLang()==='ko'?'비어 있음':'Empty')+'</div></div>'; };
+  /* ═══ [v1426] 문의 카드를 제 PC 자리에 앉힌다 ═══════════════════════════════
+     boss "아니 화면에서 안 옮겨지잖아요"
+     v1425 에서 PC 를 붙이는 것까지는 됐는데(배지가 PC18 로 바뀐다) 카드는 그대로
+     맨 뒤에 있었다. 문의 카드를 클라 카드가 전부 끝난 다음에 몰아서 그렸기 때문이다.
+     PC 가 붙은 문의 카드는 그 PC 의 '비어 있음' 자리를 대신 차지한다 — 그래야
+     끌어다 놓은 손짓과 화면이 같은 말을 한다. PC 가 없거나(PC 미정) 그 PC 에 이미
+     클라 카드가 있으면 예전처럼 맨 뒤에 선다.
+     문의 카드를 먼저 만들어야 자리를 비켜 줄 수 있으므로 순서를 앞으로 당겼다. */
+  var _iqCards='';
+  try{ window._srSeenPc=_seenPc; window._srIqByPc={};
+       _iqCards=(typeof window._srIqCardsHTML==='function')?window._srIqCardsHTML():''; }catch(_){ _iqCards=''; }
+  var _iqAtPc=(window._srIqByPc||{});
+  var _blankCard=function(pn){
+    /* 이 PC 는 비어 있지 않다 — 문의가 앉아 있다. 꺼내 쓰고 목록에서 지운다(아래 그물용) */
+    if(_iqAtPc[pn]){ var _h=_iqAtPc[pn]; delete _iqAtPc[pn]; return _h; }
+    return '<div class="sr-clcard sr-clcard-blank" aria-hidden="true" draggable="true" data-pc="'+pn+'"><div class="sr-clcard-top"><span class="sr-clcard-nm">—</span><span class="sr-clcard-pc">PC'+pn+'</span></div><div class="sr-clcard-blank-body">'+(_uiLang()==='ko'?'비어 있음':'Empty')+'</div></div>'; };
   var _blanksUpTo=function(p){ while(_blankI<_boardPcs.length && _boardPcs[_blankI]<p){ var bn=_boardPcs[_blankI++]; if(!_seenPc[bn]) _realCards+=_blankCard(bn); } };
   clKeys.forEach(function(c,ci){ var h=_clCardOne(c,ci); if(_isTrainClient(byClient[c])){ _trainCards+=h; _trainN++; } else { var pn=Number(byClient[c].pc); if(isFinite(pn)&&pn>0) _blanksUpTo(pn); _realCards+=h; _realN++; } });
   if(_realN) _blanksUpTo(Infinity);
-  /* [v1351] 문의 카드(계정보드 파이프라인)가 클라별 맨 앞에 산다 + '＋ 문의' 타일 */
-  var _iqCards='';
-  try{ _iqCards=(typeof window._srIqCardsHTML==='function')?window._srIqCardsHTML():''; }catch(_){}
+  /* [v1426] 마지막 그물 — 자리를 못 찾은 문의 카드는 반드시 맨 뒤에 남긴다.
+     (그 PC 가 숨김·OFF 라 블랭크 줄에 안 나오거나, 클라 카드가 하나도 없어
+      블랭크 자체를 안 그리는 경우) 카드가 조용히 사라지는 일만은 없어야 한다. */
+  try{ Object.keys(_iqAtPc).forEach(function(k){ _iqCards += _iqAtPc[k]; delete _iqAtPc[k]; }); }catch(_){}
+  /* [v1351] 문의 카드(계정보드 파이프라인) + '＋ 문의' 타일
+     [v1426] _iqCards 는 위(블랭크 카드 정의 앞)에서 이미 만들었다 — PC 가 붙은 것은
+     제 PC 자리로 빠져나갔고, 여기 남은 것은 PC 미정이거나 그 PC 에 이미 클라가 있는 것들이다. */
   var _iqAdd='<button class="sr-iqadd" onclick="_srIqAdd()" title="'+(_uiLang()==='ko'?'새 문의 카드 — PC 없이도 만들 수 있어요(PC는 임대 후 연결)':'New inquiry card')+'">＋ '+(_uiLang()==='ko'?'문의':'Inquiry')+'</button>';
   /* [v1352] boss "밑으로 가게 해야지 위가 아니고" — 문의 카드는 기존 카드들이 끝나는
      그 다음 칸부터 이어진다(새 PC 가 자연히 붙는 자리). ＋문의 타일이 맨 끝. */
