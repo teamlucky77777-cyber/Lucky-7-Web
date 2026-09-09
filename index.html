@@ -4,7 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
 <title>ARASAKA Corp</title>
-<!-- BUILD: v1416 | 내 클라 카드 — 로그인하면 어느 화면에 있든 열린다 -->
+<!-- BUILD: v1417 | 내 클라 카드 접기 → 쉬는 중인지 퇴근인지 한 번 묻는다 -->
 <!-- v745 ê¸°ë¡ì git ì´ë ¥(v1302 ì´ì  ì»¤ë°)ì ìë¤ â 100KB ë³ê²½ì¬ ì£¼ìì ë°°í¬ìì ì ê±° -->
 <!-- [v677] a <link href> cannot read a CSS variable, so the favicon carries its own copy.
      64px: a browser tab draws it at 16-32px, so this is 2x-DPR sharp at 11KB. -->
@@ -70111,6 +70111,40 @@ console.info('AUTO100 build applied',AUTO100_BUILD.version,v3Audit());
       + '<div class="sr-s" id="sr-s-checkout" style="display:none"></div>'
       + '</div>';
   }
+  /* ═══ [v1417] 카드를 접을 때 한 번 묻는다 ═══════════════════════════════════
+     boss "한번 물어보자". 로드맵 4번 셋째 — 접기를 퇴근으로 잇는다.
+
+     여태 카드를 위로 밀면 무조건 휴식이었다. 퇴근하려면 카드를 접고 다른 화면으로
+     가서 또 눌러야 했다. 접는 손짓 하나에 두 가지 뜻이 있으니 물어보는 게 맞다.
+
+     묻지 않는 경우 하나 — 출근 기록이 아예 없으면 쉴 것도 퇴근할 것도 없다.
+     그때는 예전처럼 그냥 접는다(_mcClose 안에서 "출근 기록이 없어요" 를 말한다).
+
+     퇴근은 clockOut() 을 그대로 부른다. 15분 미만·20시간 초과 같은 제 안전장치를
+     이미 갖고 있으므로 여기서 또 만들지 않는다. */
+  window._mcCloseAsk = async function(){
+    if(!MC.open) return;
+    var _k3 = ko();
+    var working = false;
+    try{ working = myAttWorking() || myAttBreak(); }catch(_){ working = false; }
+    if(!working){ _mcClose(true); return; }
+    var out = false;
+    try{
+      out = await _askConfirm({
+        icon:   '🌙',
+        title:  _k3 ? '카드를 접습니다' : 'Putting the card away',
+        body:   _k3 ? '잠깐 쉬는 건가요, 오늘 끝인가요?' : 'Resting for a bit, or done for today?',
+        ok:     _k3 ? '퇴근' : 'Clock out',
+        cancel: _k3 ? '쉬는 중' : 'Just resting'
+      });
+    }catch(_){ out = false; }
+    if(out){
+      _mcClose(false);                                  /* 카드는 조용히 접는다 — 휴식으로 찍지 않는다 */
+      try{ if(typeof clockOut === 'function') await clockOut(); }catch(_){}
+    } else {
+      _mcClose(true);                                   /* 예전 그대로 — 휴식 */
+    }
+  };
   window._mcClose = function(asBreak){
     if(!MC.open) return;
     var card = document.getElementById('mc-card'), layer = document.getElementById('mc-layer');
@@ -70208,13 +70242,13 @@ console.info('AUTO100 build applied',AUTO100_BUILD.version,v3Audit());
   function gMove(e){ if(G.pushY == null) return; var d = G.pushY - gY(e); var card = document.getElementById('mc-card'); if(card && d > 0) card.style.transform = 'translateY(' + (-Math.min(d, 90) * .6) + 'px)'; }
   function gUp(e){
     var y = gY(e);
-    if(G.pushY != null){ var d = G.pushY - y; G.pushY = null; var card = document.getElementById('mc-card'); if(card) card.style.transform = ''; if(d > 60) _mcClose(true); return; }
+    if(G.pushY != null){ var d = G.pushY - y; G.pushY = null; var card = document.getElementById('mc-card'); if(card) card.style.transform = ''; if(d > 60) _mcCloseAsk(); return; }   /* [v1417] 밀면 묻는다 */
     if(G.pullY != null){ var d2 = y - G.pullY; G.pullY = null; var hd = document.getElementById('mc-handle'); if(hd) hd.classList.remove('pull'); if(d2 > 24) openDraft(false); }
   }
   document.addEventListener('mousedown', gDown); document.addEventListener('touchstart', gDown, { passive:false });
   document.addEventListener('mousemove', gMove); document.addEventListener('touchmove', gMove, { passive:true });
   document.addEventListener('mouseup', gUp); document.addEventListener('touchend', gUp);
-  function bindPush(){ var p = document.getElementById('mc-push'); if(!p || p._mcBound) return; p._mcBound = true; p.addEventListener('click', function(){ _mcClose(true); }); }
+  function bindPush(){ var p = document.getElementById('mc-push'); if(!p || p._mcBound) return; p._mcBound = true; p.addEventListener('click', function(){ _mcCloseAsk(); }); }   /* [v1417] 눌러도 묻는다 */
   function bindPull(hd){ /* ë¬¸ì ìì§ì´ ì²ë¦¬íë¤ */ }
 
   /* ââ ë¹ ì¤ ââââââââââââââââââââââââââââââââââââââââââââââââââââââââââââââââ */
