@@ -4,7 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
 <title>ARASAKA Corp</title>
-<!-- BUILD: v1420 | 인니 시간 전환이 배정 격자에도 먹는다 — 막대가 통째로 2시간 당겨진다 -->
+<!-- BUILD: v1421 | PC 현황 명령바에 전자시계 — 보고 있는 시간대의 지금 시각, 초까지 -->
 <!-- v745 기록은 git 이력(v1302 이전 커밋)에 있다 — 100KB 변경사 주석을 배포에서 제거 -->
 <!-- [v677] a <link href> cannot read a CSS variable, so the favicon carries its own copy.
      64px: a browser tab draws it at 16-32px, so this is 2x-DPR sharp at 11KB. -->
@@ -10134,6 +10134,48 @@ body.pool-grouping .pool-rolebox.grp-over .pool-role-hd::after{
 }
 .dp-override:hover{background:var(--bg-h);color:var(--tx);border-color:var(--tx3)}
 .dp-override.on{background:var(--ac);color:var(--bg);border-color:var(--ac)}
+
+/* ═══ [v1421] 시간대 시계 ═══════════════════════════════════════════════
+   boss "인도네시아 시간으로 바꾸면 지금 몇시인지 한국 시간으로 바꾸면 지금 몇시인지
+         전자시계좀 넣어줘 · 세련된 디자인으로 · 초까지 계산되게"
+   계기판처럼 읽히게 한다 — 시·분은 크고 또렷하게, 초는 작고 흐리게(크로노그래프의
+   작은 바늘 자리). 초는 1초마다 바뀌므로 크면 눈이 계속 그리로 끌려간다.
+   숫자는 tabular-nums — 1 과 8 의 폭이 달라 초가 넘어갈 때 시계가 들썩이면 안 된다.
+   왼쪽 점 하나가 '살아 있다'는 뜻이고, 오른쪽 흐린 시각이 반대편 나라의 지금이다. */
+.pc-tzclock{
+  display:inline-flex;align-items:baseline;gap:6px;
+  padding:4px 10px;text-transform:none;letter-spacing:0;
+  font-variant-numeric:tabular-nums;font-feature-settings:"tnum" 1;
+}
+.pc-tzclock .tzc-dot{
+  width:4px;height:4px;border-radius:50%;background:currentColor;
+  opacity:.55;flex:0 0 auto;align-self:center;
+  animation:tzcBreathe 2.4s var(--ease,ease-in-out) infinite;
+}
+@keyframes tzcBreathe{0%,100%{opacity:.22}50%{opacity:.8}}
+@media (prefers-reduced-motion: reduce){ .pc-tzclock .tzc-dot{animation:none;opacity:.5} }
+.pc-tzclock .tzc-t{
+  font-size:13px;font-weight:700;letter-spacing:.005em;line-height:1;
+  font-variant-numeric:tabular-nums;white-space:nowrap;
+}
+/* 시계는 절대 기울면 안 된다 — 속을 <i> 로 감쌌더니 브라우저 기본 이탤릭이 먹었다 */
+.pc-tzclock .tzc-t,
+.pc-tzclock .tzc-t i,
+.pc-tzclock .tzc-t u{font-style:normal}
+.pc-tzclock .tzc-t u{                                   /* 초 — 작은 바늘 */
+  text-decoration:none;font-size:10px;font-weight:600;
+  opacity:.5;letter-spacing:.01em;
+}
+.pc-tzclock .tzc-t u::before{content:':';opacity:.62;margin:0 .5px 0 1px}   /* 18:20:21 — 한 덩어리로 읽히게 */
+.pc-tzclock .tzc-z{                                     /* KST / WIB */
+  font-style:normal;font-size:8.5px;font-weight:700;
+  letter-spacing:.09em;opacity:.6;
+}
+.pc-tzclock .tzc-alt{                                   /* 반대편 나라의 지금 */
+  font-style:normal;font-size:9px;font-weight:600;opacity:.42;
+  padding-left:7px;border-left:1px solid currentColor;
+  letter-spacing:.02em;white-space:nowrap;
+}
 
 /* ═══════════════════════════════════════════════════
    DRAG AUTO-SCROLL hot zone — 가장자리 글로우 + 화살표
@@ -55605,6 +55647,35 @@ function togglePcTZ(){
   toast(pcTZ === 'wib' ? '🕒 표시 시간대 → 인도네시아 (WIB)' : '🕒 표시 시간대 → 한국 (KST)');
   render();
 }
+/* ═══ [v1421] 지금 몇 시인가 ═══════════════════════════════════════════════
+   boss "여기 인터페이스에 인도네시아 시간으로 바꾸면 지금 몇시인지 한국 시간으로
+         바꾸면 지금 몇시인지 전자시계좀 넣어줘 · 초까지 계산되게"
+   브라우저 지역시계는 안 쓴다. UTC 에 고정 오프셋을 더한다 — 인도네시아 직원 PC 와
+   한국 사장님 PC 가 반드시 같은 숫자를 봐야 하기 때문이다. 자카르타 UTC+7 ·
+   서울 UTC+9, 둘 다 서머타임이 없으므로 이 두 수는 영원히 안 바뀐다.
+   (파일 전체가 쓰는 방식과 같다 — Date.now()+오프셋 뒤 getUTC*) */
+function _pcTzClk(tz){
+  var d = new Date(Date.now() + (tz === 'wib' ? 7 : 9) * 3600000);
+  return { hm: pad2(d.getUTCHours()) + ':' + pad2(d.getUTCMinutes()), s: pad2(d.getUTCSeconds()) };
+}
+function _pcTzClockPaint(){
+  try{
+    var hm = document.getElementById('pc-tz-hm'); if(!hm) return;   /* 판이 안 열려 있으면 아무 일도 안 한다 */
+    var here  = (typeof pcTZ !== 'undefined' && pcTZ === 'wib') ? 'wib' : 'kst';
+    var there = here === 'wib' ? 'kst' : 'wib';
+    var a = _pcTzClk(here), b = _pcTzClk(there);
+    hm.textContent = a.hm;
+    var s = document.getElementById('pc-tz-s'); if(s) s.textContent = a.s;
+    var alt = document.getElementById('pc-tz-alt');
+    if(alt) alt.textContent = b.hm + ' ' + (there === 'wib' ? 'WIB' : 'KST');
+    var btn = hm.closest ? hm.closest('.pc-tzclock') : null;
+    if(btn) btn.title = (here === 'wib')
+      ? ('지금 인도네시아 ' + a.hm + ':' + a.s + ' · 한국 ' + b.hm + ' — 누르면 한국시간으로 (판 전체가 같이 바뀝니다)')
+      : ('지금 한국 ' + a.hm + ':' + a.s + ' · 인도네시아 ' + b.hm + ' — 누르면 인니시간으로 (판 전체가 같이 바뀝니다)');
+  }catch(_){}
+}
+/* 1초마다 글자 두 개만 갈아 끼운다 — 판을 다시 그리지 않는다 */
+try{ if(!window._pcTzClockTimer) window._pcTzClockTimer = setInterval(_pcTzClockPaint, 1000); }catch(_){}
 let tlSpan = 24;  // 24h (단일 사이클) 또는 48h (확장 — 자정 가로지름도 한 막대)
 const DAY_LABELS_KO = ['일','월','화','수','목','금','토'];
 
@@ -57526,8 +57597,13 @@ function renderDayPicker(){
          글자가 180px 을 먹고 있었다. 지우지 않고 <i> 로 감싸서 명령바에서만 접는다 —
          아이콘과 툴팁은 남으니 뭘 누르는지는 그대로 안다. */''}
     <button class="dp-override ${overrideWorkDays?'on':''}" onclick="toggleOverrideWorkDays()" title="${overrideWorkDays?'해제 — 정상 work_days 적용':'테스트용 — 요일 제한 무시하고 모든 직원 배정 가능'}">🧪<i class="dp-ow"> 휴일 무시</i></button>
-    <button class="dp-override ${pcTZ==='wib'?'on':''}" onclick="togglePcTZ()" title="화면 표시 시간대 전환 — 데이터는 항상 한국시간으로 저장됩니다">🕒<i class="dp-ow"> ${pcTZ==='wib'?'WIB 인니시간':'KST 한국시간'}</i></button>
+    ${/* [v1421] 시계와 전환 버튼을 하나로 합쳤다 — 같은 것을 말하는 물건이 둘일 이유가 없다.
+          보고 있는 시간대의 지금 시각을 띄우고, 누르면 그 시간대가 바뀐다(판 전체와 같이). */''}
+    <button class="dp-override pc-tzclock ${pcTZ==='wib'?'on':''}" onclick="togglePcTZ()" title="시간대 전환">
+      <i class="tzc-dot"></i><span class="tzc-t"><i id="pc-tz-hm">--:--</i><u id="pc-tz-s">--</u></span><em class="tzc-z">${pcTZ==='wib'?'WIB':'KST'}</em><i class="dp-ow tzc-alt" id="pc-tz-alt"></i>
+    </button>
   </div>`;
+  try{ _pcTzClockPaint(); }catch(_){}   /* [v1421] 다시 그린 직후 바로 채운다 — 1초 동안 '--:--' 이 보이지 않게 */
 }
 function setScheduleDay(d){
   scheduleDay = d;
