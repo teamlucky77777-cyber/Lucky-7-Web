@@ -4,7 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
 <title>ARASAKA Corp</title>
-<!-- BUILD: v1418 | 기록·통계에서 소속 누르면 뒤가 계정보드로 갈리던 것 + 클라 카드 우클릭 메뉴 -->
+<!-- BUILD: v1419 | 계정 보드 탭을 메뉴에서 뺀다 (기록·통계 클라별이 대신한다) -->
 <!-- v745 기록은 git 이력(v1302 이전 커밋)에 있다 — 100KB 변경사 주석을 배포에서 제거 -->
 <!-- [v677] a <link href> cannot read a CSS variable, so the favicon carries its own copy.
      64px: a browser tab draws it at 16-32px, so this is 2x-DPR sharp at 11KB. -->
@@ -52972,7 +52972,7 @@ function visibleTree(){
       .filter(cat => canSee(cat.perms))
       .map(cat => ({
         ...cat,
-        channels: cat.channels.filter(ch => ch.id !== 'op-backup' && ch.id !== 'pl-calc-std' /* [v1391] 기준표 탭은 메뉴에서 뺀다 — 기록·통계 카드 뒷면이 같은 편집창을 연다 */ && ch.id !== 'op-clients' && ch.id !== 'pl-clients' /* [v1405] boss 3번: 클라이언트 탭 둘은 메뉴에서 뺀다 — 클라별 카드(쉬는 줄·쪽지·겹치기)와 PC 현황 풀 칩 패널이 대신한다 */ && ch.id !== 'op-pc-board' /* [v1394] boss "계정보드도 지워도 되지?" — 문의 파이프라인(카드·3단계·PC 연결·담당/테스터·확정 적용)이 전부 기록·통계 클라별로 옮겨졌다. 코드·경로는 남김 */ && (ch.kind === 'divider' || (canSee(ch.perms) && matrixAllows(ch.id))))
+        channels: cat.channels.filter(ch => ch.id !== 'op-backup' && ch.id !== 'op-pc-board' /* [v1419] boss "계정보드 저거 필요없어" — 문의 카드·단계 올리기·인력 서랍이 전부 기록·통계 클라별에서 되므로 메뉴에서 뺀다. 코드와 자료(PCB_INQ)는 그대로 두고 길만 닫는다 — 되살리려면 이 조건 하나만 지우면 된다 */ && ch.id !== 'pl-calc-std' /* [v1391] 기준표 탭은 메뉴에서 뺀다 — 기록·통계 카드 뒷면이 같은 편집창을 연다 */ && ch.id !== 'op-clients' && ch.id !== 'pl-clients' /* [v1405] boss 3번: 클라이언트 탭 둘은 메뉴에서 뺀다 — 클라별 카드(쉬는 줄·쪽지·겹치기)와 PC 현황 풀 칩 패널이 대신한다 */ && ch.id !== 'op-pc-board' /* [v1394] boss "계정보드도 지워도 되지?" — 문의 파이프라인(카드·3단계·PC 연결·담당/테스터·확정 적용)이 전부 기록·통계 클라별로 옮겨졌다. 코드·경로는 남김 */ && (ch.kind === 'divider' || (canSee(ch.perms) && matrixAllows(ch.id))))
       }))
       // [v290] hide a category header if the role ends up with no visible channels in it
       // (e.g. 운영 is open to all for PC 현황, but a role with PC 현황 disabled shows nothing there)
