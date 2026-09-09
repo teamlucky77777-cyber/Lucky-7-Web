@@ -4,7 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
 <title>ARASAKA Corp</title>
-<!-- BUILD: v1416 | 인코딩 복구(v1415 가 파일 전체를 이중 인코딩함) + PC 현황 직원 팝업 -->
+<!-- BUILD: v1417 | 내 클라 카드 자동 열기·접기 물음 되살림 + 손 리포트 시작칸 잠금 -->
 <!-- v745 기록은 git 이력(v1302 이전 커밋)에 있다 — 100KB 변경사 주석을 배포에서 제거 -->
 <!-- [v677] a <link href> cannot read a CSS variable, so the favicon carries its own copy.
      64px: a browser tab draws it at 16-32px, so this is 2x-DPR sharp at 11KB. -->
@@ -37567,12 +37567,12 @@ function _srRecAddOpen(){
     +'<div class="sr-rec-edit-h">'+(ko?'리포트 추가':'Add report')+'</div>'
     +'<div class="sr-rec-edit-meta">'+(ko?'누락된 리포트를 이 근무에 직접 넣습니다':'Insert a missing report into a shift')+'</div>'
     +'<label class="sr-rec-edit-l">'+(ko?'근무 (체크인)':'Shift (check-in)')+'</label>'
-    +'<select id="sr-add-shift" class="sr-rec-edit-i" onchange="_srRecAddPrefill()">'+opts+'</select>'
+    +'<select id="sr-add-shift" class="sr-rec-edit-i" onchange="_srRecAddPrefill(true)">'+opts+'</select>'
     +'<label class="sr-rec-edit-l">'+(ko?'시각 (한국시간 HH:MM)':'Time (KST HH:MM)')+'</label>'
-    +'<input id="sr-add-time" class="sr-rec-edit-i" type="text" inputmode="numeric" placeholder="11:00">'
+    +'<input id="sr-add-time" class="sr-rec-edit-i" type="text" inputmode="numeric" placeholder="11:00" oninput="_srRecAddPrefill()">'
     +'<label class="sr-rec-edit-l">'+(ko?'레벨':'LV')+'</label>'
     +'<input id="sr-add-lv" class="sr-rec-edit-i" type="number" min="1" max="99" step="1">'
-    +'<label class="sr-rec-edit-l">'+(ko?'EXP 시작 %':'EXP from %')+'</label>'
+    +'<label class="sr-rec-edit-l">'+(ko?'EXP 시작 % (자동)':'EXP from % (auto)')+'</label>'
     +'<input id="sr-add-from" class="sr-rec-edit-i" type="number" min="0" max="100" step="0.01" placeholder="59.83">'
     +'<label class="sr-rec-edit-l">'+(ko?'EXP 종료 %':'EXP to %')+'</label>'
     +'<input id="sr-add-to" class="sr-rec-edit-i" type="number" min="0" max="100" step="0.01" placeholder="61.06">'
@@ -37583,21 +37583,56 @@ function _srRecAddOpen(){
     +'<button id="sr-add-save" class="sr-rec-edit-save" onclick="_srRecAddSave()">'+(ko?'추가':'Add')+'</button></div>'
     +'</div>';
   document.body.appendChild(ov);
-  _srRecAddPrefill();
+  _srRecAddPrefill(true);
   var t=document.getElementById('sr-add-time'); if(t){ t.focus(); }
 }
-function _srRecAddPrefill(){
+/* ═══ [v1417] 손으로 끼워넣는 리포트 — 시작 숫자를 사람이 못 쓴다 ═══════════════
+   2026-09-06 Sil 사고가 여기서 났다. 06:08 에 손으로 넣은 리포트의 '시작' 을
+   76.61 로 적었는데 앞 리포트는 75.66 에서 끝나 있었다. 사슬이 끊겨 06시는 0,
+   07시는 1.81(두 시간치)이 됐고 아무도 못 봤다.
+
+   원인 둘:
+     ① 앞 숫자를 회색 힌트(placeholder)로만 보여줬다 — 치면 사라지고 뭐든 받는다.
+     ② 그 숫자를 '그 근무의 맨 마지막' 리포트에서 집어왔다. 06시를 채워넣는데
+        08시 숫자를 가져오면 오히려 더 크게 어긋난다.
+
+   이제 끼워넣을 시각 바로 앞 리포트가 끝난 숫자를 값으로 넣고 잠근다.
+   시각을 고치면 다시 계산한다. 종료 %만 사람이 적는다. */
+function _srRecAddPrefill(full){
   try{
     var sel=document.getElementById('sr-add-shift'); if(!sel) return;
     var id=sel.value, sess=(window._srRecAll&&window._srRecAll.sessions)||[], ci=null;
     for(var i=0;i<sess.length;i++){ if(String(sess[i].id)===String(id)){ ci=sess[i]; break; } }
     if(!ci) return;
-    var lv=document.getElementById('sr-add-lv'); if(lv) lv.value=(ci.lv==null?'':ci.lv);
-    var mp=document.getElementById('sr-add-map'); if(mp) mp.value=(ci.map==null?'':ci.map);
-    // suggest "from" = the latest EXP already recorded in this shift, so the chain continues cleanly
-    var best=null; sess.forEach(function(s){ if(s.key===ci.key && String(s.client||'')===String(ci.client||'') && s.date===ci.date && s.tag!=='checkin'){ if(!best||(s.ms||0)>(best.ms||0)) best=s; } });
+    /* 근무를 새로 고를 때만 레벨·맵을 덮는다 — 시각을 칠 때마다 덮으면 손으로 고친 게 날아간다 */
+    if(full){
+      var lv=document.getElementById('sr-add-lv'); if(lv) lv.value=(ci.lv==null?'':ci.lv);
+      var mp=document.getElementById('sr-add-map'); if(mp) mp.value=(ci.map==null?'':ci.map);
+    }
+    var tEl=document.getElementById('sr-add-time');
+    var tm=/^(\d{1,2}):(\d{2})$/.exec(String((tEl&&tEl.value)||'').trim());
+    var at=null;
+    if(tm){ at=Date.parse(String(ci.date||'').trim()+'T'+('0'+tm[1]).slice(-2)+':'+tm[2]+':00+09:00'); if(!isFinite(at)) at=null; }
+    var best=null;
+    sess.forEach(function(s){
+      if(!(s.key===ci.key && String(s.client||'')===String(ci.client||'') && s.date===ci.date && s.tag!=='checkin')) return;
+      if(at!=null && (s.ms||0) >= at) return;                 /* 끼워넣을 시각보다 뒤는 안 본다 */
+      if(!best || (s.ms||0) > (best.ms||0)) best=s;
+    });
     var f=(best&&best.expAt!=null)?best.expAt:ci.expAt;
-    var from=document.getElementById('sr-add-from'); if(from && f!=null) from.placeholder=Number(f).toFixed(2);
+    var from=document.getElementById('sr-add-from');
+    if(!from) return;
+    var _ko2=(_uiLang()==='ko');
+    if(f!=null){
+      from.value=Number(f).toFixed(2);
+      from.readOnly=true;
+      from.title=_ko2?'앞 리포트가 끝난 숫자예요 — 고칠 수 없습니다':'Where the previous report ended — locked';
+      from.style.opacity='.72'; from.style.cursor='not-allowed';
+    }else{
+      /* 앞 리포트를 못 찾으면 잠그지 않는다 — 잠근 빈칸은 손쓸 데가 없다 */
+      from.readOnly=false; from.style.opacity=''; from.style.cursor='';
+      from.title=_ko2?'앞 리포트를 못 찾았어요 — 직접 확인해서 넣어주세요':'No previous report found — enter it yourself';
+    }
   }catch(_){}
 }
 async function _srRecAddSave(){
@@ -50987,6 +51022,18 @@ function showAuthScreen(){
 function showAppScreen(){
   document.getElementById('auth-screen').style.display = 'none';
   document.getElementById('app-screen').style.display = '';
+  /* ═══ [v1417] 내 클라 카드가 로그인하면 열린다 ═══════════════════════════════
+     _mcAutoOpen 은 v1401 부터 있었지만 부르는 곳이 기록·통계 화면을 그릴 때
+     둘뿐이었다. 직원이 로그인해서 대시보드나 PC 현황에 내려앉으면 카드는 영영
+     안 열린다 — 기능이 있는데 닿을 수가 없었다.
+
+     세 번 두드리는 이유: 시프트 기록은 로그인 직후엔 아직 안 읽혀 있을 수 있다.
+     못 열면 조용히 돌아가고(기회는 안 쓴다), 읽히는 대로 다음 번에 열린다. */
+  try{
+    [800, 2500, 5000].forEach(function(ms){
+      setTimeout(function(){ try{ if(typeof _mcAutoOpen === 'function') _mcAutoOpen(); }catch(_){} }, ms);
+    });
+  }catch(_){}
 }
 
 function showAuthTab(tab){
@@ -70098,6 +70145,37 @@ console.info('AUTO100 build applied',AUTO100_BUILD.version,v3Audit());
       + '<div class="sr-s" id="sr-s-checkout" style="display:none"></div>'
       + '</div>';
   }
+  /* ═══ [v1417] 카드를 접을 때 한 번 묻는다 ═══════════════════════════════════
+     boss "한번 물어보자". 여태 카드를 위로 밀면 무조건 휴식이었다. 퇴근하려면
+     카드를 접고 다른 화면으로 가서 또 눌러야 했다. 접는 손짓 하나에 두 가지 뜻이
+     있으니 물어보는 게 맞다.
+
+     퇴근은 clockOut() 을 그대로 부른다 — 15분 미만·20시간 초과 재확인 같은 제
+     안전장치를 이미 갖고 있으므로 여기서 또 만들지 않는다.
+     출근 기록이 아예 없으면 쉴 것도 퇴근할 것도 없으니 예전처럼 그냥 접는다. */
+  window._mcCloseAsk = async function(){
+    if(!MC.open) return;
+    var _k3 = ko();
+    var working = false;
+    try{ working = myAttWorking() || myAttBreak(); }catch(_){ working = false; }
+    if(!working){ _mcClose(true); return; }
+    var out = false;
+    try{
+      out = await _askConfirm({
+        icon:   '🌙',
+        title:  _k3 ? '카드를 접습니다' : 'Putting the card away',
+        body:   _k3 ? '잠깐 쉬는 건가요, 오늘 끝인가요?' : 'Resting for a bit, or done for today?',
+        ok:     _k3 ? '퇴근' : 'Clock out',
+        cancel: _k3 ? '쉬는 중' : 'Just resting'
+      });
+    }catch(_){ out = false; }
+    if(out){
+      _mcClose(false);                                  /* 카드는 조용히 접는다 — 휴식으로 찍지 않는다 */
+      try{ if(typeof clockOut === 'function') await clockOut(); }catch(_){}
+    } else {
+      _mcClose(true);                                   /* 예전 그대로 — 휴식 */
+    }
+  };
   window._mcClose = function(asBreak){
     if(!MC.open) return;
     var card = document.getElementById('mc-card'), layer = document.getElementById('mc-layer');
@@ -70195,13 +70273,13 @@ console.info('AUTO100 build applied',AUTO100_BUILD.version,v3Audit());
   function gMove(e){ if(G.pushY == null) return; var d = G.pushY - gY(e); var card = document.getElementById('mc-card'); if(card && d > 0) card.style.transform = 'translateY(' + (-Math.min(d, 90) * .6) + 'px)'; }
   function gUp(e){
     var y = gY(e);
-    if(G.pushY != null){ var d = G.pushY - y; G.pushY = null; var card = document.getElementById('mc-card'); if(card) card.style.transform = ''; if(d > 60) _mcClose(true); return; }
+    if(G.pushY != null){ var d = G.pushY - y; G.pushY = null; var card = document.getElementById('mc-card'); if(card) card.style.transform = ''; if(d > 60) _mcCloseAsk(); return; }   /* [v1417] 밀면 묻는다 */
     if(G.pullY != null){ var d2 = y - G.pullY; G.pullY = null; var hd = document.getElementById('mc-handle'); if(hd) hd.classList.remove('pull'); if(d2 > 24) openDraft(false); }
   }
   document.addEventListener('mousedown', gDown); document.addEventListener('touchstart', gDown, { passive:false });
   document.addEventListener('mousemove', gMove); document.addEventListener('touchmove', gMove, { passive:true });
   document.addEventListener('mouseup', gUp); document.addEventListener('touchend', gUp);
-  function bindPush(){ var p = document.getElementById('mc-push'); if(!p || p._mcBound) return; p._mcBound = true; p.addEventListener('click', function(){ _mcClose(true); }); }
+  function bindPush(){ var p = document.getElementById('mc-push'); if(!p || p._mcBound) return; p._mcBound = true; p.addEventListener('click', function(){ _mcCloseAsk(); }); }   /* [v1417] 눌러도 묻는다 */
   function bindPull(hd){ /* 문서 손짓이 처리한다 */ }
 
   /* ── 빈 줄 ──────────────────────────────────────────────────────────────── */
@@ -70415,10 +70493,13 @@ console.info('AUTO100 build applied',AUTO100_BUILD.version,v3Audit());
   /* 로그인하면 마지막 카드가 열려 있게 (내 시프트가 그 카드면) */
   window._mcAutoOpen = function(){
     try{
-      if(!cardRole() || MC.open || window._mcAutoDone) return; window._mcAutoDone = true;
+      if(!cardRole() || MC.open || window._mcAutoDone) return;
       var raw = localStorage.getItem(LS_LAST); if(!raw) return; var o = JSON.parse(raw); if(!o || (Date.now() - (o.t || 0)) > 14 * 3600000) return;
       var s = (typeof _srSession !== 'undefined' && _srSession && _srSession.client) ? _srSession : (typeof _srLoadSession === 'function' && _srLoadSession() ? _srSession : null);
       if(!s || clKey(s.client) !== clKey(o.n)) return;
+      /* [v1417] 여기까지 왔을 때만 기회를 쓴다 — 위에서 켜면 시프트가 아직 안 읽힌
+         첫 호출 한 번으로 소진돼, 정작 열 수 있게 됐을 때 안 열린다. */
+      window._mcAutoDone = true;
       setTimeout(function(){ if(!MC.open) _mcOpen(o.n, o.pc); }, 600);
     }catch(_){}
   };
