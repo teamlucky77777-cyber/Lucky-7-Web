@@ -4,7 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
 <title>ARASAKA Corp</title>
-<!-- BUILD: v1440 | 테스트 들어간 PC 는 초록 테두리 -->
+<!-- BUILD: v1441 | PC 현황에 변경 기록판 — 시스템 변경과 사람 메모가 한 줄기로 -->
 <!-- v745 기록은 git 이력(v1302 이전 커밋)에 있다 — 100KB 변경사 주석을 배포에서 제거 -->
 <!-- [v677] a <link href> cannot read a CSS variable, so the favicon carries its own copy.
      64px: a browser tab draws it at 16-32px, so this is 2x-DPR sharp at 11KB. -->
@@ -8661,6 +8661,43 @@ html[data-theme=light] #ch-pc-status #pc-cmdbar .dp-day.on{background:#fff;color
 /* ═══ [v1079] 배정 격자 — 세로 PC, 가로 24시간 ═══
    한 줄 26px. 20대가 520px 이면 스크롤 없이 한 화면에 들어온다.
    같은 세로선이 같은 시각이라 빈 구간이 그냥 보인다 — 시계 20개로는 못 하던 일. */
+/* ═══ [v1441] 변경 기록판 — PC 현황에 붙는 댓글칸 ═══════════════════════════════
+   적는 자리가 위, 읽는 자리가 아래. 새 글이 맨 위로 온다 — 무엇이 방금 바뀌었나가
+   이 판의 질문이다. 내가 쓴 글은 왼쪽에 금색 실선으로 표가 난다. */
+#pn-wrap{height:100%;overflow:hidden}
+.pn-box{display:flex;flex-direction:column;gap:7px;height:100%;overflow-y:auto;padding-right:2px}
+.pn-write{display:flex;gap:6px;align-items:flex-start;position:sticky;top:0;z-index:2;
+  background:var(--bg-sb,#17181c);padding-bottom:6px}
+.pn-write textarea{flex:1 1 auto;min-width:0;resize:none;font:inherit;font-size:12px;line-height:1.5;
+  padding:7px 9px;border-radius:9px;border:1px solid var(--br,#33363d);
+  background:var(--bg-c,#1b1c20);color:var(--tx,#e6e5e2);overflow:hidden}
+.pn-write textarea:focus{outline:none;border-color:var(--ac,#c2a04a)}
+.pn-write textarea::placeholder{color:var(--tx4,#6c6b66)}
+.pn-write button{flex:0 0 auto;font:inherit;font-size:11.5px;font-weight:700;padding:7px 12px;
+  border-radius:9px;border:0;background:var(--ac,#c2a04a);color:var(--bg,#141416);cursor:pointer}
+.pn-write button:disabled{opacity:.5;cursor:default}
+.pn-item{border-left:2px solid transparent;padding:5px 2px 6px 9px}
+.pn-item+.pn-item{border-top:1px solid var(--br2,#2a2c32)}
+.pn-item.mine{border-left-color:var(--ac,#c2a04a)}
+.pn-head{display:flex;align-items:baseline;gap:7px;margin-bottom:2px}
+.pn-head b{font-size:11.5px;font-weight:700;color:var(--tx2,#b9b8b4)}
+.pn-head span{font-size:10.5px;color:var(--tx4,#6c6b66);font-variant-numeric:tabular-nums}
+.pn-x{margin-left:auto;font:inherit;font-size:13px;line-height:1;padding:0 4px;border:0;
+  background:none;color:var(--tx4,#6c6b66);cursor:pointer;opacity:0;transition:opacity .12s ease}
+.pn-item:hover .pn-x,.pn-x:focus-visible{opacity:1}
+.pn-x:hover{color:var(--re,#c46a6a)}
+.pn-txt{font-size:12.5px;line-height:1.6;color:var(--tx,#e6e5e2);word-break:break-word;white-space:pre-wrap}
+.pn-empty{padding:16px 10px;text-align:center;font-size:12px;color:var(--tx4,#6c6b66);line-height:1.7}
+.pn-empty span{font-size:11px;opacity:.8}
+/* 시스템이 스스로 적은 줄 — 사람이 적은 줄보다 조용하다. 점 하나가 '기계가 적었다' 는 뜻. */
+.pn-sys{display:flex;gap:8px;align-items:flex-start;padding:3px 2px 4px 0}
+.pn-sys i{flex:0 0 auto;width:5px;height:5px;border-radius:50%;margin:6px 0 0 3px;
+  background:var(--tx4,#6c6b66);opacity:.55}
+.pn-sysb{min-width:0;display:flex;flex-wrap:wrap;align-items:baseline;gap:4px 7px}
+.pn-sysa{font-size:11.5px;color:var(--tx3,#8a8a92);line-height:1.5}
+.pn-syst{font-size:11px;font-weight:700;color:var(--tx2,#b9b8b4)}
+.pn-sysw{font-size:10px;color:var(--tx4,#6c6b66);font-variant-numeric:tabular-nums;margin-left:auto;white-space:nowrap}
+
 #ag-wrap{--lab:150px;--now:0%;font-variant-numeric:tabular-nums;user-select:none}
 #ag-wrap .ag-row{display:flex;align-items:stretch;height:26px}
 #ag-wrap .ag-row+.ag-row{margin-top:2px}
@@ -55782,6 +55819,11 @@ function _pcRTJoin(){
              if(ch && ch.module === 'pcboard' && typeof renderPcBoard === 'function') renderPcBoard(); }catch(_){}
       }); }catch(_){}
     });
+    _pcRT.on('broadcast', { event:'note' }, function(m){   /* [v1441] 변경 기록 — 남이 적으면 내 판에도 바로 */
+      var p = m && m.payload; if(!p) return;
+      if(p.tab ? (p.tab === _PC_TAB_ID) : (String(p.id||'') === _pcRTMe())) return;
+      try{ if(typeof _pnRefresh === 'function' && document.getElementById('pn-wrap')) _pnRefresh(); }catch(_){}
+    });
     _pcRT.on('broadcast', { event:'aim' }, function(m){   /* [v1341] 풀에서 끌며 조준 중인 줄 */
       var p = m && m.payload;
       if(!p) return;
@@ -58135,6 +58177,9 @@ const PB_DEF = {
   assign:  { x:16,   y:96,  w:null, h:560, col:false },   /* [v1079] 배정 격자 — 이제 이게 주 화면 */
   clock:   { x:16,   y:596, w:null, h:320, col:true  },   /* 한 대를 자세히 볼 때만 편다 */
   pc:      { x:16,   y:632, w:null, h:300, col:true  },   /* [v1078] 시계로 다 되므로 기본 접힘 */
+  /* [v1441] 변경 기록 — boss "댓글을 적을수있는칸? 그럼 우리가 변경이 어떻게 됐는지 적을수있겠지"
+     기본으로 펴 둔다(col:false). 적는 판은 보여야 적는다 — 접혀 있으면 아무도 안 연다. */
+  note:    { x:16,   y:668, w:null, h:300, col:false },
   /* ═══ [v1179] 스타팅 포인트 ═══
      boss “직원풀 세로 2줄 · 클라이언트풀 세로 3줄”
      줄 수는 따로 정하는 값이 아니다 — 격자가 auto-fill 이라 상자 폭이 곧 줄 수다.
@@ -58152,7 +58197,7 @@ const PB_DEF = {
 /* [v1229] 쉘프트 타임라인을 지웠다 — boss "이제 이거 필요 없어 그냥 지워버려".
    시계 보드와 배정 격자가 같은 일을 더 잘 하게 되면서 v1070 이후 줄계 접혀 있었다.
    못 쓰는 것을 접어두면 자리는 계속 차지하고, 목록에서도 매번 그것을 읽게 된다. */
-const PB_KEYS = ['assign','clock','pc','client','staff'];
+const PB_KEYS = ['assign','clock','pc','note','client','staff'];
 /* 각 박스가 데려갈 원본 노드들. 새로 만들지 않고 그대로 옮긴다 —
    렌더 함수들이 id로 찾아 채우고, 배정 드래그가 그 노드에 물려 있다. */
 function _pbPick(k){
@@ -58163,6 +58208,12 @@ function _pbPick(k){
     /* 격자는 우리가 만든다 — 옮겨올 원본이 없다 */
     let el = q('#ag-wrap');
     if(!el){ el = document.createElement('div'); el.id = 'ag-wrap'; }
+    return [el];
+  }
+  if(k === 'note'){
+    /* [v1441] 변경 기록판도 우리가 만든다 — 옮겨올 원본이 없다(격자와 같은 방식) */
+    let el = q('#pn-wrap');
+    if(!el){ el = document.createElement('div'); el.id = 'pn-wrap'; }
     return [el];
   }
   if(k === 'client') return [q('#sb-right .pool-client') || q('#pbox-client .pool-client')].filter(Boolean);
@@ -58248,6 +58299,7 @@ const PB_META = {
   pc:      { t:'PC 카드',       te:'PC cards' },
   assign:  { t:'배정 격자 · 24시간', te:'Assign grid · 24h' },
   clock:   { t:'PC 시계 보드',   te:'PC clock board' },
+  note:    { t:'변경 기록',       te:'Change notes' },
   client:  { t:'클라이언트 풀',  te:'Client pool' },
   staff:   { t:'직원 풀',        te:'Staff pool'  }
 };
@@ -58604,7 +58656,7 @@ function _pbRestack(k, st){
    하나가 펴지면 하나가 접히면 곤란하다. */
 /* [v1105] 왼쪽 넷 = 한 식구. 풀 둘(client·staff)은 다른 식구다.
    _pbRestack 이 이 목록을 쓴다 — 둘 다 사용자 조작 뒤에만 도므로 선언 순서는 안전하다. */
-const PB_MAIN = ['assign','clock','pc'];
+const PB_MAIN = ['assign','clock','pc','note'];
 function _pbPromote(k){
   if(PB_MAIN.indexOf(k) < 0) return false;
   const st = _pbState();
@@ -58625,6 +58677,7 @@ function _pbPromote(k){
   /* 펴진 순간 채워야 하는 것들 — 접힌 동안에는 아무도 그리지 않는다 */
   try{ if(top === 'clock' && typeof renderPCHubTimeline === 'function') renderPCHubTimeline(true); }catch(_){}
   try{ if(top === 'assign' && typeof _agRender === 'function') _agRender(); }catch(_){}
+  try{ if(top === 'note' && typeof _pnRender === 'function') _pnRender(); }catch(_){}   /* [v1441] 펴는 순간 채운다 */
   try{ if(top === 'pc' && typeof renderPCs === 'function') renderPCs(); }catch(_){}
   try{ const nm = (typeof PB_META!=='undefined' && PB_META[top]) ? PB_META[top].t : top;
        toast('↑ '+nm+' — 나머지는 접었습니다'); }catch(_){}
@@ -59801,6 +59854,149 @@ function _pcGuardEdit(quiet){
   }
   return false;
 }
+/* ═══════════════════════════════════════════════════════════════════════════
+   [v1441] 변경 기록 — PC 현황에 붙는 댓글판
+   boss "댓글을 적을수있는칸? 그런 칸을 만드는거야 그럼 우리가 변경이 어떻게 됐는지
+         적을수있겠지"
+
+   시스템 로그(log_state)는 '무엇이 바뀌었나' 를 기계가 적는다. 이 판은 '왜 그랬나' 를
+   사람이 적는 자리다. 둘은 다르다 — 로그는 "Kal 배정 뺌" 이라고만 하고, 이유는
+   적을 데가 없어서 디스코드로 흩어졌다.
+
+   저장은 trust_state 의 pc_notes 한 줄(배열). 서른 개만 남긴다 — 이건 흐르는 판이지
+   장부가 아니다. 오래된 것을 쌓아 두면 아무도 안 읽는다.
+   ═══════════════════════════════════════════════════════════════════════════ */
+var PC_NOTES = [], _pnLoaded = false, _pnBusy = false;
+const PN_CAP = 30;
+function _pnHost(){ return document.getElementById('pn-wrap'); }
+function _pnWho(){
+  try{ return (typeof logActor === 'function') ? logActor()
+       : ((currentUser && (currentUser.name || currentUser.email)) || '?'); }catch(_){ return '?'; }
+}
+function _pnCanPost(){ try{ return !!(currentUser && currentUser.id); }catch(_){ return false; } }
+function _pnCanDel(n){
+  try{
+    if(currentUserRole === 'admin' || currentUserRole === 'op') return true;
+    return String(n && n.by || '') === _pnWho();      /* 제 글은 제가 지운다 */
+  }catch(_){ return false; }
+}
+async function _pnLoad(force){
+  if(_pnLoaded && !force) return PC_NOTES;
+  try{
+    if(typeof sb !== 'undefined' && sb){
+      const { data } = await sb.from('trust_state').select('data').eq('id','pc_notes').maybeSingle();
+      PC_NOTES = (data && Array.isArray(data.data)) ? data.data : [];
+    }
+  }catch(_){ }
+  _pnLoaded = true;
+  return PC_NOTES;
+}
+async function _pnSave(){
+  try{
+    if(typeof sb === 'undefined' || !sb) return false;
+    const { error } = await sb.from('trust_state').upsert({ id:'pc_notes', data:PC_NOTES, updated_at:new Date().toISOString() });
+    if(error) throw error;
+    try{ if(typeof _pcRT !== 'undefined' && _pcRT) _pcRT.send({ type:'broadcast', event:'note', payload:{ id:_pcRTMe(), tab:_PC_TAB_ID } }); }catch(_){}
+    return true;
+  }catch(e){ try{ toast('메모 저장 실패 — ' + ((e && e.message) || ''), true); }catch(_){} return false; }
+}
+/* 언제 적었나 — 방금 · N분 전 · 오늘 14:20 · 09-08 14:20 */
+function _pnWhen(ms){
+  try{
+    const d = Number(ms) || 0, gap = Date.now() - d;
+    if(gap < 60000) return '방금';
+    if(gap < 3600000) return Math.floor(gap/60000) + '분 전';
+    const k = new Date(d + 9*3600000), p = n => ('0'+n).slice(-2);
+    const hm = p(k.getUTCHours()) + ':' + p(k.getUTCMinutes());
+    const today = new Date(Date.now() + 9*3600000).toISOString().slice(0,10);
+    const day = k.toISOString().slice(0,10);
+    return (day === today) ? ('오늘 ' + hm) : (day.slice(5) + ' ' + hm);
+  }catch(_){ return ''; }
+}
+window._pnPost = async function(){
+  if(_pnBusy) return;
+  const ta = document.getElementById('pn-input'); if(!ta) return;
+  const txt = String(ta.value || '').trim();
+  if(!txt){ ta.focus(); return; }
+  if(!_pnCanPost()){ try{ toast('로그인이 필요합니다', true); }catch(_){} return; }
+  _pnBusy = true;
+  const btn = document.getElementById('pn-post'); if(btn){ btn.disabled = true; btn.textContent = '남기는 중…'; }
+  await _pnLoad();
+  PC_NOTES.unshift({ id:'n'+Date.now().toString(36)+Math.random().toString(36).slice(2,6),
+                     ts:Date.now(), by:_pnWho(), text:txt.slice(0,500) });
+  if(PC_NOTES.length > PN_CAP) PC_NOTES.length = PN_CAP;
+  const ok = await _pnSave();
+  _pnBusy = false;
+  if(ok){ ta.value = ''; try{ ta.style.height='auto'; }catch(_){} }
+  _pnRender();
+  try{ if(ok) ta.focus(); }catch(_){}
+};
+window._pnDel = async function(id){
+  const i = PC_NOTES.findIndex(n => n && n.id === id); if(i < 0) return;
+  if(!_pnCanDel(PC_NOTES[i])){ try{ toast('내가 쓴 것만 지울 수 있어요', true); }catch(_){} return; }
+  const gone = PC_NOTES.splice(i,1)[0];
+  _pnRender();
+  const ok = await _pnSave();
+  if(!ok){ PC_NOTES.splice(i,0,gone); _pnRender(); }
+};
+/* ═══ [v1441] 한 줄기 — 시스템이 적은 변경과 사람이 적은 이유가 같이 흐른다 ═══════
+   메모만 모아 두면 로그와 떨어져서, "Kal 배정 뺌"(로그)과 "Miru랑 교대라 뺐음"(메모)을
+   잇는 일이 다시 사람 머릿속 일이 된다. 시간순 한 줄기에 놓으면 방금 바뀐 것 바로
+   아래에 이유가 붙는다. 덤으로 아무도 안 적어도 판이 안 죽는다 — 시스템 변경이 흐른다.
+   PC 현황과 상관없는 로그(경고·급여·채용 등)는 빼고 이 판의 일만 담는다. */
+const PN_SYS = /배정|자리 옮김|백업|대타|커버|리더|클라이언트|PC[- ]?\d|added PC|deleted PC|inquiry|PC OFF|숨김|고정|해제/i;
+function _pnFeed(){
+  const out = [];
+  try{ (PC_NOTES||[]).forEach(function(n){ if(n) out.push({ k:'note', ts:Number(n.ts)||0, n:n }); }); }catch(_){}
+  try{
+    (typeof LOG_DATA !== 'undefined' && Array.isArray(LOG_DATA) ? LOG_DATA : []).forEach(function(l){
+      if(!l || !l.ts) return;
+      const a = String(l.action||'');
+      if(!PN_SYS.test(a)) return;
+      const ms = new Date(l.ts).getTime(); if(!isFinite(ms)) return;
+      out.push({ k:'sys', ts:ms, l:l });
+    });
+  }catch(_){}
+  out.sort(function(x,y){ return y.ts - x.ts; });
+  return out.slice(0, 60);
+}
+function _pnRender(){
+  const host = _pnHost(); if(!host) return;
+  const esc = (typeof _mtcEsc === 'function') ? _mtcEsc : (s => String(s==null?'':s));
+  if(!_pnLoaded){
+    host.innerHTML = '<div class="pn-box"><div class="pn-empty">불러오는 중…</div></div>';
+    _pnLoad().then(function(){ _pnRender(); });
+    return;
+  }
+  const can = _pnCanPost();
+  const feed = _pnFeed();
+  const list = feed.map(function(it){
+    if(it.k === 'note'){
+      const n = it.n, mine = String(n.by||'') === _pnWho();
+      return '<div class="pn-item'+(mine?' mine':'')+'">'
+        + '<div class="pn-head"><b>'+esc(n.by||'?')+'</b><span>'+esc(_pnWhen(n.ts))+'</span>'
+        + (_pnCanDel(n) ? ('<button class="pn-x" title="지우기" onclick="_pnDel(\''+esc(n.id)+'\')">×</button>') : '')
+        + '</div><div class="pn-txt">'+esc(n.text||'')+'</div></div>';
+    }
+    const l = it.l;
+    return '<div class="pn-sys"><i></i><div class="pn-sysb">'
+      + '<span class="pn-sysa">'+esc(l.action||'')+'</span>'
+      + (l.target ? ('<span class="pn-syst">'+esc(l.target)+'</span>') : '')
+      + '<span class="pn-sysw">'+esc(l.actor||'')+' · '+esc(_pnWhen(it.ts))+'</span>'
+      + '</div></div>';
+  }).join('');
+  host.innerHTML =
+      '<div class="pn-box">'
+    +   (can ? ('<div class="pn-write">'
+    +     '<textarea id="pn-input" rows="1" maxlength="500" placeholder="왜 바꿨는지 한 줄 — 예: PC-18 Kal 백업 (Miru와 교대)"'
+    +     ' oninput="this.style.height=\'auto\';this.style.height=Math.min(this.scrollHeight,110)+\'px\'"'
+    +     ' onkeydown="if((event.metaKey||event.ctrlKey)&&event.key===\'Enter\'){event.preventDefault();_pnPost();}"></textarea>'
+    +     '<button id="pn-post" onclick="_pnPost()">남기기</button></div>')
+    :     '<div class="pn-empty">로그인하면 적을 수 있어요</div>')
+    +   (list || '<div class="pn-empty">아직 아무 일도 없었어요.<br><span>배정을 바꾸면 여기에 저절로 남고, 왜 그랬는지는 위에 한 줄 적어 두면 됩니다.</span></div>')
+    + '</div>';
+}
+window._pnRefresh = function(){ _pnLoad(true).then(function(){ _pnRender(); }); };
 function _agHost(){ return document.getElementById('ag-wrap'); }
 function _agHourAt(track, clientX){
   const r = track.getBoundingClientRect();
@@ -60389,6 +60585,7 @@ function _agRender(){
   host.innerHTML = head + '<div class="ag-body">' + rows + '</div>';
   host.style.setProperty('--now', (nowD/24*100).toFixed(3)+'%');   /* [v1420] 주황 세로줄도 축과 같이 옮긴다 */
   try{ _agBind(host); }catch(_){}
+  try{ if(typeof _pnRender === 'function' && document.getElementById('pn-wrap')) _pnRender(); }catch(_){}   /* [v1441] 변경 기록판도 같이 */
   /* [v1433] 판 폭이 바뀌면 다시 그린다 — 접힘 단계(넓음/좁음/아주좁음)가 폭으로 갈리므로
      창을 줄였는데 예전 폭 그대로 그려져 있으면 아까 그 뭉개진 화면이 그대로 남는다.
      ResizeObserver 는 그 요소만 본다(창 크기 말고) — 옆 판을 접어 좁아진 것도 잡는다. */
