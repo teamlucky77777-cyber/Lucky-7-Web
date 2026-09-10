@@ -4,7 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
 <title>ARASAKA Corp</title>
-<!-- BUILD: v1447 | 테스트 초록 테두리가 위로 · 기록판 인니어(한·EN·ID) -->
+<!-- BUILD: v1448 | 겹친 줄 칸 계산 고침 — 빈 9px 없애고 막대 13px, 늘리기는 자리 빌 때만 -->
 <!-- v745 기록은 git 이력(v1302 이전 커밋)에 있다 — 100KB 변경사 주석을 배포에서 제거 -->
 <!-- [v677] a <link href> cannot read a CSS variable, so the favicon carries its own copy.
      64px: a browser tab draws it at 16-32px, so this is 2x-DPR sharp at 11KB. -->
@@ -60506,7 +60506,26 @@ function _agRender(){
        대타가 없는 줄은 지금까지와 똑같다(한 층이면 18px 한 개). */
     const covH = covers.length ? 16 : 0;               // 대타 칸(14) + 사이(2)
     const LH = 14;                                     // 대타가 있을 때 한 칸의 키
-    const rowH = covH ? (18 + lanes*16) : (22 + (lanes-1)*11);
+    /* ═══ [v1448] 겹친 줄의 칸 계산이 틀려 있었다 ═════════════════════════════════
+       boss "이거 겹치는거 봐봐 쓰레기같지?"
+
+       두 사람이 같은 시간에 있으면 줄을 33px 로 키우고 칸을 11px 씩 줬는데,
+       두 칸을 다 놓고도 **아래 9px 이 빈 채로 남았다.** 그래서 막대는 쓸데없이
+       납작하고(이름이 9.5px 인데 칸이 11px), 줄만 헐렁했다.
+
+       칸 키·사이·줄 키를 한 식으로 묶는다:
+         줄 키 = 2 + 칸수×칸키 + (칸수-1)×사이 + 2
+       한 칸이면 18px(지금과 같다), 두 칸부터는 13px. 두 칸이면 줄이 32px 로
+       오히려 1px 줄면서 막대는 11 → 13px 로 커진다. 빈 자리가 없어진 몫이다.
+
+       자리 계산이 세 군데(막대·대타·주인 띠)에 각각 적혀 있어 어긋났으므로
+       laneTop·laneBot 하나로 모은다. */
+    const GAP  = 2;
+    const BH   = covH ? LH : (lanes > 1 ? 13 : 18);    // 한 칸의 키
+    const STEP = covH ? 16 : (BH + GAP);               // 다음 칸까지
+    const rowH = covH ? (18 + lanes*16) : (4 + lanes*BH + (lanes-1)*GAP);
+    const laneTop = L => 2 + L*STEP;
+    const laneBot = L => Math.max(2, rowH - laneTop(L) - BH);
     /* ═══ [v1127] 클라이언트가 맡긴 시간을 뒤에 흐릿하게 ═══
        boss "스타크래프트2 건물 짓기 전에 이게 어떻게 지어집니다~ 하고 투명하게
        건물이 나오는거 있잖아? 그것처럼 고정 쉬프트를 뒤에 흐릿하게"
@@ -60568,17 +60587,22 @@ function _agRender(){
       const L = isCover ? 0 : (lane[o.ai]||0);
       /* [v1185] 대타는 맨 아래 칸, 주인 막대들은 그 위에서 끝난다
          [v1188] 대타가 있는 줄은 두 칸 모두 14px — 같은 무게로 읽히게 */
-      let top = isCover ? (rowH - covH) : (2 + L*(covH ? 16 : 11));
-      let bot = isCover ? 2
-                : (covH ? Math.max(2, rowH - (top + LH))
-                        : (lanes>1 ? Math.max(2, rowH - (top + 11)) : 2));
+      let top = isCover ? (rowH - covH) : laneTop(L);
+      let bot = isCover ? 2 : laneBot(L);
       /* ═══ [v1281] 반칸 막대 세로 늘리기 ═══
          boss "절반으로 들어간 직원들 세로로 잡아서 늘리면 밑까지 다 차게"
          겹침(레인)·대타 칸 때문에 반 높이가 된 막대는 아래 모서리(.ag-vz)를 잡아
          내리면 줄 전체를 차지한다(a.fill). 다시 위로 올리면 원래 높이로. 표시일 뿐
          시간·배정 자료는 그대로다 — 겹침 판정(레인 계산)도 안 바뀐다. */
       const halfH = !isCover && (top > 2 || bot > 2);
-      if(!isCover && a2.fill){ top = 2; bot = 2; }
+      /* ═══ [v1448] 늘리기는 그 시간이 비어 있을 때만 ═══════════════════════════
+         v1281 의 '아래로 끌어 줄 전체 차지'(a.fill)는 옆 칸이 비어 있다는 전제였다.
+         같은 시간에 다른 사람이 있는데 늘리면 그 사람 막대를 통째로 덮는다 —
+         사장님이 본 그 모양이다(초록 백업 막대가 주황 막대 위에 얹혀 있던 것).
+         겹치는 동안에는 늘리기를 무시한다. 자료(a.fill)는 그대로 두므로, 겹침이
+         풀리면 저절로 다시 늘어난다. */
+      const _clash = !isCover && mains.some(q => q !== o && hit(q.a, a2));
+      if(!isCover && a2.fill && !_clash){ top = 2; bot = 2; }
       const rIcon = a2.cover ? (a2.reason==='net' ? '📶' : a2.reason==='blackout' ? '⚡' : '🔁') : '';
       const rLab  = a2.cover ? (a2.reason==='net' ? '네트워크' : a2.reason==='blackout' ? '블랙아웃' : '대타') : '';
       const owner = a2.cover && typeof staffById==='function' ? (staffById(a2.coverFor)||{}).name : '';
@@ -60698,9 +60722,7 @@ function _agRender(){
       const L = lane[owner.ai] || 0;
       _agSegs(c.a.start, c.a.len).forEach(([bs, bl]) => {
         bars += '<div class="ag-out" style="left:'+(bs/24*100).toFixed(3)+'%;width:'+(bl/24*100).toFixed(3)+'%;'
-          + 'top:'+(2+L*(covH?16:11))+'px;bottom:'
-          + (covH ? Math.max(2, rowH-(2+L*16+LH))
-                  : (lanes>1?Math.max(2,rowH-(2+L*11+11)):2))+'px"></div>';   /* [v1188] 주인 막대와 같은 칸에 눕는다 */
+          + 'top:'+laneTop(L)+'px;bottom:'+laneBot(L)+'px"></div>';   /* [v1188] 주인 막대와 같은 칸에 눕는다 · [v1448] 자리 계산 한 곳으로 */
       });
     });
     mains.forEach(o => draw(o, false));
