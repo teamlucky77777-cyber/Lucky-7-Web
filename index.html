@@ -4,7 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
 <title>ARASAKA Corp</title>
-<!-- BUILD: v1433 | 배정 격자가 좁은 판에서 뭉개지던 것 — 폭에 따라 스스로 접힌다 -->
+<!-- BUILD: v1434 | 구원씨 절차 3·5·6·8을 지원자 카드의 진짜 칸으로 -->
 <!-- v745 기록은 git 이력(v1302 이전 커밋)에 있다 — 100KB 변경사 주석을 배포에서 제거 -->
 <!-- [v677] a <link href> cannot read a CSS variable, so the favicon carries its own copy.
      64px: a browser tab draws it at 16-32px, so this is 2x-DPR sharp at 11KB. -->
@@ -17388,6 +17388,20 @@ function setApplicantInfo(id, field, value){
   // [v303] board only — don't rebuild the panel mid-typing (would wipe the field you just left)
   _apEditing = true; try{ renderRecruit(); }catch(_){} _apEditing = false;
 }
+/* [v1434] 구원씨 절차 3·5·6·8 — 지원자 카드에 적고, 온보딩 화면이 그걸 읽는다.
+   누가 언제 눌렀는지는 로그에 남는다(표시만 남기고 사라지면 나중에 못 따진다). */
+function setApplicantOnboard(id, field){
+  const a = APPLICANTS.find(x => x.id === id);
+  if(!a) return;
+  if(!a.onboard) a.onboard = {};
+  a.onboard[field] = !a.onboard[field];
+  a.updatedAt = Date.now();
+  const lbl = { agreed:'근무 조건 동의', remote:'Remote T·AnyDesk 설치', gametest:'게임 테스트', final:'최종 상호 동의' }[field] || field;
+  try{ logAction('update', (a.onboard[field] ? '채용 확인 · ' : '채용 확인 해제 · ') + lbl, a.name); }catch(_){}
+  _recruitDirtyUntil = Date.now() + 20000;
+  saveRecruits();
+  _apEditing = true; try{ renderRecruit(); }catch(_){} _apEditing = false;
+}
 function setApplicantShift(id, shift){
   const a = APPLICANTS.find(x => x.id === id);
   if(!a) return;
@@ -17470,6 +17484,27 @@ function renderApplicantPanel(){
       <div style="flex:1">${_lbl('↑ Up (Mbps)')}<input type="text" style="${_ist}" value="${_esc(_wf.up)}" placeholder="0" onchange="setApplicantSpec('${a.id}','up',this.value)"></div>
     </div>
     ${_lbl('Spec Status')}<select style="${_ist}" onchange="setApplicantSpec('${a.id}','status',this.value)"><option value="pending" ${(!a.spec_status||a.spec_status==='pending')?'selected':''}>⏳ Pending</option><option value="pass" ${a.spec_status==='pass'?'selected':''}>✓ Passed</option><option value="fail" ${a.spec_status==='fail'?'selected':''}>✗ Failed</option></select>
+    ${/* ═══ [v1434] 구원씨 절차 3·5·6·8단계를 진짜 칸으로 ═══════════════════════
+         온보딩 화면에서 이 넷은 '사람이 눌러 표시' 였다. 표시는 어디에도 안 남아서
+         누가 언제 확인했는지 되짚을 수 없고, 지원자를 보는 화면과 온보딩을 보는
+         화면이 서로 다른 말을 했다. 확인한 자리는 지원자 카드다 — 여기 적으면
+         온보딩 화면이 그걸 그대로 읽는다. 한 번 적으면 두 곳이 같이 맞는다. */''}
+    ${_lbl('구원씨 절차 · 채용 확인')}
+    <div style="display:flex;flex-direction:column;gap:5px">
+      ${[['agreed','3. 근무 조건 동의','급여·수습 90%·시프트·규칙'],
+         ['remote','5. Remote T · AnyDesk 설치',''],
+         ['gametest','6. Remote 게임 테스트','렉·딜레이·성능·회선'],
+         ['final','8. 최종 상호 동의','']].map(function(f){
+        var on = !!(a.onboard && a.onboard[f[0]]);
+        return `<button onclick="setApplicantOnboard('${a.id}','${f[0]}')" title="${f[2]}"
+          style="display:flex;align-items:center;gap:7px;text-align:left;font:inherit;font-size:11px;
+                 padding:6px 9px;border-radius:8px;cursor:pointer;width:100%;
+                 border:1px solid ${on?'var(--gr,#3aa05a)':'var(--br,#33333a)'};
+                 background:${on?'rgba(58,160,90,.13)':'transparent'};
+                 color:${on?'var(--tx,#e6e5e2)':'var(--tx3,#8a8a92)'}">
+          <span style="font-size:12px">${on?'✓':'○'}</span><span>${f[1]}</span></button>`;
+      }).join('')}
+    </div>
   </div>`;
   const reportsBlock = (a.reports||[]).length ? `<div class="ap-section">
     <div class="ap-section-title">인터뷰 리포트</div>
@@ -46928,12 +46963,12 @@ function _staffAttBgRefresh(){
 const OB_STEPS = [
   { n:1,  g:'채용',   t:'왓츠앱 서류 스크리닝',        d:'CV · PC 사양 · 와이파이 속도 · 랜 케이블', k:'spec' },
   { n:2,  g:'채용',   t:'1차 메시지 면접',             d:'경력 · 가능 시간 · 게임 경험',            k:'stage:first_int' },
-  { n:3,  g:'채용',   t:'근무 조건 안내 · 동의 확인',   d:'급여 · 수습 90% · 시프트 · 기본 규칙',    k:'mark' },
+  { n:3,  g:'채용',   t:'근무 조건 안내 · 동의 확인',   d:'급여 · 수습 90% · 시프트 · 기본 규칙',    k:'app:agreed' },
   { n:4,  g:'채용',   t:'2차 디스코드 캠 면접',         d:'PC·와이파이 재확인 · 태도',              k:'stage:second_int' },
-  { n:5,  g:'채용',   t:'Remote T · AnyDesk 설치',      d:'설치가 됐는지 확인',                     k:'p:anydesk' },
-  { n:6,  g:'채용',   t:'Remote 게임 테스트',           d:'렉 · 딜레이 · PC 성능 · 회선 안정성',    k:'mark' },
+  { n:5,  g:'채용',   t:'Remote T · AnyDesk 설치',      d:'설치가 됐는지 확인',                     k:'app:remote' },
+  { n:6,  g:'채용',   t:'Remote 게임 테스트',           d:'렉 · 딜레이 · PC 성능 · 회선 안정성',    k:'app:gametest' },
   { n:7,  g:'채용',   t:'최종 면접 · 세부사항 설명',    d:'업무 · 회사 규칙',                       k:'stage:pass' },
-  { n:8,  g:'채용',   t:'최종 상호 동의',               d:'양측 동의 → 채용 확정',                  k:'mark' },
+  { n:8,  g:'채용',   t:'최종 상호 동의',               d:'양측 동의 → 채용 확정',                  k:'app:final' },
   { n:9,  g:'채용',   t:'공식 입사 등록',               d:'직원 풀에 올라갔나',                     k:'staff' },
   { n:10, g:'온보딩', t:'메이플 캐릭터 · 디스코드 프로필', d:'담당 캐릭터 정하기',                  k:'mark' },
   { n:11, g:'온보딩', t:'디스코드 Role 부여',           d:'시프트·포지션에 맞는 Role',              k:'mark' },
@@ -47024,8 +47059,18 @@ async function renderOnboarding(pickId){
   function state(s){
     switch(s.k){
       case 'mark':    return { ok:!!marks[s.n], human:true, why: marks[s.n] ? '확인함' : '사람이 확인해야 합니다' };
-      case 'spec':    var sp=(app&&app.spec)||{}; var n=['cpu','ram','gpu','ssd','lan','down','up'].filter(function(x){ return has(sp[x]); }).length;
-                      return { ok:n>=3, why: app ? (n+'/7 칸 채움') : '지원자 기록 없음' };
+      /* [v1434] 지원자 PC 사양은 a.pc_spec 이다 (a.spec 이 아니다 — v1431 에서 잘못 봤다).
+         와이파이 속도는 pc_spec.wifi 안에 한 겹 더 들어 있다. */
+      case 'spec':    var sp=(app&&app.pc_spec)||{}, wf=(sp&&sp.wifi)||{};
+                      var n=['processor','memory','gpu'].filter(function(x){ return has(sp[x]); }).length
+                          + ['ssd','lan'].filter(function(x){ return sp[x]!=null; }).length
+                          + ['down','up'].filter(function(x){ return has(wf[x]); }).length;
+                      return { ok:n>=4, why: app ? (n+'/7 칸 채움'+(app.spec_status==='pass'?' · 통과':(app.spec_status==='fail'?' · 탈락':''))) : '지원자 기록 없음' };
+      /* [v1434] 구원씨 절차 3·5·6·8 — 지원자 카드에서 확인한 것을 그대로 읽는다 */
+      case 'app:agreed': case 'app:remote': case 'app:gametest': case 'app:final':
+                      var f=s.k.slice(4), ob=(app&&app.onboard)||{};
+                      return { ok:!!ob[f], appMark:true,
+                        why: app ? (ob[f] ? '지원자 카드에서 확인함' : '채용 화면에서 확인해 주세요') : '지원자 기록 없음' };
       case 'staff':   return { ok:true, why:'직원 풀에 있음' };
       case 'personal':var need=['full_name','bank','account','phone','start_work'];
                       var got=need.filter(function(x){ return has(P[x]); });
@@ -47060,6 +47105,9 @@ async function renderOnboarding(pickId){
             : ('<span class="ob-auto">'+(st.ok?'○':'✗')+'</span>'))
       +   ((s.k==='personal'||s.k==='p:discord_id'||s.k==='p:discord_thread'||s.k==='both'||s.k==='p:anydesk')&&!st.ok&&_obCanEdit()
             ? ('<button class="ob-go" onclick="openStaffInfoEditor(\''+esc(String(me.id))+'\')">채우기</button>') : '')
+      /* [v1434] 채용 쪽에서 확인하는 것들 — 그 화면으로 바로 보낸다 */
+      +   (st.appMark && !st.ok && app
+            ? ('<button class="ob-go" onclick="setActiveChannel(\'op-recruit\')">채용 화면</button>') : '')
       + '</div></div>';
   });
   var pct = Math.round(doneN/OB_STEPS.length*100);
