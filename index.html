@@ -4,7 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
 <title>ARASAKA Corp</title>
-<!-- BUILD: v1456 | 급여 통합 1단계: 시급 칸(프로필) · 온보딩 9번 초대 코드·계정 잇기 · 14번 데일리보드 자동 생성 -->
+<!-- BUILD: v1457 | 시급 칸 뺌 — 기준은 시프트 월급표 하나 (온보딩 9·14번은 그대로) -->
 <!-- v745 기록은 git 이력(v1302 이전 커밋)에 있다 — 100KB 변경사 주석을 배포에서 제거 -->
 <!-- [v677] a <link href> cannot read a CSS variable, so the favicon carries its own copy.
      64px: a browser tab draws it at 16-32px, so this is 2x-DPR sharp at 11KB. -->
@@ -35327,30 +35327,6 @@ function _srProfilesReady(){
   try{ return typeof STAFF_PROFILE !== 'undefined' && Object.keys(STAFF_PROFILE).length > 0; }
   catch(_){ return false; }
 }
-/* ═══ [v1456] 시급 한 곳 ═══════════════════════════════════════════════════════
-   boss "시급이 코드에 박혀 있는 회사가 어디 있어" — 급여 통합 1단계.
-   직원 프로필(personal.hourly_wage)에 적힌 시급을 돌려준다. id 로 먼저 찾고, 레이스처럼
-   이름만 아는 곳은 로스터 이름 → 프로필로 잇는다. 없으면 0 — 부르는 쪽이 예전 계산으로 간다.
-   이름 맞추기는 정확히 같은 이름을 먼저, 그다음에 첫 낱말(CLAWS ↔ Claws Musk). */
-function _hourlyWageOf(idOrName){
-  try{
-    if(typeof STAFF_PROFILE==='undefined') return 0;
-    var num=function(v){ var n=Number(String(v==null?'':v).replace(/[^\d.]/g,'')); return (isFinite(n)&&n>0)?Math.round(n):0; };
-    var k=String(idOrName==null?'':idOrName).trim(); if(!k) return 0;
-    if(STAFF_PROFILE[k] && STAFF_PROFILE[k].personal){ var w=num(STAFF_PROFILE[k].personal.hourly_wage); if(w) return w; }
-    var strip=function(x){ return String(x||'').toLowerCase().trim().replace(/^\s*(mr|ms|mrs)(\.|\s)\s*/,'').trim(); };
-    var key=strip(k), first=key.split(' ')[0]; if(!key) return 0;
-    var cands=[];
-    if(typeof STAFF!=='undefined' && Array.isArray(STAFF)) STAFF.forEach(function(st){ if(st&&st.id&&STAFF_PROFILE[st.id]&&STAFF_PROFILE[st.id].personal) cands.push({ n:[strip(st.name),strip(st.full_name)], p:STAFF_PROFILE[st.id].personal }); });
-    for(var id in STAFF_PROFILE){ var pr=STAFF_PROFILE[id]; if(pr&&pr.personal&&pr.personal.full_name) cands.push({ n:[strip(pr.personal.full_name)], p:pr.personal }); }
-    for(var pass=0; pass<2; pass++){
-      for(var i=0;i<cands.length;i++){ var c=cands[i], hit=false;
-        for(var j=0;j<c.n.length;j++){ var nm=c.n[j]; if(!nm) continue; if(pass===0 ? nm===key : nm.split(' ')[0]===first){ hit=true; break; } }
-        if(hit){ var w2=num(c.p.hourly_wage); if(w2) return w2; } }
-    }
-    return 0;
-  }catch(_){ return 0; }
-}
 function _srThread(){
   try{
     if(typeof STAFF_PROFILE==='undefined' || typeof currentUser==='undefined' || !currentUser) return '';
@@ -41272,10 +41248,8 @@ function _rcBuildKbPlayers(reports, clients, settings, roster){
     else if(/Shift\s*3/i.test(_slot)){ _mb=_MBT.shift3; _sh=8; }
     else if(/Night\s*8/i.test(_shf)){ _mb=_MBT.shift3; _sh=8; }
     else if(/Day\s*8/i.test(_shf)){ _mb=_MBT.shift1; _sh=8; }
-    var _hbProf=(typeof _hourlyWageOf==='function')?_hourlyWageOf(cfg.name):0;   /* [v1456] 프로필에 적은 시급이 있으면 그것이 먼저 — 코드에 박힌 표보다 사람이 적은 칸이 이긴다 */
-    var _hb = _hbProf>0 ? _hbProf : (_mb>0 ? Math.round(_mb/_sh/30) : (Number(cfg.hourlyBase)||0));
-    out.hourlyWage=_hb; out.hourlySrc=(_hbProf>0?'profile':'table');
-    if(!_hb && Number(cfg.monthlyBase)>0){ var _sh2=(o&&o.raceMode==='1212')?12:8; _hb=Math.round(Number(cfg.monthlyBase)/24/_sh2); }
+    var _hb = _mb>0 ? Math.round(_mb/_sh/30) : (Number(cfg.hourlyBase)||0);   /* [v1457] 기준은 시프트 월급표 하나 — v1456 프로필 시급은 뺐다 */
+    if(!_hb && Number(cfg.monthlyBase)>0){ var _sh2=(o&&o.raceMode==='1212')?12:8; _hb=Math.round(Number(cfg.monthlyBase)/30/_sh2); }   /* [v1457] 30일 기준으로 통일 */
     out.raceCutAmt=(o&&o.raceShortfall>0&&_hb>0)?Math.round(_hb*o.raceShortfall):0;   // [v544] today's wage-layer cut (Rp), shown in the race so minuses are visible
     out.raceCutWeek=(_hb>0)?Math.round(_hb*(_wkShort[k]||0)):0; out.raceCutMonth=(_hb>0)?Math.round(_hb*(_moShort[k]||0)):0;   // [v592] period wage-layer cuts (same _hb × Σshortfall) — feeds the Week/Month net RP
     out.perfPctWeek=(perfWeekByKey[k]!=null?perfWeekByKey[k]:null); out.perfPctMonth=(perfMonthByKey[k]!=null?perfMonthByKey[k]:null);   // [v530] Records-basis period %
@@ -47926,9 +47900,6 @@ async function openStaffDetail(staffId){
       ${pinfo.start_work
         ? infoRow('입사일', pinfo.start_work)
         : `<div class="sf-info-row"><span class="sf-info-lbl">입사일</span><span class="sf-info-val" style="color:var(--re,#c46a6a)">미설정${_firstIn ? ` — 기록상 첫 출근 <b style="color:var(--tx,#e6e5e2);font-variant-numeric:tabular-nums">${_firstIn}</b>${(currentUserRole==='admin'||currentUserRole==='op') ? ' · ✎ Edit info 에서 확정' : ''}` : ((currentUserRole==='admin'||currentUserRole==='op') ? ' — ✎ Edit info 에서 입력' : '')}</span></div>`}
-      ${pinfo.hourly_wage
-        ? infoRow('시급', Number(String(pinfo.hourly_wage).replace(/[^\d.]/g,'')).toLocaleString() + ' Rp/h')
-        : ((currentUserRole==='admin'||currentUserRole==='op') ? `<div class="sf-info-row"><span class="sf-info-lbl">시급</span><span class="sf-info-val" style="color:var(--tx3)">미설정 — 시프트 월급표로 계산 중 · ✎ Edit info 에서 입력</span></div>` : '')}
       ${infoRow('시프트', pinfo.shift_pattern)}
       ${pinfo.discord_id
         ? infoRow('Discord ID', pinfo.discord_id, true)
@@ -48952,9 +48923,8 @@ async function openStaffInfoEditor(staffId){
        게 아니라 폼에 떠 있을 뿐이므로, 저장을 안 누르면 아무 일도 안 일어난다. */
     { k:'start_work', label:'입사일 / Start date', type:'date',
       value:(p.start_work || (function(){ try{ var f=window._sfFirstIn; return (f && String(f.id)===String(staffId)) ? f.date : ''; }catch(_){ return ''; } })()) },
-    /* [v1456] 시급 — 급여 통합 1단계. 코드에 박혀 있던 시급을 사람이 적는 칸으로 옮긴다.
-       비워 두면 지금까지처럼 시프트 월급표로 계산한다(값을 지어내지 않는다). */
-    { k:'hourly_wage', label:'시급 / Hourly wage (Rp)', type:'number', value:p.hourly_wage, ph:'예: 10500 — 비우면 시프트 월급표로 계산' },
+    /* [v1457] boss "시급 계산을 왜 해, 월급 기준대로 하면 되는데" — v1456 의 시급 칸은 뺐다.
+       기준은 시프트 월급표(MONTHLY_BASE_TABLE) 하나다. 사람에게 묻는 건 시프트뿐. */
     { k:'shift_pattern', label:'시프트 / Shift', value:p.shift_pattern, ph:'12H Day · 8H Shift 1 ...' },
     { k:'discord_id', label:'Discord ID / 봇 연동용', value:p.discord_id, ph:'예: 734635939007168592' },
     { k:'discord_thread', label:'Discord 보고 스레드 / Report thread link', value:p.discord_thread, ph:'https://discord.com/channels/…' }
@@ -50651,8 +50621,7 @@ async function renderMyPerformance(){
     const myCheckins = allRs.filter(r => r.tag==='checkin' && !isTestMap(r));
     const shiftHours = myCheckins.length ? (myCheckins.reduce((s,r)=>s+sessionHours(r,brk),0)/myCheckins.length) : 12;
     const monthBasePay = rate + allowance;
-    const _pwProf = (typeof _hourlyWageOf==='function') ? (_hourlyWageOf((typeof currentUser!=='undefined'&&currentUser)?currentUser.id:'') || _hourlyWageOf(myName)) : 0;   /* [v1456] 프로필 시급이 있으면 그것 */
-    const hourlyBase = _pwProf>0 ? _pwProf : (shiftHours>0 ? (monthBasePay/30)/shiftHours : (monthBasePay/30)/12);
+    const hourlyBase = shiftHours>0 ? (monthBasePay/30)/shiftHours : (monthBasePay/30)/12;
 
     const expHist = days.map(d => byDate[d].hours ? byDate[d].gain/byDate[d].hours : 0);
     const adeHist = days.map(d => byDate[d].hours ? Math.round(byDate[d].ade/byDate[d].hours/1000) : 0);
@@ -70494,9 +70463,12 @@ console.info('AUTO100 build applied',AUTO100_BUILD.version,v3Audit());
     }
     return Math.max(1,cnt);
   }
-  const PAYROLL_WORKDAYS=businessDaysInMonth(CONFIG.payrollYear,CONFIG.payrollMonth,CONFIG.payrollHolidays);
-  window.__PAYROLL_CALENDAR__={year:CONFIG.payrollYear,month:CONFIG.payrollMonth,workdays:PAYROLL_WORKDAYS,weekendExcluded:true,holidays:CONFIG.payrollHolidays.slice(),build:BUILD};
-  if(PAY_PROJECTION){PAY_PROJECTION.monthDays=PAYROLL_WORKDAYS;PAY_PROJECTION.weekDays=5;}
+  /* [v1457] boss "우린 근무일 기준이 아니고 한국식으로 주말까지 포함해서 시급 계산해"
+     평일만 세던 businessDaysInMonth(22일 안팎)는 쓰지 않는다. 한 달 = 30일, 시급 = 월급 ÷ 30 ÷ 시프트시간.
+     레이스 컷(_hb)과 내 성과가 이미 30으로 나누고 있었는데 이 일급 계산만 평일로 나눠 하루 값이 커져 있었다. */
+  const PAYROLL_WORKDAYS=30;
+  window.__PAYROLL_CALENDAR__={year:CONFIG.payrollYear,month:CONFIG.payrollMonth,workdays:PAYROLL_WORKDAYS,weekendExcluded:false,holidays:CONFIG.payrollHolidays.slice(),build:BUILD};
+  if(PAY_PROJECTION){PAY_PROJECTION.monthDays=PAYROLL_WORKDAYS;PAY_PROJECTION.weekDays=7;}
 
   Object.assign(I18N.ko,{
     dMonth:' 근무일/월',
@@ -70557,10 +70529,8 @@ console.info('AUTO100 build applied',AUTO100_BUILD.version,v3Audit());
   };
 
   function computedDayBase(p){
-    const hours=v3Num((p&&p.todayHours)||0);
-    const _pw=(typeof _hourlyWageOf==='function')?_hourlyWageOf(p&&p.name):0;   /* [v1456] 프로필 시급 우선 */
-    if(_pw>0 && hours) return v3Int(_pw*hours);
     const monthBase=v3Int(salaryPlanOf(p).month||0);
+    const hours=v3Num((p&&p.todayHours)||0);
     const shiftH=shiftHoursOf(p)||1;
     if(!monthBase||!hours)return 0;
     return v3Int(monthBase/PAYROLL_WORKDAYS/shiftH*hours);
@@ -70593,7 +70563,7 @@ console.info('AUTO100 build applied',AUTO100_BUILD.version,v3Audit());
   recalcEmbeddedDayPay();
 
   playerPayProjection=function(p){
-    const shiftH=shiftHoursOf(p),weekDays=5,monthDays=PAYROLL_WORKDAYS;
+    const shiftH=shiftHoursOf(p),weekDays=7,monthDays=PAYROLL_WORKDAYS;   /* [v1457] 주말 포함 */
     const plan=salaryPlanOf(p),monthBase=v3Int(plan.month||0);
     if(!monthBase)return {ok:false,weekDays,monthDays,shiftH:shiftH||0,planLabel:plan.label,planKey:plan.key,baseDay:0,adjDay:0,totalDay:0,weekBase:0,weekAdj:0,week:0,monthBase:0,monthAdj:0,month:0,poolImpact:0};
     const currentAdj=v3Int(p.todayDelta||0);
@@ -70619,7 +70589,7 @@ console.info('AUTO100 build applied',AUTO100_BUILD.version,v3Audit());
     add(!!claws,'CLAWS exists','CLAWS 확인');
     add(!!cp&&cp.monthBase===MONTHLY_BASE_TABLE.shift1,'CLAWS Shift 1 base 2.5JT',cp?`${v3Money(cp.monthBase)} / ${displayShiftOf(claws)}`:'missing');
     add(!!cp&&cp.month===Math.max(0,MONTHLY_BASE_TABLE.shift1+v3Int(cp.monthAdj)),'CLAWS no monthly projection',cp?`${v3Money(cp.month)}`:'missing');   /* [v608] adj is now NET (paid+live−cuts) */
-    add(PAYROLL_WORKDAYS>0,'Weekday day-pay basis',`${CONFIG.payrollYear}-${pad2(CONFIG.payrollMonth)} · ${PAYROLL_WORKDAYS} weekdays · Sat/Sun excluded`);
+    add(PAYROLL_WORKDAYS===30,'30-day day-pay basis (weekends included)',`월급 ÷ 30일 ÷ 시프트시간 · 주말 포함`);
     add(recorded.every(p=>v3Int(p.todayPay)===Math.max(0,v3Int(p.todayBase)+v3Int(p.todayDelta))),'Day pay source protected',`recorded ${recorded.length} players`);
     add(TODAY_BONUS_SPENT===PLAYERS.reduce((s,p)=>s+Math.max(0,v3Num(p.todayDelta)),0),'Bonus pool positive-only',v3Money(TODAY_BONUS_SPENT));
     add(PLAYERS.filter(p=>v3Num(p.todayDelta)<0).every(p=>Math.max(0,v3Num(p.todayDelta))===0),'Penalty excluded from gross spend','감액은 총지출서 제외 · 예산엔 환입(상한 5주따) [v638]');
@@ -70631,7 +70601,7 @@ console.info('AUTO100 build applied',AUTO100_BUILD.version,v3Audit());
   window.__PAY_AUDIT__=v3Audit;
   v3CalcBody=function(){
     const ym=`${CONFIG.payrollYear}-${pad2(CONFIG.payrollMonth)}`;
-    return `<div class="calc-rules"><div><b>월급</b> = 고정 월 기본급 + 현재 입력된 보너스/감액. 오늘 보너스를 월 전체로 늘리지 않음.</div><div><b>주급</b> = 고정 월 기본급 ÷ 4 + 현재 입력된 보너스/감액.</div><div><b>일급 기본급</b> = 월 기본급 ÷ ${ym} 평일 ${PAYROLL_WORKDAYS}일 × 오늘 기록시간 ÷ 시프트시간. 토요일/일요일 제외.</div><div><b>일급 합계</b> = 일급 기본급 + 오늘 인센티브/감액.</div><div><b>보너스 풀</b> = Math.max(0, todayDelta)만 차감. 기본급 제외, 감액은 다시 더하지 않음.</div><div><b>CLAWS</b> = 다음달부터 Day 8 · Shift 1 · 기본 2.5JT. 이전 10시간 특례는 종료.</div></div>`;
+    return `<div class="calc-rules"><div><b>월급</b> = 고정 월 기본급 + 현재 입력된 보너스/감액. 오늘 보너스를 월 전체로 늘리지 않음.</div><div><b>주급</b> = 고정 월 기본급 ÷ 4 + 현재 입력된 보너스/감액.</div><div><b>일급 기본급</b> = 월 기본급 ÷ 30일 × 오늘 기록시간 ÷ 시프트시간. 주말 포함(한국식).</div><div><b>일급 합계</b> = 일급 기본급 + 오늘 인센티브/감액.</div><div><b>보너스 풀</b> = Math.max(0, todayDelta)만 차감. 기본급 제외, 감액은 다시 더하지 않음.</div><div><b>CLAWS</b> = 다음달부터 Day 8 · Shift 1 · 기본 2.5JT. 이전 10시간 특례는 종료.</div></div>`;
   };
 
   if(window.__AUTO100_BUILD__){window.__AUTO100_BUILD__.version=BUILD;window.__AUTO100_BUILD__.guardrails.push('101 CLAWS moved to Day 8 Shift 1 next month','102 day base uses payroll-month weekdays excluding Sat/Sun','103 partial day base is prorated by shift hours');}
