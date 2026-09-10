@@ -4,7 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
 <title>ARASAKA Corp</title>
-<!-- BUILD: v1432 | 테스트 배지에 며칠째인지 · PC18 클라 id 바로잡음 -->
+<!-- BUILD: v1433 | 배정 격자가 좁은 판에서 뭉개지던 것 — 폭에 따라 스스로 접힌다 -->
 <!-- v745 기록은 git 이력(v1302 이전 커밋)에 있다 — 100KB 변경사 주석을 배포에서 제거 -->
 <!-- [v677] a <link href> cannot read a CSS variable, so the favicon carries its own copy.
      64px: a browser tab draws it at 16-32px, so this is 2x-DPR sharp at 11KB. -->
@@ -8669,6 +8669,25 @@ html[data-theme=light] #ch-pc-status #pc-cmdbar .dp-day.on{background:#fff;color
 #ag-wrap .ag-lab em{font-style:normal;font-size:9px;color:var(--ac,#c9963a);overflow:hidden;
   text-overflow:ellipsis;white-space:nowrap;flex:1 1 auto;min-width:0}
 #ag-wrap .ag-lab u{text-decoration:none;font:700 9px ui-monospace,monospace;color:var(--tx4,#6c6b66);flex:0 0 auto}
+/* ═══ [v1433] 판이 좁아지면 이름 칸이 먼저 물러난다 ═══════════════════════════
+   막대는 끝까지 남긴다 — 이 판은 '누가 언제 있나' 를 보는 판이고 그건 막대만 한다.
+   지키는 순서: PC 번호 > 클라 이름 > 합계 시간 > 버튼. 뒤에서부터 내려놓는다. */
+#ag-wrap.ag-narrow{--lab:94px}
+#ag-wrap.ag-narrow .ag-lab{gap:4px;padding:0 4px 0 2px}
+#ag-wrap.ag-narrow .ag-lab b{font-size:9.5px}
+#ag-wrap.ag-narrow .ag-lab em{font-size:8.5px}
+#ag-wrap.ag-narrow .ag-lab u{display:none}
+#ag-wrap.ag-narrow .ag-lab .ag-btns{display:none}
+#ag-wrap.ag-narrow .pc-testbadge{margin-left:3px;padding:1px 4px;font-size:8px;gap:2px}
+#ag-wrap.ag-narrow .pc-testbadge .pc-testd{display:none}
+#ag-wrap.ag-narrow .ag-bar .ag-hh{display:none}
+#ag-wrap.ag-tiny{--lab:56px}
+#ag-wrap.ag-tiny .ag-lab em,
+#ag-wrap.ag-tiny .ag-lab .ag-bk,
+#ag-wrap.ag-tiny .ag-lab .ag-led,
+#ag-wrap.ag-tiny .pc-testbadge{display:none}
+#ag-wrap.ag-tiny .ag-lab b{font-size:9px}
+#ag-wrap.ag-tiny .ag-bar .ag-nm{font-size:8.5px}
 #ag-wrap .ag-track{position:relative;flex:1 1 auto;min-width:0;border-radius:6px;
   --six:repeating-linear-gradient(90deg,rgba(255,255,255,.14) 0 1px,transparent 1px calc(100%/4));
   background:var(--bg-i,#151517);
@@ -59856,6 +59875,20 @@ function _agRender(){
       }).catch(function(){});
     }
   }catch(_){}
+  /* ═══ [v1433] 좁아지면 스스로 줄어든다 ═══════════════════════════════════════
+     boss "저렇게 디자인이랑 UI가 완전 고장났잖아"
+     이름 칸이 150px 고정이었다. 판이 219px 로 좁아지면 막대 자리가 65px 밖에 안 남고,
+     그 안에 24시간이 다 들어가니 막대는 색 얼룩이 되고 눈금 글자(00 03 06 …)는
+     서로 겹쳐 '0000012521' 같은 덩어리가 된다. 화면이 좁은 게 아니라 판이 안 접혔다.
+
+     좁아지면 덜 중요한 것부터 내려놓는다. 이름 칸에서 지키는 순서는
+       PC 번호 > 클라 이름 > 합계 시간 > 버튼
+     이고, 눈금은 3시간 → 6시간 → 12시간으로 성기게 간다. 막대는 끝까지 남는다 —
+     이 판은 '누가 언제 있나' 를 보는 판이고 그건 막대만 할 수 있는 말이다. */
+  var _agW = 0; try{ _agW = host.clientWidth || host.offsetWidth || 0; }catch(_){}
+  var _narrow = _agW > 0 && _agW < 430, _tiny = _agW > 0 && _agW < 320;
+  try{ host.classList.toggle('ag-narrow', _narrow); host.classList.toggle('ag-tiny', _tiny); }catch(_){}
+  var _tickStep = _tiny ? 12 : (_narrow ? 6 : 3);
   const kst = new Date(Date.now()+9*3600000);
   const nowH = kst.getUTCHours() + kst.getUTCMinutes()/60;
   /* [v1420] '지금' 도 축 위에 놓이는 것이므로 막대와 같은 자로 잰다.
@@ -59867,7 +59900,7 @@ function _agRender(){
   try{ _mpStampSince(pcs); }catch(_){}
   let head = '<div class="ag-row ag-head"><div class="ag-lab"></div><div class="ag-track">';
   for(let h=0; h<24; h++){
-    if(h%3) continue;                               /* 3시간마다만 — 24개는 촘촘해서 못 읽는다 */
+    if(h % _tickStep) continue;                     /* [v1433] 3 / 6 / 12 시간 — 좁아질수록 성기게. 24개는 촘촘해서 못 읽는다 */
     /* ═══ [v1159] 눈금이 오른쪽으로 밀려 있던 것 ═══
        boss “이거 잘 안보여 그리고 눈금은 왜 살짝 오른쪽으로 가있는거야?”
        left 만 주고 끝냈다. 글자는 그 지점에서 '오른쪽으로' 자라므로, 눈금선은
@@ -60195,6 +60228,25 @@ function _agRender(){
   host.innerHTML = head + '<div class="ag-body">' + rows + '</div>';
   host.style.setProperty('--now', (nowD/24*100).toFixed(3)+'%');   /* [v1420] 주황 세로줄도 축과 같이 옮긴다 */
   try{ _agBind(host); }catch(_){}
+  /* [v1433] 판 폭이 바뀌면 다시 그린다 — 접힘 단계(넓음/좁음/아주좁음)가 폭으로 갈리므로
+     창을 줄였는데 예전 폭 그대로 그려져 있으면 아까 그 뭉개진 화면이 그대로 남는다.
+     ResizeObserver 는 그 요소만 본다(창 크기 말고) — 옆 판을 접어 좁아진 것도 잡는다. */
+  try{
+    if(!host._agRO && typeof ResizeObserver === 'function'){
+      var _rot = null;
+      host._agRO = new ResizeObserver(function(){
+        clearTimeout(_rot);
+        _rot = setTimeout(function(){
+          try{
+            var w = host.clientWidth || 0;
+            var n = w > 0 && w < 430, t = w > 0 && w < 320;
+            if(n !== host.classList.contains('ag-narrow') || t !== host.classList.contains('ag-tiny')) _agRender();
+          }catch(_){}
+        }, 140);
+      });
+      host._agRO.observe(host);
+    }
+  }catch(_){}
 }
 /* [v1083] 대타 사유 고르기 — 작게, 그 자리에서. 폼을 띄우면 배치 흐름이 끊긴다. */
 function _agAskReason(cov, who, owner, px, py){
