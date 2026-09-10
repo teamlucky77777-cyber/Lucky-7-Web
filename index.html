@@ -4,7 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
 <title>ARASAKA Corp</title>
-<!-- BUILD: v1468 | 메이플 캐릭터 826개 전부 보이게 (160개에서 잘리던 것) -->
+<!-- BUILD: v1469 | 캐릭터 고르면 웹 얼굴도 그 캐릭터 · 디스코드 닉네임 자동 · 그림은 DM 으로 · 13번은 봇이 아니라 디스코드 아이디 -->
 <!-- v745 기록은 git 이력(v1302 이전 커밋)에 있다 — 100KB 변경사 주석을 배포에서 제거 -->
 <!-- [v677] a <link href> cannot read a CSS variable, so the favicon carries its own copy.
      64px: a browser tab draws it at 16-32px, so this is 2x-DPR sharp at 11KB. -->
@@ -16513,6 +16513,20 @@ function photoFor(key){
   if(currentUser && currentUser.avatar_url && (currentUser.name||'').toLowerCase().trim() === k) return currentUser.avatar_url;
   if(PHOTOS[k]) return PHOTOS[k];
   if(typeof STAFF_PROFILE !== 'undefined'){ const sp = STAFF_PROFILE[key] || STAFF_PROFILE[k]; if(sp && sp.photo) return sp.photo; }
+  /* [v1469] boss "캐릭터 고르면 프로필도 그걸로" — 사진이 없으면 고른 메이플 캐릭터가 얼굴이 된다.
+     key 가 id 면 그 프로필, 이름이면 로스터에서 id 를 찾아 프로필로. */
+  try{
+    if(typeof STAFF_PROFILE !== 'undefined' && typeof _mapleIcon === 'function'){
+      var _sp = STAFF_PROFILE[key];
+      if(!_sp && typeof STAFF !== 'undefined' && Array.isArray(STAFF)){
+        var _strip = function(x){ return String(x||'').toLowerCase().trim().replace(/^\s*(mr|ms|mrs)(\.|\s)\s*/,'').trim(); };
+        var _kk = _strip(key);
+        for(var i=0;i<STAFF.length;i++){ var st=STAFF[i]; if(!st||!st.id) continue; if(_strip(st.name)===_kk || _strip(st.full_name)===_kk || _strip(st.name).split(' ')[0]===_kk){ _sp = STAFF_PROFILE[st.id]; if(_sp) break; } }
+      }
+      var _mc = _sp && _sp.personal && _sp.personal.maple_char;
+      if(_mc && _mc.id) return _mapleIcon(_mc.id);
+    }
+  }catch(_){}
   return null;
 }
 // returns a style string: profile photo as background if set, else the given/initial color
@@ -47178,7 +47192,7 @@ const OB_STEPS = [
   { n:10, g:'온보딩', t:'메이플 캐릭터 · 디스코드 프로필', d:'본인이 내 시프트에서 고르거나, 여기서 대신 고르기', k:'maple' },   /* [v1466] */
   { n:11, g:'온보딩', t:'디스코드 Role 부여',           d:'시프트·포지션에 맞는 Role',              k:'mark' },
   { n:12, g:'온보딩', t:'개인정보 · 입사일 등록',       d:'실명 · 은행 · 계좌 · 전화 · 입사일',     k:'personal' },
-  { n:13, g:'온보딩', t:'HR BOT 등록',                  d:'디스코드 아이디 — 없으면 출퇴근이 안 찍힌다', k:'p:discord_id' },
+  { n:13, g:'온보딩', t:'디스코드 아이디',              d:'데일리보드 태그 · 닉네임 자동 설정에 쓴다 (출퇴근은 웹에서)', k:'p:discord_id' },   /* [v1469] 봇 출퇴근은 안 쓴다 */
   { n:14, g:'온보딩', t:'데일리보드 생성 · 태그',       d:'전용 보드 링크',                         k:'p:discord_thread' },
   { n:15, g:'온보딩', t:'웹사이트 가입',                d:'링크 전달 → 직접 가입',                  k:'login' },
   { n:16, g:'온보딩', t:'초대 코드 전달',               d:'가입에 필요한 코드',                     k:'invite' },
@@ -72874,6 +72888,19 @@ console.info('AUTO100 build applied',AUTO100_BUILD.version,v3Audit());
       try{ logAction('update', '메이플 캐릭터 · ' + name, cur.uid); }catch(_){}
       toast('✓ ' + name + (L ? ' — 내 캐릭터로 정했어요' : ' — set as your character'));
       close(); if(typeof cur.onDone === 'function') cur.onDone();
+      /* [v1469] 디스코드 닉네임을 캐릭터 이름으로, 프로필 그림은 DM 으로 보내 본인이 넣게(남의 사진은 봇이 못 바꾼다) */
+      (async function(){
+        try{
+          var did = ''; try{ did = String((STAFF_PROFILE[cur.uid] && STAFF_PROFILE[cur.uid].personal && STAFF_PROFILE[cur.uid].personal.discord_id) || '').replace(/\D/g,''); }catch(_){}
+          if(!did && typeof sb !== 'undefined' && sb){ try{ var u = await sb.from('user_profiles').select('discord_id').eq('id', cur.uid).maybeSingle(); did = String((u && u.data && u.data.discord_id) || '').replace(/\D/g,''); }catch(_){} }
+          if(!did){ toast(L ? '디스코드 아이디가 없어 닉네임은 못 바꿨어요 — 온보딩 13번' : 'No Discord ID — nickname not changed'); return; }
+          var r = await _srFetchRetry(_SR_SERVER + '/api/discord/nick', { method:'POST', headers:{ 'Content-Type':'application/json' },
+            body: JSON.stringify({ discordId: did, nick: name, iconUrl: icon(id), charName: name }) });
+          var j = await r.json().catch(function(){ return {}; });
+          if(r.ok && j.ok) toast(L ? ('디스코드 닉네임 → ' + name + (j.dm ? ' · 프로필 그림은 DM 으로 보냈어요' : '')) : ('Discord nickname → ' + name));
+          else toast((L ? '디스코드 닉네임은 못 바꿨어요 — ' : 'Nickname not changed — ') + (j.error || ('HTTP ' + r.status)), true);
+        }catch(e){ toast((L ? '디스코드 연결 실패 — ' : 'Discord failed — ') + (e && e.message), true); }
+      })();
     }catch(e){ toast((L ? '저장 실패 — ' : 'Failed — ') + (e && e.message), true); }
   }
   window._mapleCharClear = async function(){
