@@ -4,7 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
 <title>ARASAKA Corp</title>
-<!-- BUILD: v1448 | 겹친 줄 칸 계산 고침 — 빈 9px 없애고 막대 13px, 늘리기는 자리 빌 때만 -->
+<!-- BUILD: v1449 | 겹친 줄 칸 계산 · 번역 빠진 옛 댓글은 판을 열면 알아서 붙는다 -->
 <!-- v745 기록은 git 이력(v1302 이전 커밋)에 있다 — 100KB 변경사 주석을 배포에서 제거 -->
 <!-- [v677] a <link href> cannot read a CSS variable, so the favicon carries its own copy.
      64px: a browser tab draws it at 16-32px, so this is 2x-DPR sharp at 11KB. -->
@@ -8714,7 +8714,7 @@ html[data-theme=light] #ch-pc-status #pc-cmdbar .dp-day.on{background:#fff;color
   text-transform:uppercase;color:var(--tx4,#6c6b66);background:var(--bg-a,#232326);
   border-radius:4px;padding:1px 5px;margin-right:7px;vertical-align:1px}
 .pn-g{font:inherit;font-size:10.5px;line-height:1;padding:2px 5px;border:0;border-radius:5px;
-  background:transparent;color:var(--tx4,#6c6b66);cursor:pointer;opacity:0;transition:opacity .15s ease}
+  background:transparent;color:var(--tx4,#6c6b66);cursor:pointer;opacity:.5;transition:opacity .15s ease}
 .pn-item:hover .pn-g,.pn-g:focus-visible,.pn-g.busy,.pn-g.fail{opacity:1}
 .pn-g:hover{color:var(--ac,#c2a04a);background:var(--bg-a,#232326)}
 .pn-g.busy{color:var(--tx4,#6c6b66);cursor:default}
@@ -60029,11 +60029,29 @@ async function _pnTr(text, to){
    보이기는 하되 서버에는 안 쓴다(권한 없이 쓰면 실패 알림만 뜬다). */
 async function _pnTrFill(n){
   if(!n || n.tr || _pnTrState[n.id] === 'busy') return;
-  _pnTrState[n.id] = 'busy'; _pnRender();
+  const id = n.id;
+  _pnTrState[id] = 'busy'; _pnRender();
   const tr = await _pnTr(n.text);
-  if(tr){ n.tr = tr.out; n.trTo = tr.to; delete _pnTrState[n.id]; _pnRender();
-          if(_pnCanDel(n)) await _pnSave(); }
-  else { _pnTrState[n.id] = 'fail'; _pnRender(); }
+  /* 기다리는 사이 서버 것으로 갈렸을 수 있다(실시간 새로고침) — id 로 다시 찾는다.
+     안 그러면 번역이 떨어져 나간 옛 객체에 붙고 저장되는 블롭에는 안 들어간다. */
+  const cur = PC_NOTES.find(x => x && x.id === id) || n;
+  if(tr){ cur.tr = tr.out; cur.trTo = tr.to; delete _pnTrState[id]; _pnRender();
+          if(_pnCanDel(cur)) await _pnSave(); }
+  else { _pnTrState[id] = 'fail'; _pnRender(); }
+}
+/* ═══ [v1449] 번역 없는 글은 알아서 채운다 ═══════════════════════════════════════
+   v1446 이전에 적힌 글에는 번역이 없다. 🌐 버튼을 달아 뒀지만 마우스를 올려야
+   보이므로 "번역이 안 되네" 로 읽힌다 — 실제로 사장님 첫 글이 그랬다.
+   판을 열면 번역이 빠진 글을 스스로 채운다. 한 번에 둘씩만 부르고, 실패한 것은
+   그 자리에서 다시 부르지 않는다(🌐 로 사람이 다시 시킬 수는 있다). */
+function _pnTrSweep(){
+  if(!_pnCanPost()) return;
+  let n = 0;
+  for(const x of PC_NOTES){
+    if(!x || x.tr || _pnTrState[x.id]) continue;
+    if(++n > 2) break;
+    _pnTrFill(x);
+  }
 }
 window._pnTrOne = function(id){
   const n = PC_NOTES.find(x => x && x.id === id); if(!n) return;
@@ -60213,6 +60231,7 @@ function _pnRender(){
     +   '</div>'
     +   (list || '<div class="pn-empty">'+W.empty+'</div>')
     + '</div>';
+  setTimeout(_pnTrSweep, 0);        /* [v1449] 번역 빠진 글 채우기 — 그리기가 끝난 뒤에 */
 }
 window._pnRefresh = function(){ _pnLoad(true).then(function(){ _pnRender(); }); };
 function _agHost(){ return document.getElementById('ag-wrap'); }
