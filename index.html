@@ -4,7 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
 <title>ARASAKA Corp</title>
-<!-- BUILD: v1474 | ATS 자리표 카드 — 기준 없는 시간 경고에서 빼기 (자동사냥은 채점 대상이 아니다) -->
+<!-- BUILD: v1475 | 직원 풀 OP TEAM 에 ATS 자리표 카드 (계정 없이 화면에만) -->
 <!-- v745 기록은 git 이력(v1302 이전 커밋)에 있다 — 100KB 변경사 주석을 배포에서 제거 -->
 <!-- [v677] a <link href> cannot read a CSS variable, so the favicon carries its own copy.
      64px: a browser tab draws it at 16-32px, so this is 2x-DPR sharp at 11KB. -->
@@ -63123,6 +63123,7 @@ function isResignedId(id){
   try{ if(typeof _staffResigned === 'function' && _staffResigned(id)) return true; }catch(_){}
   return false;
 }
+const ATS_STAFF_ID = 'ats-op';   /* [v1475] 자리표 카드 — 진짜 계정이 아니다 */
 async function loadStaffPool(){
   if(!sb) return;
   try{
@@ -63145,6 +63146,17 @@ async function loadStaffPool(){
         day_off: false
       });
     });
+    /* ═══ [v1475] ATS 자리표 ═══════════════════════════════════════════════════
+       boss "OP TEAM 쪽에 ATS 라는 가라 카드 하나 — 클라이언트가 ATS 돌려 달라고 할 때
+       PC 현황에 넣을 카드가 없어서". 사람이 아니라 프로그램이 도는 자리다.
+       **계정은 만들지 않는다.** 로그인·급여·출퇴근 어디에도 안 들어가고 화면에만 있는 카드다
+       (급여 줄은 user_profiles 의 staff·leader 만 도니 이 카드는 애초에 대상이 아니다). */
+    try{
+      if(!STAFF.some(function(x){ return x && x.id === ATS_STAFF_ID; })){
+        STAFF.push({ id:ATS_STAFF_ID, name:'ATS', full_name:'ATS 자동사냥', short:'AT',
+                     position:'support', work_days:7, shiftLen:12, break_hours:0, day_off:false, virtual:true });
+      }
+    }catch(_){}
   }catch(e){ console.warn('staff pool load failed:', e); }
 }
 
