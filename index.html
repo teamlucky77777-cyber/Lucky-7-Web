@@ -4,7 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
 <title>ARASAKA Corp</title>
-<!-- BUILD: v1451 | 기본 배치 고정 — 배정격자·변경기록·시계·PC카드 차례, 모두 한 번 새로 -->
+<!-- BUILD: v1452 | 배치 격자7:기록3 · 영어일 때 안 바뀌던 것들 -->
 <!-- v745 기록은 git 이력(v1302 이전 커밋)에 있다 — 100KB 변경사 주석을 배포에서 제거 -->
 <!-- [v677] a <link href> cannot read a CSS variable, so the favicon carries its own copy.
      64px: a browser tab draws it at 16-32px, so this is 2x-DPR sharp at 11KB. -->
@@ -59062,10 +59062,14 @@ function pcTidyBoxes(silent){
      여태는 열린 상자끼리 똑같이 나눈 뒤 격자만 내용 높이(agNeed)로 깎았다.
      깎인 만큼은 아무도 안 쓰는 빈 띠로 남았다 — 화면 아래가 늘 허전하던 이유.
      격자는 필요한 만큼만, 남는 세로는 아래 상자(변경 기록)가 받는다. */
+  /* [v1452] boss "내가 보내준 스크린샷대로" — 격자 7 : 변경 기록 3.
+     격자는 제 내용만큼만 쓰되, 아래 상자 몫(약 30%)은 남겨 두고 가져간다.
+     격자 내용이 그보다 작으면 남는 세로는 전부 아래가 받는다. */
   const MIN_H = 160;
   const others = openers.filter(k => k !== 'assign');
+  const keep = others.length ? Math.max(others.length*MIN_H, Math.round(spare * 0.30)) : 0;
   const agH = (openers.indexOf('assign') >= 0)
-    ? Math.max(220, Math.min(agNeed, spare - others.length*MIN_H))
+    ? Math.max(220, Math.min(agNeed, spare - keep))
     : 0;
   const rest = others.length ? Math.max(MIN_H, Math.floor((spare - agH) / others.length)) : 0;
   LEFTS.forEach(k => {
@@ -59095,7 +59099,7 @@ function pcTidyBoxes(silent){
   st.client.h = Math.max(180, cliH);
 
   _pbSave(st); _pbApply();
-  if(!silent){ try{ toast('⊞ 배치를 정리했습니다 — 시계(배정) · 직원 풀(끌어오기) 중심'); }catch(_){} }
+  if(!silent){ try{ toast(_uiLang()==='ko' ? '⊞ 배치를 정리했습니다 — 배정 격자 · 변경 기록 · 직원 풀' : '⊞ Layout tidied — grid, change notes, staff pool'); }catch(_){} }
 }
 
 function pcPoolBoxes(){
@@ -59991,7 +59995,7 @@ async function _pnSave(){
     if(error) throw error;
     try{ if(typeof _pcRT !== 'undefined' && _pcRT) _pcRT.send({ type:'broadcast', event:'note', payload:{ id:_pcRTMe(), tab:_PC_TAB_ID } }); }catch(_){}
     return true;
-  }catch(e){ try{ toast('메모 저장 실패 — ' + ((e && e.message) || ''), true); }catch(_){} return false; }
+  }catch(e){ try{ toast((_pnUiLang()==='ko'?'메모 저장 실패 — ':_pnUiLang()==='id'?'Gagal menyimpan — ':'Could not save — ') + ((e && e.message) || ''), true); }catch(_){} return false; }
 }
 /* 언제 적었나 — 방금 · N분 전 · 오늘 14:20 · 09-08 14:20 */
 function _pnWhen(ms){
@@ -60107,7 +60111,7 @@ window._pnPost = async function(){
   const ta = document.getElementById('pn-input'); if(!ta) return;
   const txt = String(ta.value || '').trim();
   if(!txt){ ta.focus(); return; }
-  if(!_pnCanPost()){ try{ toast('로그인이 필요합니다', true); }catch(_){} return; }
+  if(!_pnCanPost()){ try{ toast(PN_L[_pnUiLang()].login, true); }catch(_){} return; }
   _pnBusy = true;
   const btn = document.getElementById('pn-post'); if(btn){ btn.disabled = true; btn.textContent = (PN_L[_pnUiLang()]||PN_L.ko).posting; }
   await _pnLoad();
@@ -60125,7 +60129,7 @@ window._pnPost = async function(){
 };
 window._pnDel = async function(id){
   const i = PC_NOTES.findIndex(n => n && n.id === id); if(i < 0) return;
-  if(!_pnCanDel(PC_NOTES[i])){ try{ toast('내가 쓴 것만 지울 수 있어요', true); }catch(_){} return; }
+  if(!_pnCanDel(PC_NOTES[i])){ try{ toast(_pnUiLang()==='ko'?'내가 쓴 것만 지울 수 있어요':_pnUiLang()==='id'?'Hanya tulisan sendiri yang bisa dihapus':'You can only delete your own', true); }catch(_){} return; }
   const gone = PC_NOTES.splice(i,1)[0];
   _pnRender();
   const ok = await _pnSave();
@@ -60235,8 +60239,8 @@ function _pnRender(){
               return '<button class="pn-g" title="'+W.tr+'" onclick="_pnTrOne(\''+esc(n.id)+'\')">🌐</button>';
             })()
         +   (_pnCanDel(n) ? ('<button class="pn-x" title="'+W.del+'" onclick="_pnDel(\''+esc(n.id)+'\')">×</button>') : '')
-        +   '</div><div class="pn-txt">'+esc(n.text||'')+'</div>'
-        +   (n.tr ? ('<div class="pn-tr"><i>'+(n.trTo === 'ko' ? '한국어' : 'Bahasa')+'</i>'+esc(n.tr)+'</div>') : '')
+        +   '</div><div class="pn-txt" data-no-i18n>'+esc(n.text||'')+'</div>'
+        +   (n.tr ? ('<div class="pn-tr" data-no-i18n><i>'+(n.trTo === 'ko' ? '한국어' : 'Bahasa')+'</i>'+esc(n.tr)+'</div>') : '')
         + '</div></div>';
     }
     const l = it.l;
@@ -60246,13 +60250,15 @@ function _pnRender(){
        같은 사실이 두 가지 말투로 보인다. 서랍이 쓰는 해석기를 그대로 빌려 쓴다.
        번호를 누르면 그 PC 전체 내역이 열린다. */
     const p = (typeof _pchParse === 'function') ? _pchParse(l, PL) : null;
-    if(!p) return '<div class="pn-sys">'
+    if(!p) return '<div class="pn-sys" data-no-i18n>'
       + _pnFace(l.actor, 18)
       + '<span class="pn-sysa">'+esc(_pnPretty(l.action))+'</span>'
       + (l.target ? ('<b class="pn-syst">'+esc(l.target)+'</b>') : '')
       + '<span class="pn-sysw">'+esc(_pnWhen(it.ts))+'</span>'
       + '</div>';
-    return '<div class="pn-sys'+(p.v ? ' v-'+p.v : '')+'" title="'+esc(String(l.action||'')+(l.target?' · '+l.target:''))+'">'
+    /* [v1452] data-no-i18n — 글은 이미 고른 말로 지어졌고, title 은 기록 원문이다.
+       자동 번역기가 두 번 손대면 "새로 Assign" 같은 반쪽 말이 된다. */
+    return '<div class="pn-sys'+(p.v ? ' v-'+p.v : '')+'" data-no-i18n title="'+esc(String(l.action||'')+(l.target?' · '+l.target:''))+'">'
       + _pnFace(l.actor, 18)
       + (p.pc != null
           ? '<b class="pn-sysn" title="PC-'+(p.pc<10?'0':'')+p.pc+' '+W.hist+'" onclick="event.stopPropagation();_pcHistForPC('+p.pc+')">'+(p.pc<10?'0':'')+p.pc+'</b>'
@@ -60270,7 +60276,7 @@ function _pnRender(){
     +     ' onkeydown="if((event.metaKey||event.ctrlKey)&&event.key===\'Enter\'){event.preventDefault();_pnPost();}"></textarea>'
     +     '<button id="pn-post" onclick="_pnPost()">'+W.post+'</button></div>')
     :     '<div class="pn-empty">'+W.login+'</div>')
-    +   '<div class="pn-langs">'
+    +   '<div class="pn-langs" data-no-i18n>'
     +     ['ko','en','id'].map(function(v){ return '<button class="'+(v===PL?'on':'')+'" onclick="_pnSetLang(\''+v+'\')">'
     +       (v==='ko'?'한':v==='en'?'EN':'ID')+'</button>'; }).join('')
     +   '</div>'
@@ -60668,7 +60674,9 @@ function _agRender(){
       const _clash = !isCover && mains.some(q => q !== o && hit(q.a, a2));
       if(!isCover && a2.fill && !_clash){ top = 2; bot = 2; }
       const rIcon = a2.cover ? (a2.reason==='net' ? '📶' : a2.reason==='blackout' ? '⚡' : '🔁') : '';
-      const rLab  = a2.cover ? (a2.reason==='net' ? '네트워크' : a2.reason==='blackout' ? '블랙아웃' : '대타') : '';
+      /* [v1452] 영어로 바꿨을 때 반쪽만 바뀌던 것 — 사전이 '네트워크' 만 알아듣고
+         "Miru 가 Kal Spot" 처럼 조사가 남았다. 말은 여기서 통째로 고른다. */
+      const rLab  = a2.cover ? (a2.reason==='net' ? (kl?'네트워크':'Network') : a2.reason==='blackout' ? (kl?'블랙아웃':'Blackout') : (kl?'대타':'Cover')) : '';
       const owner = a2.cover && typeof staffById==='function' ? (staffById(a2.coverFor)||{}).name : '';
       _agSegs(a2.start, a2.len).forEach(([bs, bl], si) => {
         /* [v1099] 이 사람이 곧 쉬는가 — 대타 막대는 원래 사람 자리를 대신 채운 것이라 제외 */
@@ -60701,7 +60709,8 @@ function _agRender(){
           + ' data-pc="'+p.id+'" data-idx="'+o.ai+'" data-staff="'+_mtcEsc(String(a2.staff||''))+'"'
           + ' style="left:'+(bs/24*100).toFixed(3)+'%;width:'+(bl/24*100).toFixed(3)+'%;top:'+top+'px;bottom:'+bot+'px;--bc:'+col2+'"'
           + ' title="'+(isCover
-              ? (rIcon+' '+rLab+' — '+_mtcEsc(nm2)+' 가 '+_mtcEsc(String(owner||'?'))+' 자리 · ')
+              ? (rIcon+' '+rLab+' — '+(kl ? (_mtcEsc(nm2)+' 가 '+_mtcEsc(String(owner||'?'))+' 자리')
+                                           : (_mtcEsc(nm2)+' covering '+_mtcEsc(String(owner||'?'))))+' · ')
               : (_mtcEsc(nm2)+(_isBk?(kl?' · 백업 인원이 채운 자리':' · filled by backup'):'')+' · '))
           + pad2(Math.floor(_tzH(a2.start)))+'–'+pad2(Math.floor(_tzH((a2.start+a2.len)%24)))+' · '+a2.len+'h'
           + (od ? (kl ? (' · 🌴 휴무 '+od.date+' '+(od.d===0?'오늘':od.d+'일 뒤')+(od.st==='approved'?' (승인됨)':' (승인 대기)')+(od.reason?' · '+_mtcEsc(od.reason):''))
@@ -60915,8 +60924,11 @@ function _agAskReason(cov, who, owner, px, py){
   document.getElementById('ag-reason')?.remove();
   const el = document.createElement('div');
   el.id = 'ag-reason';
-  const opts = [['blackout','⚡','블랙아웃'],['net','📶','네트워크'],['etc','🔁','기타']];
-  el.innerHTML = '<div class="hd">'+_mtcEsc(who)+' → '+_mtcEsc(owner)+' 자리 · 사유</div>'
+  /* [v1452] 사유 고르는 쪽지도 영어로 */
+  const _rl = (typeof _uiLang !== 'function') || _uiLang() === 'ko';
+  const opts = _rl ? [['blackout','⚡','블랙아웃'],['net','📶','네트워크'],['etc','🔁','기타']]
+                   : [['blackout','⚡','Blackout'],['net','📶','Network'],['etc','🔁','Other']];
+  el.innerHTML = '<div class="hd" data-no-i18n>'+_mtcEsc(who)+' → '+_mtcEsc(owner)+(_rl?' 자리 · 사유':' · why?')+'</div>'
     + opts.map(o => '<button data-r="'+o[0]+'">'+o[1]+' '+o[2]+'</button>').join('');
   document.body.appendChild(el);
   const w = el.offsetWidth||190, h = el.offsetHeight||120;
@@ -64831,6 +64843,27 @@ setInterval(renderTimeline, 60000);
   "지존쌤":"Jijon-ssaem",
   "검쌤":"Geom-ssaem",
   "칼쌤":"Kal-ssaem",
+  /* ═══ [v1452] PC 현황 점검에서 반쪽만 바뀌던 말들 ═════════════════════════════
+     boss "웹사이트 영어로 바꿨을때 적용안되는거 있으면 전부 수정해"
+     사전은 아는 낱말만 바꾸므로 "🛟 Backup으로 Show" 같은 반쪽 말이 나왔다.
+     낱말이 아니라 통문장을 키로 넣는다 — 긴 것부터 맞추므로 낱말 항목보다 먼저 잡힌다. */
+  "백업으로 표시":"Mark as backup",
+  "백업 표시 떼기":"Unmark backup",
+  "백업으로 표시했습니다":"marked as backup",
+  "백업 표시를 뗐습니다":"backup mark removed",
+  "스탠다드 수정":"Edit standard",
+  "대타 지정 (블랙아웃·네트워크)":"Assign cover (blackout/network)",
+  "누가 대신 들어가나요?":"Who covers?",
+  "지금 커버 종료":"End cover now",
+  "이 커버 취소":"Cancel this cover",
+  "이 배정 해제":"Unassign",
+  "1시간 더":"1 more hour",
+  "커버 진행 중":"cover running",
+  "커버 종료":"cover ended",
+  "커버 취소":"cover cancelled",
+  "박스 배치 정리":"Tidy layout",
+  "박스 정리":"Tidy layout",
+  "여기로 끌어다 놓기":"drop here",
   /* [v1175] 요일은 한 글자라 꼬리만 잡으면 앞 글자가 남는다 — 일곱 개를 통으로 넣는다.
      '5번째 시간까지 — 3시간 배정' 처럼 양쪽에 숫자가 들어가면 통문장이 키가 될 수 없다. */
   "일요일 휴무":"Sun off",
@@ -72277,8 +72310,9 @@ console.info('AUTO100 build applied',AUTO100_BUILD.version,v3Audit());
       }
       var same = ix > 0 && kept[ix - 1].p.pc === it.p.pc && kept[ix - 1].l.actor === actor;
       var full = esc(String(it.l.action || '') + (it.l.target ? ' · ' + it.l.target : ''));
+      /* [v1452] 줄 글자는 이미 고른 말로 지어졌고 title 은 기록 원문이다 — 자동 번역기 제외 */
       h += '<div class="pch-row' + (it.p.v ? ' v-' + it.p.v : '') + '"'
-         + (it.p.pc != null ? ' data-pc="' + it.p.pc + '"' : '') + ' title="' + full + '">'
+         + (it.p.pc != null ? ' data-pc="' + it.p.pc + '"' : '') + ' data-no-i18n title="' + full + '">'
          + '<span class="pch-t">' + hm(it.l.ts) + '</span>'
          + (it.p.pc != null
              ? '<b class="pch-n' + (same ? ' same' : '') + '" data-only="' + it.p.pc + '" title="' + (_k ? 'PC-' + p2(it.p.pc) + ' 것만 보기' : 'only PC-' + p2(it.p.pc)) + '">' + p2(it.p.pc) + '</b>'
