@@ -4,7 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
 <title>ARASAKA Corp</title>
-<!-- BUILD: v1442 | 변경 기록을 커뮤니티 글처럼 — 얼굴·이름·내용 -->
+<!-- BUILD: v1444 | 변경 내역 한 줄에 하나 — PC 번호 눌러 그 PC만, 사람 이름은 바뀔 때만 -->
 <!-- v745 기록은 git 이력(v1302 이전 커밋)에 있다 — 100KB 변경사 주석을 배포에서 제거 -->
 <!-- [v677] a <link href> cannot read a CSS variable, so the favicon carries its own copy.
      64px: a browser tab draws it at 16-32px, so this is 2x-DPR sharp at 11KB. -->
@@ -10267,6 +10267,11 @@ body.pool-grouping .pool-rolebox .s-chip{pointer-events:none}   /* 카드가 드
 body.pool-grouping .pool-rolebox.grp-over .pool-role-hd::after{
   content:'↓ 여기로';margin-left:6px;font-size:9px;font-weight:800;opacity:.9}   /* 역할 박스는 한 칸에 끼지 않고 전체 폭 — 안 그러면 196px로 눌린다 */
 .pool-rolegrid{display:grid;grid-template-columns:repeat(auto-fill,minmax(176px,1fr));gap:8px;align-content:start}   /* 칩은 여기서 흐른다 */
+/* [v1443] 아무도 없는 칸 — 자리는 남기되 빈 상자처럼 무겁지 않게. 가는 점선 한 줄. */
+.pool-roledrop{border:1px dashed var(--gc,#9aa3b0);opacity:.4;border-radius:8px;
+  padding:9px 10px;margin-bottom:4px;text-align:center;font-size:10.5px;letter-spacing:.02em;
+  color:var(--gc,#9aa3b0);transition:opacity .14s ease}
+.pool-rolebox.grp-over .pool-roledrop{opacity:.9}
 .c-chip{cursor:pointer}   /* [v1281] 칩 클릭 = 관리 패널 */
 .s-chip{background:var(--bg-h);border:1px solid var(--br);padding:10px 12px;border-radius:var(--r-md);transition:all var(--d-fast) var(--ease);position:relative;overflow:hidden}
 .s-chip::before{content:'';position:absolute;left:0;top:0;bottom:0;width:3px;background:var(--rank-color,var(--ac));border-radius:3px 0 0 3px}
@@ -61999,8 +62004,18 @@ function groupedStaffList(list){
     if(!buckets[k]) buckets[k] = [];
     buckets[k].push(s);
   });
-  return ROLE_SECTIONS.filter(sec => buckets[sec.key] && buckets[sec.key].length)
-                      .map(sec => ({ label:sec.label, color:sec.color, staff:buckets[sec.key], group:sec.key }));
+  /* ═══ [v1443] 빈 칸도 남긴다 — 놓을 자리가 없으면 옮길 수가 없다 ═══════════════
+     boss "PC 현황쪽에 백업이랑 Player 이거 드래그 앤 드롭으로 옮길수있게 해줘라"
+     끌어다 놓는 기능은 원래 있었다(poolGroupDrop). 그런데 여기서 **빈 칸을 걸러내고**
+     있었다. 그래서 백업에 아무도 없으면 백업 칸 자체가 안 그려지고, 놓을 자리가
+     없으니 아무도 못 넣는다 — 한 명이 이미 들어가 있어야 넣을 수 있는 셈이었다.
+     이제 빈 칸도 남기고, 아래 renderPools 가 그것을 가는 점선 띠로 그린다.
+     찾는 중(검색·필터)일 때는 안 남긴다 — 그때 빈 칸은 '없다' 는 답이라 보여야 한다. */
+  var _searching = false;
+  try{ _searching = !!(staffFilter && (String(staffFilter.search||'').trim()
+        || staffFilter.availableOnly || (staffFilter.category && staffFilter.category !== 'all'))); }catch(_){}
+  return ROLE_SECTIONS.filter(sec => (buckets[sec.key] && buckets[sec.key].length) || !_searching)
+                      .map(sec => ({ label:sec.label, color:sec.color, staff:buckets[sec.key]||[], group:sec.key }));
 }
 
 /* [v1108] boss "빌리 재키 칼은 잠깐 대기중이라서 · 주황색 엄청 얇은 테두리 넣고
@@ -62637,7 +62652,10 @@ function renderPools(){
           <span style="display:flex;align-items:center;gap:6px">${g.label}<span style="opacity:.55;font-weight:600">${g.staff.length}</span></span>
           <button onclick="togglePoolBox('${g.group}')" title="${collapsed?(_uiLang()==='ko'?'펼치기':'Expand'):(_uiLang()==='ko'?'접기':'Minimize')}" style="background:none;border:1px solid ${col}66;color:${col};width:20px;height:20px;border-radius:6px;cursor:pointer;font-size:14px;line-height:1;display:flex;align-items:center;justify-content:center;flex-shrink:0;padding:0">${collapsed?'+':'−'}</button>
         </div>
-        ${collapsed ? '' : `<div class="pool-rolegrid">${cards}</div>`}
+        ${collapsed ? '' : (g.staff.length
+          ? `<div class="pool-rolegrid">${cards}</div>`
+          /* [v1443] 비어 있어도 놓을 자리는 남는다 — 여기가 없으면 아무도 못 옮긴다 */
+          : `<div class="pool-roledrop">${_uiLang()==='ko'?'여기로 끌어다 놓기':'drop here'}</div>`)}
       </div>`;
     }).join('');
   }
@@ -71814,7 +71832,8 @@ console.info('AUTO100 build applied',AUTO100_BUILD.version,v3Audit());
 /* ═══ [v1402] PC 현황 — 누가 뭘 바꿨나 (내역 서랍) ═══════════════════════════════
    boss "누가 뭘 바꿨는지 내역 좀 볼 수 있게 하자". 자료는 이미 log_state 에 쌓인다(v1283 부터 배정 격자까지).
    여기서는 PC 현황에 해당하는 줄만 골라 오른쪽 서랍에 날짜별로 보여준다. 줄을 누르면 그 PC 행이 반짝인다. */
-#pc-hist{position:fixed;top:0;right:0;bottom:0;width:min(400px,94vw);z-index:100150;background:#151517;border-left:1px solid #2a2a2e;box-shadow:-24px 0 60px rgba(0,0,0,.55);display:flex;flex-direction:column;transform:translateX(102%);transition:transform .32s cubic-bezier(.2,.9,.3,1.05);font-family:inherit;color:#ecebe6}
+#pc-hist{position:fixed;top:0;right:0;bottom:0;width:min(420px,94vw);z-index:100150;background:#151517;border-left:1px solid #2a2a2e;box-shadow:-24px 0 60px rgba(0,0,0,.55);display:flex;flex-direction:column;transform:translateX(102%);transition:transform .32s cubic-bezier(.2,.9,.3,1.05);font-family:inherit;color:#ecebe6;
+  --pch-add:#4fb07a;--pch-del:#e0655a;--pch-move:#c9963a;--pch-bk:#6e9ec9;--pch-cl:#b087cf;--pch-pc:#8a8a86}
 #pc-hist.on{transform:none}
 #pc-hist .pch-h{display:flex;align-items:center;gap:10px;padding:16px 16px 10px}
 #pc-hist .pch-h b{font-size:15px;font-weight:700}
@@ -71824,46 +71843,143 @@ console.info('AUTO100 build applied',AUTO100_BUILD.version,v3Audit());
 #pc-hist .pch-tools{padding:0 16px 10px;display:flex;flex-direction:column;gap:8px}
 #pc-hist .pch-tools input{width:100%;background:#1c1c1f;border:1px solid #3a3a40;border-radius:10px;padding:9px 11px;color:#ecebe6;font:inherit;font-size:13px;outline:none}
 #pc-hist .pch-tools input:focus{border-color:#c9963a}
-#pc-hist .pch-chips{display:flex;gap:6px;flex-wrap:wrap}
+#pc-hist .pch-chips{display:flex;gap:6px;flex-wrap:wrap;align-items:center}
 #pc-hist .pch-chips button{font:inherit;font-size:11.5px;font-weight:700;background:transparent;border:1px solid #3a3a40;color:#8a8a86;border-radius:999px;padding:4px 10px;cursor:pointer}
 #pc-hist .pch-chips button.on{border-color:rgba(201,150,58,.5);color:#c9963a;background:rgba(201,150,58,.12)}
+/* [v1444] 'PC-18 만' 걸린 것을 떼는 칩 */
+#pc-hist .pch-only{margin-left:auto;display:none;align-items:center;gap:5px;font-size:11.5px;font-weight:700;color:#151517;background:#c9963a;border:0;border-radius:999px;padding:4px 9px;cursor:pointer;font-family:inherit}
+#pc-hist .pch-only.on{display:inline-flex}
 #pc-hist .pch-list{flex:1;overflow:auto;padding:0 8px 24px}
-#pc-hist .pch-day{position:sticky;top:0;background:#151517;font-size:11px;font-weight:700;letter-spacing:.06em;color:#6f6f6a;padding:10px 8px 6px;z-index:1}
-#pc-hist .pch-row{display:grid;grid-template-columns:44px 1fr;gap:10px;padding:8px 8px;border-radius:10px;cursor:pointer;align-items:start}
+#pc-hist .pch-day{position:sticky;top:0;background:#151517;font-size:11px;font-weight:700;letter-spacing:.06em;color:#6f6f6a;padding:12px 8px 6px;z-index:2}
+/* [v1444] 사람 머리 — 같은 사람이 이어서 한 일은 이름을 한 번만 쓴다 */
+#pc-hist .pch-grp{display:flex;align-items:center;gap:7px;padding:9px 8px 3px;font-size:12px;font-weight:700;color:#c8c7c1;position:sticky;top:28px;background:#151517;z-index:1}
+#pc-hist .pch-grp .pn-face{font-size:8.5px;flex:none}
+#pc-hist .pch-grp span{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+#pc-hist .pch-grp.mine{color:#c9963a}
+/* [v1444] 한 줄에 하나 — 시각 · PC · 무슨 일. PC 번호는 여기서 chip 이라 .pc 를 쓰지 않는다
+   (전역 .pc 는 PC 카드라서 border 와 display:flex 가 딸려 와 줄이 통째로 상자가 됐다) */
+#pc-hist .pch-row{display:grid;grid-template-columns:38px 26px minmax(0,1fr);gap:8px;padding:5px 8px 5px 6px;border-radius:8px;cursor:pointer;align-items:center;border-left:2px solid transparent}
 #pc-hist .pch-row:hover{background:#1c1c1f}
-#pc-hist .pch-row.mine{opacity:.8}
-#pc-hist .pch-t{font-size:12px;color:#6f6f6a;font-weight:600;font-variant-numeric:tabular-nums;padding-top:1px}
-#pc-hist .pch-who{font-size:12.5px;font-weight:700;color:#ecebe6;margin-right:6px}
-#pc-hist .pch-what{font-size:12.5px;color:#a9a9a3;line-height:1.45;word-break:keep-all}
+#pc-hist .pch-t{font-size:11.5px;color:#6f6f6a;font-weight:600;font-variant-numeric:tabular-nums}
+#pc-hist .pch-n{font-size:11.5px;font-weight:800;font-variant-numeric:tabular-nums;color:var(--pch-pc);background:#232326;border-radius:6px;padding:2px 0;text-align:center;letter-spacing:-.02em}
+#pc-hist .pch-row:hover .pch-n{background:#2e2e33;color:#ecebe6}
+#pc-hist .pch-n.same{opacity:.32}
+#pc-hist .pch-what{font-size:12.5px;color:#d6d5cf;line-height:1.4;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+#pc-hist .pch-what i{font-style:normal;color:#7d7d78;font-variant-numeric:tabular-nums;margin-left:6px;font-size:11.5px}
 #pc-hist .pch-what b{color:#ecebe6;font-weight:600}
-#pc-hist .pch-what .pc{color:#c9963a;font-weight:700}
-#pc-hist .pch-what .del{color:#e05a4d}
-#pc-hist .pch-empty{padding:40px 12px;text-align:center;color:#6f6f6a;font-size:13px}
+#pc-hist .pch-what u{text-decoration:none;color:#6f6f6a;font-size:11px;font-weight:700;margin-left:6px}
+#pc-hist .pch-row.v-add{border-left-color:var(--pch-add)}
+#pc-hist .pch-row.v-del{border-left-color:var(--pch-del)}
+#pc-hist .pch-row.v-move{border-left-color:var(--pch-move)}
+#pc-hist .pch-row.v-bk{border-left-color:var(--pch-bk)}
+#pc-hist .pch-row.v-cl{border-left-color:var(--pch-cl)}
+#pc-hist .pch-row.v-plan{border-left-color:rgba(201,150,58,.4)}
+#pc-hist .pch-row.v-del .pch-what{color:#c0938c}
+#pc-hist .pch-empty{padding:40px 12px;text-align:center;color:#6f6f6a;font-size:13px;line-height:1.6}
 #ch-pc-status .ag-row.pch-flash{animation:pchFlash 1.6s ease both}
 @keyframes pchFlash{0%{box-shadow:inset 0 0 0 2px rgba(201,150,58,.9);background:rgba(201,150,58,.14)}100%{box-shadow:inset 0 0 0 0 rgba(201,150,58,0);background:transparent}}
 @media (prefers-reduced-motion:reduce){#pc-hist{transition:none} #ch-pc-status .ag-row.pch-flash{animation:none}}
 </style>
 <script>
-/* ═══ [v1402] PC 현황 내역 서랍 ═══ */
+/* ═══ [v1402·v1444] PC 현황 내역 서랍 ═══ */
 (function(){
-  var H = { open:false, filter:'all', q:'' };
+  var H = { open:false, filter:'all', q:'', pc:null };
   window._pch = H;
   function ko(){ try{ return (typeof _uiLang !== 'function') || _uiLang() === 'ko'; }catch(_){ return true; } }
   function esc(s){ return String(s == null ? '' : s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;'); }
   function me(){ try{ return (currentUser && currentUser.name) || ''; }catch(_){ return ''; } }
+  function p2(n){ return (Number(n) < 10 ? '0' : '') + Number(n); }
   /* PC 현황에 속하는 줄 */
   var PC_RE = /PC-\d{2}|added PC|deleted PC|PC 숨김|PC order|pool client|백업 인원|백업에서 해제|전체 배정 해제|데모 초기화/;
   var ASSIGN_RE = /배정|자리 옮김|예정 배치|백업|커버|seat via inquiry|리더 지정/;
   var CLIENT_RE = /클라|client|inquiry|문의/i;
-  var PCONLY_RE = /added PC|deleted PC|PC 숨김|PC order|edited PC spec|PC OFF|PC 복귀|전체 배정 해제|데모 초기화/;
-  /* 영어로 남은 문장은 사람 말로 */
-  var KO = [
-    [/^added PC \(문의 카드\)$/, 'PC 추가 (문의 카드로)'], [/^added PC$/, 'PC 추가'], [/^deleted PC$/, 'PC 삭제'],
-    [/^seat via inquiry$/, '문의로 앉힘'], [/^inquiry placed$/, '문의 배치'], [/^PC order \(클라별 drag\)$/, 'PC 순서 바꿈'],
-    [/^added pool client$/, '클라 풀에 추가'], [/^deleted pool client$/, '클라 풀에서 삭제'], [/^edited PC spec$/, 'PC 사양 수정'],
-    [/^moved to backup pool \((.*)\)$/, '백업 풀로 ($1)']
+  var PCONLY_RE = /added PC|deleted PC|PC 숨김|PC order|edited PC spec|PC OFF|PC 복귀|PC 가동 복귀|전체 배정 해제|데모 초기화/;
+
+  /* ═══ [v1444] 한 줄에 하나 ═══════════════════════════════════════════════════
+     여태는 로그 문장을 그대로 뿌렸다. 그래서 한 건이 "Mr.Mongttangta 새로 배정 ·
+     PC-18 00:00~08:00 Kal" 처럼 서너 줄로 접혔고, PC 번호에 붙인 class="pc" 가
+     전역 .pc(= PC 카드: border·padding·display:flex)에 걸려 줄 가운데에 빈 상자가
+     하나씩 박혔다. 76건을 훑으려면 화면을 열 번 넘게 굴려야 했다.
+
+     이제는 로그 문장을 뜯어서 [시각][PC][무슨 일] 세 칸에 나눠 담는다. PC 번호는
+     이미 칸에 있으니 문장에서 뺀다. 사람 이름은 바뀔 때만 한 번 적는다.
+     같은 사람이 같은 일을 90초 안에 두 번 하면 한 줄로 묶고 ×2 를 붙인다.
+     PC 번호를 누르면 그 PC 것만 남는다 — "PC-18 뭐 있었지" 가 한 번에 끝난다.
+     왼쪽 색 띠는 종류다: 넣음 초록 · 뺌 빨강 · 옮김 금색 · 백업 파랑 · 클라 보라. */
+  var VERB = [
+    [/^자리 옮김 · PC-(\d{2}) → PC-(\d{2})/, 'move', '$T 옮김', 'moved $T', 'PC-$1 에서', 'from PC-$1'],
+    [/^자리 옮김/,            'move', '$T 옮김',           'moved $T'],
+    [/^새로 배정/,            'add',  '$T 넣음',           'added $T'],
+    [/^예정 배치/,            'plan', '$T 미리 잡음',      'pre-booked $T'],
+    [/^배정 뺌/,              'del',  '$T 뺌',             'removed $T'],
+    [/^커버 투입 · PC-\d{2}[^·]*· (.+?) 자리/, 'bk', '$T 커버', '$T covers', '$1 자리', 'seat of $1'],
+    [/^커버 투입/,            'bk',   '$T 커버',           '$T covers'],
+    [/^백업 투입/,            'bk',   '$T 백업 투입',      '$T as backup'],
+    [/^백업으로 표시/,        'bk',   '$T 백업 표시',      'marked $T backup'],
+    [/^백업으로 넣음/,        'bk',   '$T 백업으로',       '$T to backup'],
+    [/^백업에서 뺌/,          'del',  '$T 백업에서 뺌',    '$T out of backup'],
+    [/^백업 추가/,            'bk',   '$T 백업 추가',      'backup $T'],
+    [/^백업 인원으로/,        'bk',   '$T 백업 인원으로',  '$T is backup staff'],
+    [/^백업에서 해제/,        'del',  '$T 백업 해제',      '$T no longer backup'],
+    [/^리더 지정/,            'add',  '$T 리더로',         '$T as leader'],
+    [/^클라 앉힘 · PC-\d{2} \(PC-(\d{2})에서\)/, 'cl', '$T 앉힘', 'seated $T', 'PC-$1 에서', 'from PC-$1'],
+    [/^클라 앉힘/,            'cl',   '$T 앉힘',           'seated $T'],
+    [/^클라 뺌/,              'del',  '$T 클라 뺌',        'unseated $T'],
+    [/^같은 클라로 겹침 · (.+?) → (.+)$/, 'cl', '$1 → $2 겹침', '$1 → $2 merged'],
+    [/^겹친 클라 뗌 · (.+)$/, 'del',  '$1 겹침 뗌',        'unmerged $1'],
+    [/^문의 배치$|^inquiry placed$/, 'cl', '$Q 문의 앉힘',  'seated inquiry $Q'],
+    [/^inquiry → PC/,         'cl',   '$Q 문의 옮김',      'moved inquiry $Q'],
+    [/^seat via inquiry$/,    'add',  '$Q 앉힘',           'seated $Q', '문의로', 'via inquiry'],
+    [/^added PC \(문의 카드\)/, 'add', 'PC 추가',           'PC added', '문의 카드로', 'from inquiry'],
+    [/^added PC/,             'add',  'PC 추가',           'PC added'],
+    [/^deleted PC$/,          'del',  'PC 삭제',           'PC deleted'],
+    [/^PC 숨김 해제$/,        'pc',   '다시 보이게',       'unhidden'],
+    [/^PC 숨김$/,             'pc',   '숨김',              'hidden'],
+    [/^PC OFF · 배정 (\d+)건/, 'del', 'PC 껐음',           'PC switched off', '배정 $1건 해제', '$1 shifts cleared'],
+    [/^PC OFF/,               'del',  'PC 껐음',           'PC switched off'],
+    [/^PC 가동 복귀$/,        'add',  'PC 다시 켬',        'PC back on'],
+    [/^PC order/,             'pc',   '순서 바꿈',         'reordered', '$T', '$T'],
+    [/^edited PC spec$/,      'pc',   '$T 사양 수정',      'spec edited · $T'],
+    [/^added pool client$/,   'cl',   '$T 클라 풀에 추가', '$T added to pool'],
+    [/^deleted pool client$/, 'del',  '$T 클라 풀에서 삭제', '$T removed from pool'],
+    [/^전체 배정 해제$/,      'del',  '전체 배정 해제',    'all shifts cleared', '$T', '$T'],
+    [/^데모 초기화$/,         'del',  '데모 초기화',       'demo reset']
   ];
-  function human(a){ a = String(a || ''); for(var i = 0; i < KO.length; i++){ if(KO[i][0].test(a)) return a.replace(KO[i][0], KO[i][1]); } return a; }
+  var TIME_RE = /(\d{1,2}:\d{2}\s*[~-]\s*\d{1,2}:\d{2})/;
+  function fill(tpl, T, Q, m){
+    return String(tpl == null ? '' : tpl)
+      .replace(/\$T/g, function(){ return T; })
+      .replace(/\$Q/g, function(){ return Q; })
+      .replace(/\$(\d)/g, function(_, d){ return (m && m[Number(d)] != null) ? esc(String(m[Number(d)]).trim()) : ''; });
+  }
+  /* 로그 한 줄 → { pc, v, txt, when, extra } */
+  function parse(l){
+    var A = String(l.action || ''), T0 = String(l.target || '');
+    var mv = /자리 옮김 · PC-(\d{2}) → PC-(\d{2})/.exec(A);
+    var pc = null, pm;
+    if(mv) pc = Number(mv[2]);
+    else if((pm = /PC-(\d{2})/.exec(A))) pc = Number(pm[1]);
+    else if((pm = /PC-(\d{2})/.exec(T0))) pc = Number(pm[1]);
+    var tm = TIME_RE.exec(A) || TIME_RE.exec(T0);
+    var when = tm ? tm[1].replace(/\s/g, '') : '';
+    var L = ko();
+    var Q = esc(T0.split(/->|→/)[0].trim());
+    var T = esc(T0.replace(/\s*(->|→)\s*PC-\d{2}\s*/g, ' ').replace(TIME_RE, '').trim() || T0.trim());
+    /* 'PC-01 after PC-02' 는 사람 말이 아니다 */
+    var om = /^PC-(\d{2}) (after|before) PC-(\d{2})$/.exec(T0);
+    if(om && L) T = 'PC-' + om[1] + ' 을 PC-' + om[3] + (om[2] === 'after' ? ' 뒤로' : ' 앞으로');
+    for(var i = 0; i < VERB.length; i++){
+      var m = VERB[i][0].exec(A); if(!m) continue;
+      return { pc:pc, v:VERB[i][1],
+               txt:fill(L ? VERB[i][2] : VERB[i][3], T, Q, m),
+               when:when,
+               extra:fill(L ? (VERB[i][4] || '') : (VERB[i][5] || VERB[i][4] || ''), T, Q, m) };
+    }
+    /* 규칙에 없는 줄 — PC 번호·시간만 떼고 그대로 */
+    return { pc:pc, v:(l.type === 'delete' ? 'del' : l.type === 'create' ? 'add' : ''),
+             txt:esc(A.replace(/·?\s*PC-\d{2}( → PC-\d{2})?/g, ' ').replace(TIME_RE, '').replace(/\s+/g, ' ').replace(/\s*·\s*$/, '').trim()) + (T ? ' <b>' + T + '</b>' : ''),
+             when:when, extra:'' };
+  }
   function rows(){
     var all = (typeof LOG_DATA !== 'undefined' && Array.isArray(LOG_DATA)) ? LOG_DATA : [];
     var q = H.q.trim().toLowerCase();
@@ -71884,26 +72000,60 @@ console.info('AUTO100 build applied',AUTO100_BUILD.version,v3Audit());
     if(dk === nk) return _k ? '오늘' : 'Today'; if(dk === yk) return _k ? '어제' : 'Yesterday';
     return (d.getMonth() + 1) + '/' + d.getDate() + ' ' + (_k ? ['일','월','화','수','목','금','토'][d.getDay()] : ['Sun','Mon','Tue','Wed','Thu','Fri','Sat'][d.getDay()]);
   }
-  function hm(ts){ var d = new Date(ts); return ('0' + d.getHours()).slice(-2) + ':' + ('0' + d.getMinutes()).slice(-2); }
-  function sentence(l){
-    var a = human(l.action), t = String(l.target || ''), del = (l.type === 'delete');
-    var s = esc(a).replace(/PC-(\d{2})/g, '<span class="pc">PC-$1</span>');
-    if(t) s += ' <b>' + esc(t).replace(/PC-(\d{2})/g, '<span class="pc">PC-$1</span>') + '</b>';
-    return del ? '<span class="del">' + s + '</span>' : s;
-  }
+  function hm(ts){ var d = new Date(ts); return p2(d.getHours()) + ':' + p2(d.getMinutes()); }
   function draw(){
     var box = document.getElementById('pc-hist'); if(!box) return;
-    var _k = ko(), list = rows(), h = '', day = '';
-    var mine = me();
-    list.slice(0, 400).forEach(function(l){
-      var dl = dayLabel(l.ts); if(dl !== day){ day = dl; h += '<div class="pch-day">' + esc(dl) + '</div>'; }
-      var m = /PC-(\d{2})/.exec(String(l.action || '') + ' ' + String(l.target || ''));
-      h += '<div class="pch-row' + (l.actor === mine ? ' mine' : '') + '"' + (m ? ' data-pc="' + Number(m[1]) + '"' : '') + '><span class="pch-t">' + hm(l.ts) + '</span><span><span class="pch-who">' + esc(l.actor || '?') + '</span><span class="pch-what">' + sentence(l) + '</span></span></div>';
+    var _k = ko(), list = rows(), mine = me();
+    var kept = [];
+    for(var i = 0; i < list.length && kept.length < 400; i++){
+      var l = list[i], p = parse(l);
+      if(H.pc != null && p.pc !== H.pc) continue;
+      /* 같은 사람이 같은 일을 90초 안에 두 번 — 한 줄로 묶는다 */
+      var last = kept[kept.length - 1];
+      if(last && last.l.actor === l.actor && last.l.action === l.action && last.l.target === l.target
+         && Math.abs(new Date(last.l.ts) - new Date(l.ts)) < 90000){ last.n++; continue; }
+      kept.push({ l:l, p:p, n:1 });
+    }
+    var h = '', day = '', who = '';
+    kept.forEach(function(it, ix){
+      var dl = dayLabel(it.l.ts);
+      if(dl !== day){ day = dl; who = ''; h += '<div class="pch-day">' + esc(dl) + '</div>'; }
+      var actor = it.l.actor || '?';
+      if(actor !== who){
+        who = actor;
+        h += '<div class="pch-grp' + (actor === mine ? ' mine' : '') + '">'
+           + (typeof _pnFace === 'function' ? _pnFace(actor, 18) : '')
+           + '<span>' + esc(actor) + '</span></div>';
+      }
+      var same = ix > 0 && kept[ix - 1].p.pc === it.p.pc && kept[ix - 1].l.actor === actor;
+      var full = esc(String(it.l.action || '') + (it.l.target ? ' · ' + it.l.target : ''));
+      h += '<div class="pch-row' + (it.p.v ? ' v-' + it.p.v : '') + '"'
+         + (it.p.pc != null ? ' data-pc="' + it.p.pc + '"' : '') + ' title="' + full + '">'
+         + '<span class="pch-t">' + hm(it.l.ts) + '</span>'
+         + (it.p.pc != null
+             ? '<b class="pch-n' + (same ? ' same' : '') + '" data-only="' + it.p.pc + '" title="' + (_k ? 'PC-' + p2(it.p.pc) + ' 것만 보기' : 'only PC-' + p2(it.p.pc)) + '">' + p2(it.p.pc) + '</b>'
+             : '<b class="pch-n same">·</b>')
+         + '<span class="pch-what">' + it.p.txt
+         + (it.p.when ? '<i>' + esc(it.p.when) + '</i>' : '')
+         + (it.p.extra ? '<i>' + it.p.extra + '</i>' : '')
+         + (it.n > 1 ? '<u>&times;' + it.n + '</u>' : '')
+         + '</span></div>';
     });
-    if(!h) h = '<div class="pch-empty">' + (_k ? '아직 바뀐 것이 없어요' : 'Nothing changed yet') + '</div>';
+    if(!h) h = '<div class="pch-empty">' + (_k ? ((H.pc != null || H.q || H.filter !== 'all') ? '조건에 맞는 것이 없어요' : '아직 바뀐 것이 없어요') : 'Nothing here') + '</div>';
     box.querySelector('.pch-list').innerHTML = h;
-    box.querySelector('.pch-sub').textContent = list.length + (_k ? '건' : '');
-    Array.prototype.forEach.call(box.querySelectorAll('.pch-chips button'), function(b){ b.classList.toggle('on', b.getAttribute('data-f') === H.filter); });
+    box.querySelector('.pch-sub').textContent = kept.length + (_k ? '건' : '');
+    var only = box.querySelector('.pch-only');
+    if(only){
+      only.classList.toggle('on', H.pc != null);
+      if(H.pc != null) only.innerHTML = 'PC-' + p2(H.pc) + ' &times;';
+    }
+    Array.prototype.forEach.call(box.querySelectorAll('.pch-chips button[data-f]'), function(b){ b.classList.toggle('on', b.getAttribute('data-f') === H.filter); });
+  }
+  function flashPC(pc){
+    var row = document.querySelector('#ch-pc-status .ag-row[data-pc="' + pc + '"]');
+    if(!row){ try{ toast(ko() ? ('PC-' + p2(pc) + ' 은 지금 화면에 없어요') : ('PC-' + pc + ' not on screen')); }catch(_){} return; }
+    try{ row.scrollIntoView({ block:'center', behavior:'smooth' }); }catch(_){ row.scrollIntoView(); }
+    row.classList.remove('pch-flash'); void row.offsetWidth; row.classList.add('pch-flash');
   }
   function ensure(){
     var box = document.getElementById('pc-hist'); if(box) return box;
@@ -71911,17 +72061,19 @@ console.info('AUTO100 build applied',AUTO100_BUILD.version,v3Audit());
     box = document.createElement('div'); box.id = 'pc-hist';
     box.innerHTML = '<div class="pch-h"><b>' + (_k ? '누가 뭘 바꿨나' : 'Who changed what') + '</b><span class="pch-sub"></span><button class="pch-x" title="' + (_k ? '닫기' : 'close') + '">✕</button></div>'
       + '<div class="pch-tools"><input placeholder="' + (_k ? '사람 · PC 번호 · 클라 이름' : 'person · PC · client') + '"><div class="pch-chips">'
-      + '<button data-f="all">' + (_k ? '전체' : 'All') + '</button><button data-f="assign">' + (_k ? '배정' : 'Shifts') + '</button><button data-f="client">' + (_k ? '클라' : 'Clients') + '</button><button data-f="pc">PC</button></div></div>'
+      + '<button data-f="all">' + (_k ? '전체' : 'All') + '</button><button data-f="assign">' + (_k ? '배정' : 'Shifts') + '</button><button data-f="client">' + (_k ? '클라' : 'Clients') + '</button><button data-f="pc">PC</button>'
+      + '<button class="pch-only" title="' + (_k ? '이 PC만 보기 — 눌러서 해제' : 'clear PC filter') + '"></button></div></div>'
       + '<div class="pch-list"></div>';
     document.body.appendChild(box);
     box.querySelector('.pch-x').addEventListener('click', function(){ _pcHistToggle(false); });
     box.querySelector('input').addEventListener('input', function(){ H.q = this.value; draw(); });
-    Array.prototype.forEach.call(box.querySelectorAll('.pch-chips button'), function(b){ b.addEventListener('click', function(){ H.filter = b.getAttribute('data-f'); draw(); }); });
+    Array.prototype.forEach.call(box.querySelectorAll('.pch-chips button[data-f]'), function(b){ b.addEventListener('click', function(){ H.filter = b.getAttribute('data-f'); draw(); }); });
+    box.querySelector('.pch-only').addEventListener('click', function(){ H.pc = null; draw(); });
     box.querySelector('.pch-list').addEventListener('click', function(e){
-      var r = e.target.closest && e.target.closest('.pch-row'); if(!r) return; var pc = r.getAttribute('data-pc'); if(!pc) return;
-      var row = document.querySelector('#ch-pc-status .ag-row[data-pc="' + pc + '"]'); if(!row){ try{ toast(ko() ? ('PC-' + ('0' + pc).slice(-2) + ' 은 지금 화면에 없어요') : ('PC-' + pc + ' not on screen')); }catch(_){} return; }
-      try{ row.scrollIntoView({ block:'center', behavior:'smooth' }); }catch(_){ row.scrollIntoView(); }
-      row.classList.remove('pch-flash'); void row.offsetWidth; row.classList.add('pch-flash');
+      var only = e.target.closest && e.target.closest('.pch-n[data-only]');
+      if(only){ var v = Number(only.getAttribute('data-only')); H.pc = (H.pc === v) ? null : v; draw(); return; }
+      var r = e.target.closest && e.target.closest('.pch-row'); if(!r) return;
+      var pc = r.getAttribute('data-pc'); if(pc) flashPC(pc);
     });
     return box;
   }
@@ -71935,6 +72087,9 @@ console.info('AUTO100 build applied',AUTO100_BUILD.version,v3Audit());
     try{ if(typeof sb !== 'undefined' && sb && typeof syncLogsFromCloud === 'function'){ syncLogsFromCloud().then(function(){ try{ _logSynced = true; _logSig = JSON.stringify(LOG_DATA); }catch(_){} if(H.open) draw(); }).catch(function(){}); } }catch(_){}
     setTimeout(function(){ var i = box.querySelector('input'); if(i) i.focus(); }, 340);
   };
+  /* 다른 데서 "이 PC 내역" 으로 바로 열 수 있게 */
+  window._pcHistForPC = function(pc){ H.pc = Number(pc); H.filter = 'all'; H.q = '';
+    var b = ensure(); var i = b.querySelector('input'); if(i) i.value = ''; _pcHistToggle(true); };
   document.addEventListener('keydown', function(e){ if(e.key === 'Escape' && H.open) _pcHistToggle(false); });
   /* 채널이 바뀌면 닫힌다 */
   try{ if(typeof setActiveChannel === 'function' && !window._pchNavWrapped){ window._pchNavWrapped = true; var _o = setActiveChannel; setActiveChannel = function(id){ try{ if(H.open && id !== 'pc-status') _pcHistToggle(false); }catch(_){} return _o.apply(this, arguments); }; } }catch(_){}
