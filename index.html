@@ -4,7 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
 <title>ARASAKA Corp</title>
-<!-- BUILD: v1458 | 변경 기록판: Admin·플레이어 리더만 · 판 글자는 앱 언어, 한·EN·ID 는 댓글 언어만 · 번역은 서버 AI(ko·en·id 한 번에) -->
+<!-- BUILD: v1459 | 팀 기본 배치 모두에게 한 번 깔기 (PB_KEY v12) -->
 <!-- v745 기록은 git 이력(v1302 이전 커밋)에 있다 — 100KB 변경사 주석을 배포에서 제거 -->
 <!-- [v677] a <link href> cannot read a CSS variable, so the favicon carries its own copy.
      64px: a browser tab draws it at 16-32px, so this is 2x-DPR sharp at 11KB. -->
@@ -58318,7 +58318,7 @@ function toggleOverrideWorkDays(){
    배치는 각자 브라우저에 저장되므로, 기본값만 고치면 이미 쓰던 사람은 옛 배치를
    그대로 본다. 키를 올려 모두 한 번 새 기본값에서 시작하게 한다.
    (그 뒤에 각자 옮기는 것은 그대로 자기 브라우저에 남는다) */
-const PB_KEY = "lucky7_poolbox_v11";   /* [v1455] 격자를 안 깎는 새 배분이 모두에게 한 번 깔리게 */
+const PB_KEY = "lucky7_poolbox_v12";   /* [v1459] 사장님이 📌 로 저장한 팀 기본 배치(nav_state.pcboxes, 9/10 17:18)가 모두에게 한 번 깔리게 — 처음 여는 것처럼 정리 → 팀 배치 적용 */
 /* [v1066] boss "더 자유롭게" — 상한을 화면 크기까지 열어둔다 */
 const PB_MINW = 190, PB_MINH = 110, PB_MAXW = 1400;
 /* [v1067] PC 카드·타임라인도 같은 박스로. w/x 가 null 이면 화면 크기에서 계산한다
