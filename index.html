@@ -4,7 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
 <title>ARASAKA Corp</title>
-<!-- BUILD: v1441 | PC 현황에 변경 기록판 — 시스템 변경과 사람 메모가 한 줄기로 -->
+<!-- BUILD: v1442 | 변경 기록을 커뮤니티 글처럼 — 얼굴·이름·내용 -->
 <!-- v745 기록은 git 이력(v1302 이전 커밋)에 있다 — 100KB 변경사 주석을 배포에서 제거 -->
 <!-- [v677] a <link href> cannot read a CSS variable, so the favicon carries its own copy.
      64px: a browser tab draws it at 16-32px, so this is 2x-DPR sharp at 11KB. -->
@@ -8664,39 +8664,62 @@ html[data-theme=light] #ch-pc-status #pc-cmdbar .dp-day.on{background:#fff;color
 /* ═══ [v1441] 변경 기록판 — PC 현황에 붙는 댓글칸 ═══════════════════════════════
    적는 자리가 위, 읽는 자리가 아래. 새 글이 맨 위로 온다 — 무엇이 방금 바뀌었나가
    이 판의 질문이다. 내가 쓴 글은 왼쪽에 금색 실선으로 표가 난다. */
+/* ═══ [v1442] 커뮤니티 글처럼 — 얼굴 · 이름 · 내용 ═══════════════════════════════
+   boss "디스코드처럼 프로필 사진나오고 이름 나오고 그리고 내용 나오듯이
+         한국 인벤이나 디시인사이드 커뮤니티 같은 느낌으로"
+   사람이 쓴 줄은 얼굴을 달고 이름·시각을 머리에 얹은 뒤 내용을 아래에 편다.
+   시스템이 적은 줄은 같은 줄기에 있지만 한 줄로 눕고, 얼굴도 절반 크기로 조용하다.
+   두 종류가 한눈에 갈려야 '누가 한 말' 과 '기계가 적은 것' 이 안 섞인다. */
 #pn-wrap{height:100%;overflow:hidden}
-.pn-box{display:flex;flex-direction:column;gap:7px;height:100%;overflow-y:auto;padding-right:2px}
-.pn-write{display:flex;gap:6px;align-items:flex-start;position:sticky;top:0;z-index:2;
-  background:var(--bg-sb,#17181c);padding-bottom:6px}
-.pn-write textarea{flex:1 1 auto;min-width:0;resize:none;font:inherit;font-size:12px;line-height:1.5;
-  padding:7px 9px;border-radius:9px;border:1px solid var(--br,#33363d);
-  background:var(--bg-c,#1b1c20);color:var(--tx,#e6e5e2);overflow:hidden}
-.pn-write textarea:focus{outline:none;border-color:var(--ac,#c2a04a)}
+.pn-box{display:flex;flex-direction:column;height:100%;overflow-y:auto;padding-right:4px}
+.pn-face{flex:0 0 auto;border-radius:50%;display:inline-flex;align-items:center;justify-content:center;
+  font-weight:800;font-size:10px;letter-spacing:-.02em;color:#fff;overflow:hidden;
+  box-shadow:inset 0 0 0 1px rgba(255,255,255,.10)}
+
+/* 적는 자리 — 늘 맨 위에 붙어 있다. 적는 칸이 보여야 적는다. */
+.pn-write{display:flex;gap:9px;align-items:flex-start;position:sticky;top:0;z-index:3;
+  background:var(--bg-sb,#17181c);padding:2px 0 9px;margin-bottom:3px;
+  box-shadow:0 8px 10px -8px rgba(0,0,0,.5)}
+.pn-write textarea{flex:1 1 auto;min-width:0;resize:none;font:inherit;font-size:12.5px;line-height:1.55;
+  padding:8px 11px;border-radius:10px;border:1px solid var(--br,#33363d);
+  background:var(--bg-c,#1b1c20);color:var(--tx,#e6e5e2);overflow:hidden;
+  transition:border-color .14s ease,background .14s ease}
+.pn-write textarea:focus{outline:none;border-color:var(--ac,#c2a04a);background:var(--bg-h,#212228)}
 .pn-write textarea::placeholder{color:var(--tx4,#6c6b66)}
-.pn-write button{flex:0 0 auto;font:inherit;font-size:11.5px;font-weight:700;padding:7px 12px;
-  border-radius:9px;border:0;background:var(--ac,#c2a04a);color:var(--bg,#141416);cursor:pointer}
+.pn-write button{flex:0 0 auto;font:inherit;font-size:11.5px;font-weight:700;padding:8px 14px;
+  border-radius:10px;border:0;background:var(--ac,#c2a04a);color:#1a1408;cursor:pointer;
+  transition:filter .14s ease}
+.pn-write button:hover{filter:brightness(1.08)}
 .pn-write button:disabled{opacity:.5;cursor:default}
-.pn-item{border-left:2px solid transparent;padding:5px 2px 6px 9px}
-.pn-item+.pn-item{border-top:1px solid var(--br2,#2a2c32)}
-.pn-item.mine{border-left-color:var(--ac,#c2a04a)}
-.pn-head{display:flex;align-items:baseline;gap:7px;margin-bottom:2px}
-.pn-head b{font-size:11.5px;font-weight:700;color:var(--tx2,#b9b8b4)}
+
+/* 사람이 쓴 글 */
+.pn-item{display:flex;gap:9px;align-items:flex-start;padding:9px 8px 9px 6px;border-radius:10px;
+  position:relative;transition:background .12s ease}
+.pn-item:hover{background:var(--bg-h,#1f2025)}
+.pn-item.mine::before{content:'';position:absolute;left:0;top:9px;bottom:9px;width:2px;
+  border-radius:2px;background:var(--ac,#c2a04a)}
+.pn-body{min-width:0;flex:1 1 auto}
+.pn-head{display:flex;align-items:baseline;gap:7px;margin-bottom:3px}
+.pn-head b{font-size:12.5px;font-weight:700;color:var(--tx,#e6e5e2);letter-spacing:-.01em}
 .pn-head span{font-size:10.5px;color:var(--tx4,#6c6b66);font-variant-numeric:tabular-nums}
-.pn-x{margin-left:auto;font:inherit;font-size:13px;line-height:1;padding:0 4px;border:0;
-  background:none;color:var(--tx4,#6c6b66);cursor:pointer;opacity:0;transition:opacity .12s ease}
+.pn-x{margin-left:auto;font:inherit;font-size:15px;line-height:1;padding:0 3px;border:0;
+  background:none;color:var(--tx4,#6c6b66);cursor:pointer;opacity:0;transition:opacity .12s ease,color .12s ease}
 .pn-item:hover .pn-x,.pn-x:focus-visible{opacity:1}
 .pn-x:hover{color:var(--re,#c46a6a)}
-.pn-txt{font-size:12.5px;line-height:1.6;color:var(--tx,#e6e5e2);word-break:break-word;white-space:pre-wrap}
-.pn-empty{padding:16px 10px;text-align:center;font-size:12px;color:var(--tx4,#6c6b66);line-height:1.7}
+.pn-txt{font-size:13px;line-height:1.65;color:var(--tx,#e6e5e2);word-break:break-word;white-space:pre-wrap}
+
+/* 시스템이 스스로 적은 줄 — 한 줄로 눕고, 얼굴도 절반 크기로 조용하다 */
+.pn-sys{display:flex;gap:7px;align-items:center;padding:4px 8px 4px 6px;border-radius:8px;
+  font-size:11.5px;line-height:1.5;min-width:0}
+.pn-sys:hover{background:var(--bg-h,#1f2025)}
+.pn-sys .pn-face{opacity:.75;font-size:7.5px}
+.pn-sysa{color:var(--tx3,#8a8a92);overflow:hidden;text-overflow:ellipsis;white-space:nowrap;min-width:0}
+.pn-syst{flex:0 0 auto;font-size:11px;font-weight:700;color:var(--tx2,#b9b8b4)}
+.pn-sysw{flex:0 0 auto;margin-left:auto;padding-left:8px;font-size:10px;color:var(--tx4,#6c6b66);
+  font-variant-numeric:tabular-nums;white-space:nowrap}
+
+.pn-empty{padding:22px 12px;text-align:center;font-size:12.5px;color:var(--tx4,#6c6b66);line-height:1.75}
 .pn-empty span{font-size:11px;opacity:.8}
-/* 시스템이 스스로 적은 줄 — 사람이 적은 줄보다 조용하다. 점 하나가 '기계가 적었다' 는 뜻. */
-.pn-sys{display:flex;gap:8px;align-items:flex-start;padding:3px 2px 4px 0}
-.pn-sys i{flex:0 0 auto;width:5px;height:5px;border-radius:50%;margin:6px 0 0 3px;
-  background:var(--tx4,#6c6b66);opacity:.55}
-.pn-sysb{min-width:0;display:flex;flex-wrap:wrap;align-items:baseline;gap:4px 7px}
-.pn-sysa{font-size:11.5px;color:var(--tx3,#8a8a92);line-height:1.5}
-.pn-syst{font-size:11px;font-weight:700;color:var(--tx2,#b9b8b4)}
-.pn-sysw{font-size:10px;color:var(--tx4,#6c6b66);font-variant-numeric:tabular-nums;margin-left:auto;white-space:nowrap}
 
 #ag-wrap{--lab:150px;--now:0%;font-variant-numeric:tabular-nums;user-select:none}
 #ag-wrap .ag-row{display:flex;align-items:stretch;height:26px}
@@ -59945,6 +59968,36 @@ window._pnDel = async function(id){
    아래에 이유가 붙는다. 덤으로 아무도 안 적어도 판이 안 죽는다 — 시스템 변경이 흐른다.
    PC 현황과 상관없는 로그(경고·급여·채용 등)는 빼고 이 판의 일만 담는다. */
 const PN_SYS = /배정|자리 옮김|백업|대타|커버|리더|클라이언트|PC[- ]?\d|added PC|deleted PC|inquiry|PC OFF|숨김|고정|해제/i;
+/* [v1442] 로그 문장이 영어·한국어가 섞여 있어 읽는 데 걸린다. 이 판은 사람이 읽는 판이니
+   자주 나오는 것만 한국어로 옮긴다 — 로그 자체는 안 건드린다(기록은 기록대로 둔다). */
+const PN_TR = [
+  [/^inquiry → PC \(단계 유지\)/, '문의 → PC 이동'],
+  [/^inquiry placed/,             '문의 배치'],
+  [/^added PC/i,                  'PC 추가'],
+  [/^deleted PC/i,                'PC 삭제'],
+  [/^added client/i,              '클라이언트 추가'],
+  [/^deleted client/i,            '클라이언트 삭제'],
+  [/^renamed client/i,            '클라이언트 이름 변경'],
+  [/^client on hiatus/i,          '클라이언트 휴면'],
+  [/^set client passive/i,        '클라이언트 대기']
+];
+function _pnPretty(a){
+  a = String(a||'');
+  for(var i=0;i<PN_TR.length;i++){ if(PN_TR[i][0].test(a)) return a.replace(PN_TR[i][0], PN_TR[i][1]); }
+  return a;
+}
+/* 얼굴 — 사진이 있으면 사진, 없으면 이름에서 뽑은 두 글자에 그 사람 색 */
+function _pnFace(name, size){
+  var esc = (typeof _mtcEsc === 'function') ? _mtcEsc : function(s){ return String(s==null?'':s); };
+  var nm = String(name||'?').trim(), s = size || 30;
+  var ini = ''; try{ ini = (typeof initials === 'function') ? initials(nm) : nm.slice(0,2).toUpperCase(); }catch(_){ ini = nm.slice(0,2).toUpperCase(); }
+  var col = '#6b6f78'; try{ if(typeof _pcv2Col === 'function') col = _pcv2Col(nm); }catch(_){}
+  var ph = null; try{ ph = (typeof photoFor === 'function') ? photoFor(nm) : null; }catch(_){}
+  return '<span class="pn-face" style="width:'+s+'px;height:'+s+'px;'
+       + (ph ? ('background-image:url('+esc(ph)+');background-size:cover;background-position:center')
+             : ('background:'+col))+'">'
+       + (ph ? '' : esc(ini)) + '</span>';
+}
 function _pnFeed(){
   const out = [];
   try{ (PC_NOTES||[]).forEach(function(n){ if(n) out.push({ k:'note', ts:Number(n.ts)||0, n:n }); }); }catch(_){}
@@ -59974,20 +60027,25 @@ function _pnRender(){
     if(it.k === 'note'){
       const n = it.n, mine = String(n.by||'') === _pnWho();
       return '<div class="pn-item'+(mine?' mine':'')+'">'
-        + '<div class="pn-head"><b>'+esc(n.by||'?')+'</b><span>'+esc(_pnWhen(n.ts))+'</span>'
-        + (_pnCanDel(n) ? ('<button class="pn-x" title="지우기" onclick="_pnDel(\''+esc(n.id)+'\')">×</button>') : '')
-        + '</div><div class="pn-txt">'+esc(n.text||'')+'</div></div>';
+        + _pnFace(n.by, 32)
+        + '<div class="pn-body">'
+        +   '<div class="pn-head"><b>'+esc(n.by||'?')+'</b><span>'+esc(_pnWhen(n.ts))+'</span>'
+        +   (_pnCanDel(n) ? ('<button class="pn-x" title="지우기" onclick="_pnDel(\''+esc(n.id)+'\')">×</button>') : '')
+        +   '</div><div class="pn-txt">'+esc(n.text||'')+'</div>'
+        + '</div></div>';
     }
     const l = it.l;
-    return '<div class="pn-sys"><i></i><div class="pn-sysb">'
-      + '<span class="pn-sysa">'+esc(l.action||'')+'</span>'
-      + (l.target ? ('<span class="pn-syst">'+esc(l.target)+'</span>') : '')
-      + '<span class="pn-sysw">'+esc(l.actor||'')+' · '+esc(_pnWhen(it.ts))+'</span>'
-      + '</div></div>';
+    return '<div class="pn-sys">'
+      + _pnFace(l.actor, 18)
+      + '<span class="pn-sysa">'+esc(_pnPretty(l.action))+'</span>'
+      + (l.target ? ('<b class="pn-syst">'+esc(l.target)+'</b>') : '')
+      + '<span class="pn-sysw">'+esc(_pnWhen(it.ts))+'</span>'
+      + '</div>';
   }).join('');
   host.innerHTML =
       '<div class="pn-box">'
     +   (can ? ('<div class="pn-write">'
+    +     _pnFace(_pnWho(), 32)
     +     '<textarea id="pn-input" rows="1" maxlength="500" placeholder="왜 바꿨는지 한 줄 — 예: PC-18 Kal 백업 (Miru와 교대)"'
     +     ' oninput="this.style.height=\'auto\';this.style.height=Math.min(this.scrollHeight,110)+\'px\'"'
     +     ' onkeydown="if((event.metaKey||event.ctrlKey)&&event.key===\'Enter\'){event.preventDefault();_pnPost();}"></textarea>'
