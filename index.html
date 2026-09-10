@@ -4,7 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
 <title>ARASAKA Corp</title>
-<!-- BUILD: v1465 | 합격 카드가 Pass 칸에 남게 (v1462 부작용) · 온보딩은 business 없어도 합격자를 받음 -->
+<!-- BUILD: v1466 | 온보딩 Loading 멈춤 고침 · 메이플 캐릭터 고르기(내 시프트·온보딩 10번) -->
 <!-- v745 기록은 git 이력(v1302 이전 커밋)에 있다 — 100KB 변경사 주석을 배포에서 제거 -->
 <!-- [v677] a <link href> cannot read a CSS variable, so the favicon carries its own copy.
      64px: a browser tab draws it at 16-32px, so this is 2x-DPR sharp at 11KB. -->
@@ -21096,6 +21096,13 @@ async function renderMyShift(){
     <div class="att-eyebrow">내 페이지</div>
     <div class="ph">내 시프트</div>
     <div class="psub">이번 주 시프트 일정 · 근무 ${_U(workedDays,'일','d')}${isDemo ? ' · <span style="color:var(--ac-strong)">📋 예시 데이터 (실제 배정 시 자동 표시)</span>' : ''}</div>
+    ${(function(){ /* [v1466] 내 메이플 캐릭터 — 본인이 고른다 (디스코드 프로필용) */
+        try{ var uid = String((currentUser && currentUser.id) || ''); if(!uid || typeof _mapleCharOpen !== 'function') return '';
+             var P = (typeof STAFF_PROFILE !== 'undefined' && STAFF_PROFILE[uid] && STAFF_PROFILE[uid].personal) || {}; var mc = P.maple_char;
+             var e2 = function(x){ return String(x == null ? '' : x).replace(/[<>&"]/g, function(c){ return { '<':'&lt;','>':'&gt;','&':'&amp;','"':'&quot;' }[c]; }); };
+             return '<div class="ms-maple">' + ((mc && mc.id) ? ('<img src="' + _mapleIcon(mc.id) + '" alt=""><b>' + e2(mc.name) + '</b><span>' + _U('내 메이플 캐릭터 · 디스코드 프로필에 쓰는 캐릭터','My Maple character · for your Discord profile') + '</span>')
+                                                : ('<span>' + _U('내 메이플 캐릭터를 아직 안 골랐어요 — 디스코드 프로필에 쓸 캐릭터를 골라 주세요','Pick your Maple character for your Discord profile') + '</span>'))
+                  + '<button class="att-btn-sm" onclick="_mapleCharOpen(\'' + uid + '\', function(){ renderMyShift(); })">' + ((mc && mc.id) ? _U('바꾸기','Change') : _U('고르기','Pick')) + '</button></div>'; }catch(_){ return ''; } })()}
 
     ${expShiftCardHTML(shiftDetails, weekHours, workedDays)}
 
@@ -47164,7 +47171,7 @@ const OB_STEPS = [
   { n:7,  g:'채용',   t:'최종 면접 · 세부사항 설명',    d:'업무 · 회사 규칙',                       k:'stage:pass' },
   { n:8,  g:'채용',   t:'최종 상호 동의',               d:'양측 동의 → 채용 확정',                  k:'app:final' },
   { n:9,  g:'채용',   t:'공식 입사 등록',               d:'직원 풀에 올라갔나',                     k:'staff' },
-  { n:10, g:'온보딩', t:'메이플 캐릭터 · 디스코드 프로필', d:'담당 캐릭터 정하기',                  k:'mark' },
+  { n:10, g:'온보딩', t:'메이플 캐릭터 · 디스코드 프로필', d:'본인이 내 시프트에서 고르거나, 여기서 대신 고르기', k:'maple' },   /* [v1466] */
   { n:11, g:'온보딩', t:'디스코드 Role 부여',           d:'시프트·포지션에 맞는 Role',              k:'mark' },
   { n:12, g:'온보딩', t:'개인정보 · 입사일 등록',       d:'실명 · 은행 · 계좌 · 전화 · 입사일',     k:'personal' },
   { n:13, g:'온보딩', t:'HR BOT 등록',                  d:'디스코드 아이디 — 없으면 출퇴근이 안 찍힌다', k:'p:discord_id' },
@@ -47295,11 +47302,12 @@ async function renderOnboarding(pickId){
   var live = { att:0, lastAtt:'', rep:0, lastRep:'', login:false, invite:false, pc:0 };
   try{
     if(!isApp && typeof sb !== 'undefined' && sb){
-      var q = await Promise.all([
+      var q = await Promise.race([ Promise.all([
         sb.from('attendance').select('date').eq('user_id', me.id).order('date',{ascending:false}).limit(1),
         sb.from('attendance').select('id', {count:'exact', head:true}).eq('user_id', me.id),
         sb.from('user_profiles').select('id,email').eq('id', me.id).maybeSingle()
-      ]);
+      ]), new Promise(function(r){ setTimeout(function(){ r([]); }, 8000); }) ]);   /* [v1466] 8초 안에 안 오면 빈 채로 그린다 */
+      q = Array.isArray(q) ? q : [];
       live.lastAtt = (q[0] && q[0].data && q[0].data[0] && q[0].data[0].date) || '';
       live.att = (q[1] && q[1].count) || 0;
       live.login = !!(q[2] && q[2].data && q[2].data.id);
@@ -47325,18 +47333,29 @@ async function renderOnboarding(pickId){
     try{ var k1 = String(me.name||'').toLowerCase().split(' ')[0];
          app = (typeof APPLICANTS!=='undefined'?APPLICANTS:[]).find(function(a){
            return a && String(a.name||'').toLowerCase().split(' ')[0] === k1; }) || null; }catch(_){}
-  } else if(typeof sb !== 'undefined' && sb){
-    /* [v1456] 초대 코드로 가입했으면 저절로 잇는다. 아니면 이름이 비슷한 계정을 후보로 보여 준다. */
-    try{
-      if(app.invite_code && window._obAutoLinked !== String(app.id)){
-        var ic = await sb.from('invite_codes').select('used_by').eq('code', app.invite_code).maybeSingle();
-        var em2 = ic && ic.data && ic.data.used_by;
-        if(em2){ var up = await sb.from('user_profiles').select('id').eq('email', em2).maybeSingle();
-          if(up && up.data && up.data.id){ window._obAutoLinked = String(app.id); await _obLink(app.id, up.data.id); return; } }
-      }
-      var fn = String(app.name||'').trim().split(' ')[0];
-      if(fn.length >= 2){ var cq = await sb.from('user_profiles').select('id,name,email').ilike('name', fn+'%').is('resigned_at', null).limit(5); cand = (cq && cq.data) || []; }
-    }catch(_){}
+  } else {
+    /* [v1466] 고원 씨 화면이 "불러오는 중…" 에서 멈췄다 — 여기서 DB 답을 기다리고 있었다. 먼저 그리고, 후보는 뒤에서
+       채운다(4초 안에 안 오면 없는 것으로). 코드로 가입한 사람은 뒤에서 확인돼 저절로 이어진다. */
+    if(!window._obCandCache) window._obCandCache = {};
+    cand = window._obCandCache[app.id] || [];
+    if(window._obCandCache[app.id] === undefined && typeof sb !== 'undefined' && sb){
+      window._obCandCache[app.id] = [];
+      (async function(){
+        var TO = function(p, ms){ return Promise.race([p, new Promise(function(r){ setTimeout(function(){ r(null); }, ms); })]); };
+        try{
+          if(app.invite_code && window._obAutoLinked !== String(app.id)){
+            var ic = await TO(sb.from('invite_codes').select('used_by').eq('code', app.invite_code).maybeSingle(), 4000);
+            var em2 = ic && ic.data && ic.data.used_by;
+            if(em2){ var up = await TO(sb.from('user_profiles').select('id').eq('email', em2).maybeSingle(), 4000);
+              if(up && up.data && up.data.id){ window._obAutoLinked = String(app.id); await _obLink(app.id, up.data.id); return; } }
+          }
+          var fn = String(app.name||'').trim().split(' ')[0];
+          if(fn.length >= 2){ var cq = await TO(sb.from('user_profiles').select('id,name,email').ilike('name', fn+'%').is('resigned_at', null).limit(5), 4000);
+            var got = (cq && cq.data) || []; window._obCandCache[app.id] = got;
+            if(got.length && String(window._obCur) === 'app:' + app.id) renderOnboarding('app:' + app.id); }
+        }catch(_){}
+      })();
+    }
   }
   var stageIdx = {}; try{ RECRUIT_STAGES.forEach(function(s,i){ stageIdx[s.id]=i; }); }catch(_){}
   var appAt = app ? (stageIdx[app.stage]!=null ? stageIdx[app.stage] : -1) : -1;
@@ -47357,6 +47376,8 @@ async function renderOnboarding(pickId){
                       var f=s.k.slice(4), ob=(app&&app.onboard)||{};
                       return { ok:!!ob[f], appMark:true,
                         why: app ? (ob[f] ? '지원자 카드에서 확인함' : '채용 화면에서 확인해 주세요') : '지원자 기록 없음' };
+      case 'maple':   var _mc = P.maple_char; return { ok:!!(_mc && _mc.id), maple:true,
+                        why: (_mc && _mc.id) ? (_mc.name + ' · 디스코드 프로필에 쓰는 캐릭터') : '아직 안 골랐음 — 826개 중에서 하나' };   /* [v1466] */
       case 'staff':   if(isApp) return { ok:false, staffLink:true,
                         why: cand.length ? ('가입된 계정 후보: '+cand.map(function(c){ return c.name+' ('+c.email+')'; }).join(' · ')+' — 맞으면 연결')
                            : (app.invite_code ? ('초대 코드 '+app.invite_code+' 발급함 — 가입하면 저절로 연결됩니다') : '직원 계정이 없습니다 — 초대 코드를 만들어 보내세요') };
@@ -47394,6 +47415,9 @@ async function renderOnboarding(pickId){
             : ('<span class="ob-auto">'+(st.ok?'○':'✗')+'</span>'))
       +   ((s.k==='personal'||s.k==='p:discord_id'||s.k==='p:discord_thread'||s.k==='both'||s.k==='p:anydesk')&&!st.ok&&_obCanEdit()&&!isApp
             ? ('<button class="ob-go" onclick="openStaffInfoEditor(\''+esc(String(me.id))+'\')">채우기</button>') : '')
+      /* [v1466] 10번 — 캐릭터 고르기(대신 고르기) */
+      +   (st.maple && _obCanEdit() && !isApp
+            ? ('<button class="ob-go" onclick="_mapleCharOpen(\''+esc(String(me.id))+'\', function(){ renderOnboarding(\''+esc(String(me.id))+'\'); })">'+(st.ok?'바꾸기':'캐릭터 고르기')+'</button>') : '')
       /* [v1456] 14번 — 봇이 스레드를 만들고 소개 카드를 고정한다 */
       +   (s.k==='p:discord_thread'&&!st.ok&&_obCanEdit()&&!isApp
             ? ('<button class="ob-go" onclick="_obMakeBoard(\''+esc(String(me.id))+'\')">데일리보드 만들기</button>') : '')
@@ -47937,6 +47961,7 @@ async function openStaffDetail(staffId){
         ? infoRow('입사일', pinfo.start_work)
         : `<div class="sf-info-row"><span class="sf-info-lbl">입사일</span><span class="sf-info-val" style="color:var(--re,#c46a6a)">미설정${_firstIn ? ` — 기록상 첫 출근 <b style="color:var(--tx,#e6e5e2);font-variant-numeric:tabular-nums">${_firstIn}</b>${(currentUserRole==='admin'||currentUserRole==='op') ? ' · ✎ Edit info 에서 확정' : ''}` : ((currentUserRole==='admin'||currentUserRole==='op') ? ' — ✎ Edit info 에서 입력' : '')}</span></div>`}
       ${infoRow('시프트', pinfo.shift_pattern)}
+      ${(pinfo.maple_char && pinfo.maple_char.id) ? `<div class="sf-info-row"><span class="sf-info-lbl">메이플 캐릭터</span><span class="sf-info-val"><img src="${_mapleIcon(pinfo.maple_char.id)}" alt="" style="width:22px;height:22px;vertical-align:middle;margin-right:6px;image-rendering:pixelated">${pinfo.maple_char.name}</span></div>` : ''}
       ${pinfo.discord_id
         ? infoRow('Discord ID', pinfo.discord_id, true)
         : ((currentUserRole==='admin'||currentUserRole==='op') ? `<div class="sf-info-row"><span class="sf-info-lbl">Discord ID</span><span class="sf-info-val" style="color:var(--re,#c46a6a)">미설정 — ✎ Edit info 에서 입력</span></div>` : '')}
@@ -48966,7 +48991,7 @@ async function openStaffInfoEditor(staffId){
     { k:'discord_thread', label:'Discord 보고 스레드 / Report thread link', value:p.discord_thread, ph:'https://discord.com/channels/…' }
   ], async vals => {
     if(!STAFF_PROFILE[staffId]) STAFF_PROFILE[staffId] = {};
-    STAFF_PROFILE[staffId].personal = vals;
+    STAFF_PROFILE[staffId].personal = Object.assign({}, STAFF_PROFILE[staffId].personal || {}, vals);   /* [v1466] 폼에 없는 칸(maple_char)은 남긴다 */
     saveStaffState();
     // [v469] ALSO write straight to user_profiles.discord_id — the actual column the Discord bot's
     // check-in link-check reads. Previously this field only saved to the ERP's own staff_state blob,
@@ -72751,6 +72776,121 @@ console.info('AUTO100 build applied',AUTO100_BUILD.version,v3Audit());
   window._spClose = close;
   document.addEventListener('keydown', function(e){ if(e.key === 'Escape' && open) close(); });
   try{ if(typeof setActiveChannel === 'function' && !window._spNavWrapped){ window._spNavWrapped = true; var _o = setActiveChannel; setActiveChannel = function(){ try{ close(); }catch(_){} return _o.apply(this, arguments); }; } }catch(_){}
+})();
+</script>
+<style id="mcp-style">
+/* [v1466] 메이플 캐릭터 고르기 — 디스코드 프로필에 쓸 NPC 를 직원이 직접 고른다 (mapledb.kr 목록 826개, 그림은 maplestory.io) */
+#mcp-back{position:fixed;inset:0;z-index:399;background:rgba(6,6,8,.6);-webkit-backdrop-filter:blur(3px);backdrop-filter:blur(3px);opacity:0;pointer-events:none;transition:opacity .2s ease}
+#mcp-back.open{opacity:1;pointer-events:auto}
+#mcp-card{position:fixed;left:50%;top:50%;width:640px;max-width:calc(100vw - 24px);max-height:88vh;z-index:400;display:flex;flex-direction:column;
+  background:var(--bg-c,var(--bg,#161616));border:1px solid var(--br2,#33363d);border-radius:18px;box-shadow:0 30px 80px rgba(0,0,0,.5);
+  transform:translate(-50%,calc(-50% + 16px)) scale(.96);opacity:0;pointer-events:none;transition:opacity .18s ease,transform .38s cubic-bezier(.16,1,.3,1);overflow:hidden}
+#mcp-card.open{opacity:1;pointer-events:auto;transform:translate(-50%,-50%) scale(1)}
+#mcp-card .mcp-hd{display:flex;align-items:center;gap:10px;padding:16px 18px 10px}
+#mcp-card .mcp-hd b{font-size:16px;letter-spacing:-.01em}
+#mcp-card .mcp-hd span{font-size:12px;color:var(--tx3)}
+#mcp-card .mcp-x{margin-left:auto;width:30px;height:30px;border-radius:50%;border:0;background:transparent;color:var(--tx3);font-size:16px;cursor:pointer}
+#mcp-card .mcp-x:hover{background:var(--bg-a);color:var(--tx)}
+#mcp-card .mcp-q{margin:0 18px 10px;padding:9px 12px;border-radius:10px;border:1px solid var(--br,#333);background:var(--bg-i,var(--bg));color:var(--tx);font:inherit;font-size:14px}
+#mcp-card .mcp-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(88px,1fr));gap:6px;padding:0 18px 18px;overflow:auto;flex:1}
+#mcp-card .mcp-it{display:flex;flex-direction:column;align-items:center;gap:4px;padding:8px 4px 7px;border-radius:12px;border:1px solid transparent;cursor:pointer;background:var(--bg-h,rgba(255,255,255,.03))}
+#mcp-card .mcp-it:hover{border-color:var(--ac,#c2a04a);background:color-mix(in srgb,var(--ac,#c2a04a) 10%,transparent)}
+#mcp-card .mcp-it img{width:52px;height:52px;object-fit:contain;image-rendering:pixelated;filter:drop-shadow(0 2px 4px rgba(0,0,0,.4))}
+#mcp-card .mcp-it b{font-size:11.5px;font-weight:600;text-align:center;line-height:1.2;max-width:84px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+#mcp-card .mcp-it.taken{opacity:.42;cursor:not-allowed}
+#mcp-card .mcp-it.taken i{font-style:normal;font-size:10px;color:var(--re,#c46a6a)}
+#mcp-card .mcp-it.mine{border-color:var(--ac,#c2a04a);background:color-mix(in srgb,var(--ac,#c2a04a) 14%,transparent)}
+#mcp-card .mcp-more{grid-column:1/-1;text-align:center;font-size:12px;color:var(--tx3);padding:8px}
+#mcp-card .mcp-ft{display:flex;justify-content:space-between;align-items:center;gap:10px;padding:10px 18px 14px;border-top:1px solid var(--br,rgba(128,128,128,.14));font-size:12px;color:var(--tx3)}
+#mcp-card .mcp-ft a{color:var(--tx3);cursor:pointer}
+.ms-maple{display:flex;align-items:center;gap:10px;margin:0 0 16px;padding:10px 14px;border-radius:12px;background:var(--bg-h);border:1px solid var(--br)}
+.ms-maple img{width:40px;height:40px;object-fit:contain;image-rendering:pixelated}
+.ms-maple b{font-size:14px}
+.ms-maple span{font-size:12px;color:var(--tx3);flex:1}
+.ms-maple button{margin-left:auto}
+@media (prefers-reduced-motion:reduce){#mcp-card,#mcp-back{transition:opacity .12s linear}#mcp-card{transform:translate(-50%,-50%) scale(1)}}
+</style>
+<script>
+/* [v1466] 메이플 캐릭터 고르기 */
+(function(){
+  var RAW = '2000:로저|2001:센|2002:피터|2003:로빈|2004:토드|2005:쌤|2006:티앤크|2100:세라|2101:히나|2102:다나|2103:마리아|10000:피오|11000:시드|11100:루시|12000:루카스|12100:마이|12101:레인|20000:존|20001:바리|20002:빅스|20100:유나|21000:판|22000:바실리|1001000:실버|1001001:나타샤|1001100:미나|1002000:필|1002001:테오|1002002:페이슨|1002003:몽롱 할배|1002004:리스항구 모범택시|1002005:김서방|1002006:체프|1002100:제인|1002101:쿤|1010100:리나|1011000:칼|1011001:샘|1011100:루나|1012000:빅토리아 중형택시|1012001:돌팔이|1012002:비셔스|1012003:장로 스탄|1012004:큐트|1012005:클로이|1012006:바르토스|1012007:프로드|1012008:카이지|1012009:이서방|1012100:헬레나|1012101:마야|1012102:피아|1012103:나탈리|1012104:브리트니|1012105:나미녀|1012106:밍밍부인|1012107:유타|1012108:카밀라|1012109:제이|1012110:앤|1012111:브루스|1012112:토리|1012113:토미|1012114:어흥이|1020000:돼지와 함께 춤을|1021000:리버|1021001:해리|1021100:그레고리 손|1022000:주먹펴고 일어서|1022001:페리온 중형택시|1022002:만지|1022003:선더|1022004:스미스|1022005:왕서방|1022006:윈스턴|1022007:이얀|1022008:불타버린 검|1022100:소피아|1022101:루니|1022102:유적발굴단 게시판|1022103:분수 조각상|1031000:요정 플로라|1031001:요정 세라비|1031100:요정 렌|1032000:엘리니아 중형택시|1032001:하인즈|1032002:에뜨랑|1032003:쉐인|1032004:루이스|1032005:엘리니아 모범택시|1032006:박서방|1032007:죠엘|1032008:체리|1032009:푸린|1032100:요정 아르웬|1032101:요정 로웬|1032102:요정 마르|1032103:엘모스|1032104:베티|1032105:에스텔|1032106:요정 윙|1032107:리프|1032108:리프|1040000:루크|1040001:마이크|1040002:펜시|1043000:꽃 무더기|1043001:약초 덤불|1051000:만슈타인|1051001:마파|1051002:소문난|1052000:알렉스|1052001:다크로드|1052002:뒷골목의 제이엠|1052003:크리스|1052004:덴마|1052005:돌팔이|1052006:웅이|1052007:개찰구|1052008:보물상자|1052009:보물상자|1052010:보물상자|1052011:나가는 곳|1052012:몽롱|1052013:컴퓨터|1052014:자판기|1052015:빌리|1052016:커닝시티 중형택시|1052017:홍서방|1052100:돈 지오바네|1052101:안드레아|1052102:슈미|1052103:넬라|1052104:툴카스|1052105:정체불명의 그녀|1052106:이카루스|1052108:넘어진 쓰레기통|1061000:크리슈라마|1061001:24시간 포장마차|1061002:시원해|1061003:시워언해|1061004:로니|1061005:사비트라마|1061006:이상한 모양의 석상|1061007:부서지고 있는 석상|1061008:오서방|1061009:차원의 문|1061010:빛나는 수정|1061011:기억하고 있는 자|1061012:의미없는 존재|1061013:그윈|1061100:호텔 안내원|1063000:분홍색 꽃 무더기|1063001:파란색 꽃 무더기|1063002:흰색 꽃 무더기|1063003:초록버섯 수배표지판|1063004:커즈아이 수배표지판|1063005:이블아이 수배표지판|1063006:콜드아이 수배표지판|1063007:좀비버섯 수배표지판|1063008:뿔버섯 수배표지판|1063009:주니어 부기 수배표지판|1063010:드레이크 수배표지판|1072000:돼지와 함께 일어서|1072001:마법사 전직교관|1072002:궁수 전직교관|1072003:도적 전직교관|1072004:전사 전직교관|1072005:마법사 전직교관|1072006:궁수 전직교관|1072007:도적 전직교관|1072008:카이린|1081000:발렌|1081001:파이슨|1081100:리엘|1081101:로엘|1081102:라엘|1090000:카이린|1091000:모건|1091001:로도스|1091002:갤리|1091003:세릴|1091004:돈틀레스|1092000:탕윤|1092001:보니|1092002:베인|1092003:샤를|1092004:캘리코|1092006:블랙바크|1092007:무라트|1092008:슈린츠|1092009:리드|1092010:잭|1092011:바르톨|1092012:롤로네|1092013:포쉐|1092014:노틸러스 중형택시|1092015:정수기|1092016:빛나는 돌|1092017:이름없는 상인|1092018:휴지통|1092019:조나단|1092090:엄마 젖소|1092091:엄마 젖소|1092092:엄마 젖소|1092093:아기 젖소|1092094:아기 젖소|1092095:아기 젖소|1093000:뿌빠|1094000:바트|1094001:아벨|1094002:풀 숲|1094003:풀 숲|1094004:풀 숲|1094005:풀 숲|1094006:풀 숲|2001000:클리프|2001001:나뭇가지 눈사람|2001002:양동이 눈사람|2001003:밀짚모자 눈사람|2001004:목도리 눈사람|2001005:루퍼트|2002000:루피|2002001:루디|2002002:토르|2010000:찰리중사|2010001:미노|2010002:프란츠|2010003:네브|2010004:윌슨상병|2010005:슈리|2010006:티니|2010007:헤라클|2010008:레아|2010009:레나리우|2012000:이프|2012001:리니|2012002:에린|2012003:요정 네리|2012004:요정 누리|2012005:요정 에델|2012006:이스|2012007:린스|2012008:로미|2012009:리자|2012010:가정부 엘마|2012011:요정 크리엘|2012012:리사|2012013:서나|2012014:오르비스 마법석|2012015:엘나스 마법석|2012016:샤미닝|2012017:휴즈|2012018:에릭손|2012019:봉달이|2012020:알퐁스 그린|2012021:라미니|2012022:펠라스|2012023:단풍잎 구슬|2012024:이그네트|2012025:제라스|2012026:엘리쟈|2012027:이미지 name= 2012027 src= https //maplestory.io/api/gms/62/npc/2012027/icon?resize=2 > 하프줄|2012028:이미지 name= 2012028 src= https //maplestory.io/api/gms/62/npc/2012028/icon?resize=2 > 하프줄|2012029:이미지 name= 2012029 src= https //maplestory.io/api/gms/62/npc/2012029/icon?resize=2 > 하프줄|2012031:이미지 name= 2012031 src= https //maplestory.io/api/gms/62/npc/2012031/icon?resize=2 > 하프줄|2012032:이미지 name= 2012032 src= https //maplestory.io/api/gms/62/npc/2012032/icon?resize=2 > 하프줄|2012033:이미지 name= 2012033 src= https //maplestory.io/api/gms/62/npc/2012033/icon?resize=2 > 하프줄|2013000:요정 웡키|2013001:시종 이크|2013002:여신 미네르바|2020000:보겐|2020001:스코트|2020002:고든|2020003:폭스상사|2020004:무슬|2020005:알케스터|2020006:제이드|2020007:스카두르|2020008:타일러스|2020009:로베이라|2020010:레네|2020011:아레크|2020012:눈의 정령 조각상|2020013:페드로|2022000:루미|2022001:하나|2022002:바른|2022003:샤모스|2022004:타일러스|2023000:위험지역 총알택시|2030000:제프|2030001:브라보하사|2030002:이지병장|2030003:눈 덮인바위|2030004:작은 무덤|2030005:조각상|2030006:성스러운 돌|2030007:석상의 파편|2030008:아도비스|2030009:글리버|2030010:아몬|2030011:알리|2030012:허클|2030013:아도비스|2030014:고대 빙석|2032000:????|2032001:스피루나|2032002:아우라|2032003:리라|2032004:용암|2040000:멜|2040001:장난감병정 델브|2040002:장난감병정 올슨|2040003:조교 챙|2040004:오뚝이 일꾼1|2040005:오뚝이 일꾼2|2040006:오뚝이 일꾼3|2040007:오뚝이 일꾼4|2040008:오뚝이 일꾼5|2040009:오뚝이 일꾼6|2040010:오뚝이 일꾼7|2040011:오뚝이 일꾼8|2040012:오뚝이 일꾼9|2040013:오뚝이 일꾼10|2040014:치코|2040015:공장장 카호|2040016:파이|2040017:메소레인저 그린|2040018:메소레인저 블랙|2040019:에버|2040020:지로큰|2040021:페이|2040022:라이돌|2040023:길잃은 병정|2040024:에오스 마법석|2040025:두번째 에오스의 돌|2040026:세번째 에오스의 돌|2040027:네번째 에오스의 돌|2040028:장난감병정 마크|2040029:괘종시계|2040030:위습|2040031:문서뭉치|2040032:위버|2040033:네르|2040034:표지판|2040035:아르토|2040036:레드 벌룬|2040037:오렌지 벌룬|2040038:옐로우 벌룬|2040039:옐로그린 벌룬|2040040:그린 벌룬|2040041:아쿠아 벌룬|2040042:스카이블루 벌룬|2040043:블루 벌룬|2040044:바이올렛 벌룬|2040045:핑크 벌룬|2040046:할리|2040047:병정 앤더슨|2040048:나나|2040049:사탕기계|2040050:떠돌이 연금술사|2040051:톨이|2040052:사서 위즈|2041000:티티앙|2041001:에린|2041002:히드|2041003:미루|2041004:마르셀|2041005:네미|2041006:미스키|2041007:미유|2041008:세피|2041009:미니|2041010:앨|2041011:메소레인저 옐로우|2041012:메소레인저 핑크|2041013:지나|2041014:패트리샤|2041015:코린|2041016:미르겔|2041017:쿠커스|2041018:조립공 한스|2041019:수리공 로키|2041020:기계공 맥|2041021:Mr. 피에로|2041022:보좌관 티군|2041023:플로|2041024:조형물|2041025:기계장치|2041026:고스트헌터 밥|2041027:수집광 매이션|2041028:정체불명의 도적|2042000:슈피겔만|2042001:슈피겔만|2042002:슈피겔만|2042003:조수 레드|2042004:조수 블루|2043000:파풀라투스|2050000:마운틴|2050001:김박사|2050002:외계인 그레이|2050003:스페이슨|2050004:구보|2050005:철이|2050006:훈이|2050007:건이|2050008:마에스터 장군|2050009:부사관 메딘|2050010:의무병 라이스|2050011:병사 케빈|2050012:요원 M|2050013:포터|2050014:운석1|2050015:운석2|2050016:운석3|2050017:운석4|2050018:운석5|2050019:운석6|2050020:수송선|2051000:페퍼|2051001:케이|2060000:나누크|2060001:로빈슨|2060002:태공|2060003:멜리아스|2060004:오안네스|2060005:켄타|2060006:뮤즈|2060007:칼립소|2060008:제라드|2060009:돌고래|2060100:카르타|2060101:탐사대장 탱|2060102:일그러진 차원의 문|2070000:노서방|2070001:뺑덕어멈|2070002:먹쇠|2070003:돌쇠|2071000:박첨지|2071001:흥부|2071002:놀부|2071003:칠남|2071004:콩쥐|2071005:칠성|2071006:제비|2071007:연이 할머니|2071008:햇님이|2071009:심봉사|2071010:산신령|2071011:나무꾼|2071012:낯익은 처녀|2071013:노란 왕도깨비|2071014:파란 왕도깨비|2071015:초록 왕도깨비|2072000:칠성이네 볏짐|2072001:칠남이네 볏짐|2073000:박첨지|2080000:모스|2080001:슬라이|2080002:맥스|2080003:노만|2080004:무디|2080005:코스쿠|2080006:돌고래|2081000:촌장 타타모|2081001:쿠모|2081002:이토|2081003:야쿠|2081004:팜|2081005:케로벤|2081006:모이라|2081007:기사 라울|2081008:나인스피릿의 아기용|2081009:무스|2081010:무스|2081100:하르모니아|2081200:그리토|2081300:레고르|2081400:헬린|2081500:새뮤엘|2082000:뮤|2082001:타미|2082002:해리|2083000:결사대 암호석판|2083001:혼테일의 이정표|2083002:나무뿌리 수정|2083003:미로방 그루터기|2083004:원정대의 표식|2083005:생명의 샘|2090000:판서방|2090001:공공|2090002:비디원|2090003:달숙|2090004:도의진|2090005:학|2090006:라야|2090100:루오 할아범|2090101:리리슈슈|2090102:나란|2090103:파타|2090104:노마|2091000:노공|2091001:도공|2091002:태상|2091003:한태수|2091004:요괴선사|2092000:구영감|2092001:황선장|2093000:무탄|2093001:소원기|2093002:란밍|2093003:공서방|2093004:돌고래|2094000:구옹|2094001:우양|2094002:구옹|2095000:델리|2100000:아흐마드|2100001:무하마드|2100002:자이드|2100003:야스민|2100004:사가티|2100005:샤티|2100006:마즈라|2100007:라일라|2100008:바드르|2100009:알딘|2101000:시린|2101001:지유르|2101002:에레스카|2101003:아딘|2101004:티건|2101005:바이런|2101006:어린왕자|2101007:아레다|2101008:셰헤라자드|2101009:압둘라 8세|2101010:자노|2101011:세쟌|2101012:수상한 남자|2101013:카르카사|2101014:세자르|2101015:압둘라 8세|2101016:아레다|2101017:세자르|2101018:세자르|2102000:아세손|2102001:슬린|2102002:시라스|2103000:궁전 오아시스|2103001:비밀의 벽|2103002:왕비의 장식장|2103003:아리안트 민가1|2103004:아리안트 민가2|2103005:아리안트 민가4|2103006:아리안트 민가6|2103007:보물상자|2103008:기묘한 목소리|2103009:아리안트 민가1 찬장|2103010:아리안트 민가2 찬장|2103011:아리안트 민가4 찬장|2103012:아리안트 민가6 찬장|2110000:로슨|2110001:제리|2110002:루이|2110003:반리|2110004:스탠|2110005:낙타 택시|2111000:카슨|2111001:매드|2111002:드랭|2111003:휴머노이드 A|2111004:필리아|2111005:키니|2111006:파웬|2111007:브로커 한|2111008:베딘|2111009:러셀론|2111010:알카드노의 책장|2111011:벽|2111012:책장|2111013:액자|2111014:책상|2111015:러셀론의 책상|2111016:드랭의 비밀책|2111017:첫번째 파이프손잡이|2111018:두번째 파이프손잡이|2111019:세번째 파이프손잡이|2111020:첫번째 마법진|2111021:두번째 마법진|2111022:세번째 마법진|2111023:마법진 중앙|2111024:비밀통로|2111025:제어장치|2111026:미완성 마법진|2112000:유레테|2112001:유레테|2112002:유레테|2112003:줄리엣|2112004:로미오|2112005:줄리엣|2112006:로미오|2112007:조사 결과|2112008:줄리엣|2112009:로미오|2112010:유레테|2112011:유레테|2112012:유레테|2112013:조사 결과|2112014:유레테|2120000:가면신사|2120001:문지기|2120002:집사|2120003:메이드|2120004:조나스|2120005:소필리아|2120006:루드밀라|2120007:조이|2120008:유령 T|2120009:집사|2121000:이름 모를 고양이|2121001:비석이 쓰러진 무덤|2121002:이름 모를 무덤|2121003:찾는 이 없는 무덤|2121004:누군가의 무덤|2121005:피아노|2121006:누군가의 액자1|2121007:누군가의 액자2|2121008:누군가의 액자3|2121009:누군가의 액자4|2121010:누군가의 액자5|2121011:소필리아의 액자|2130000:마요른|2131000:헬레나|2131001:페르젠|2131002:유리스|2131003:로하|2131004:주먹쥐고 누워|2131005:시온|2131006:두르|2131007:테스|2132000:칸데룬|2132001:로드|2132002:리어스|2132003:샤드리언|9000000:폴|9000001:쟝|9000002:피에트로|9000003:바이칸|9000004:바이콘|9000005:바이컨|9000006:바이쿤|9000007:천지|9000008:몽땅따|9000009:바이킨|9000010:피에트라|9000011:마틴|9000012:해리|9000013:토니|9000014:지니|9000015:타미스|9000017:코코|9000018:마틸다|9000019:가위바위보 운영자|9000020:스피넬|9000021:가가|9000036:요원 E|9000040:달리어|9000041:기부함|9001000:코-크베어 운영자|9001001:북극곰 로로|9001002:북극곰 포치|9001003:북극곰 넬|9001005:북극곰 푸치|9001006:북극곰 푸치|9001102:아기 월묘|9010000:메이플 운영자|9010001:티아|9010002:로아|9010003:리아|9010004:미아|9010005:다이앤|9010006:샐리|9010007:조시|9010008:페티트|9010009:듀이|9010010:카산드라|9010011:주황버섯|9010012:스타픽시|9010013:헹키|9010014:아르미|9010022:차원의 거울|9020000:라케리스|9020001:클로토|9020002:네일리아|9030000:프레드릭|9030100:스크루지|9040000:슈앵|9040001:누리스|9040002:샨|9040003:샤렌 3세의 영혼|9040004:명예로운 바위|9040005:귀환석|9040006:분수 조각상|9040007:샤렌 3세의 유언장|9040008:길드 랭킹 게시판|9040009:성문 문지기|9040010:비호 석상|9040011:게시판|9040012:기사갑옷|9060000:켄타|9090000:묘묘|9100000:커닝시티 마네키네코|9100001:헤네시스 마네키네코|9100002:엘리니아 마네키네코|9100003:페리온 마네키네코|9100004:슬리피우드 마네키네코|9100100:가|9100101:나|9100102:다|9100103:라|9100104:마|9100105:바|9100106:사|9100107:아|9100108:자|9110000:페리|9110001:라이우 무사|9110002:키노코노코|9110003:쟈켄|9110004:타루|9110005:브론즈|9110006:진쟈|9110007:로보|9110008:로보|9110009:적선함|9110010:버섯석상|9110100:욧코라|9110101:데얀데|9110103:아오이|9110104:횻토코|9110106:안즈 공주|9110108:매부리|9110109:Taekken|9110110:우스케|9110111:사스케|9110112:카메데야|9110113:퓽퓽|9110114:나가레|9120000:신타|9120001:하나코|9120002:도란|9120003:히카리|9120004:모모요|9120005:우미|9120006:스카이|9120007:후라노|9120008:츠리|9120009:창고지기 유씨|9120010:파이토|9120011:사쿠라|9120012:상처투성이 고양이|9120013:두목 고양이|9120014:피포파|9120015:콘페이|9120016:마리와카|9120017:포니차이|9120018:구라코|9120019:모모요|9120020:쇼와NPC|9120021:쇼와NPC|9120023:요코요코|9120024:우에리바|9120025:아시아|9120026:크리스탈|9120100:쇼와NPC|9120101:쇼와NPC|9120102:검은수염 선생|9120103:쇼와NPC|9120200:콘페이|9120201:콘페이|9200001:건방진 토끼|9201000:알레그로|9201002:르베르토4세|9201004:문월하|9201005:클라랜스 수녀님|9201006:발렌티나 수녀님|9201007:안나 수녀님|9201013:마가렛 수녀님|9201014:필라|9201020:패리스|9201021:비비안|9201022:토마스|9201023:헤라|9201030:산타고양이|9201034:벤|9201035:제이콥|9201036:안젤리크|9201037:게리와 샤티마|9270013:쇼와 메이플 TV|9300000:삼장법사|9300001:사장법사|9300002:오장법사|9300003:월하노인|9300004:스트링 없음|9300005:스트링 없음|9300006:스트링 없음|9300007:서문정 지하철 승무원|9300008:스트링 없음|9300009:스트링 없음|9300010:스트링 없음|9300011:스트링 없음|9300012:스트링 없음|9300013:스트링 없음|9300014:스트링 없음|9310001:이씨 아줌마|9310002:장사장|9310003:진씨 아가씨|9310008:경찰처장 주씨|9310009:조씨 아가씨|9310010:양씨 아저씨|9310011:노점상 주인 여씨|9310012:사진기사 조씨|9900000:즐|9900001:님아즐';
+  var LIST = null;
+  function list(){ if(LIST) return LIST; LIST = RAW.split('|').map(function(x){ var i = x.indexOf(':'); return { id:Number(x.slice(0,i)), name:x.slice(i+1) }; }).filter(function(o){ return o.id > 0 && o.name; }); return LIST; }
+  function icon(id){ return 'https://maplestory.io/api/gms/62/npc/' + id + '/icon?resize=2'; }
+  window._mapleIcon = icon;
+  window._mapleName = function(id){ var o = list().find(function(x){ return x.id === Number(id); }); return o ? o.name : ''; };
+  function esc(s){ return String(s == null ? '' : s).replace(/[&<>"']/g, function(c){ return { '&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;' }[c]; }); }
+  var open = false, cur = { uid:'', name:'', taken:{}, mine:null, q:'', onDone:null };
+  function el(){ var b = document.getElementById('mcp-back'), c = document.getElementById('mcp-card');
+    if(!b){ b = document.createElement('div'); b.id = 'mcp-back'; b.addEventListener('click', close); document.body.appendChild(b); }
+    if(!c){ c = document.createElement('div'); c.id = 'mcp-card'; document.body.appendChild(c); }
+    return { b:b, c:c }; }
+  function ko(){ try{ return (typeof _uiLang === 'function' ? _uiLang() : 'ko') === 'ko'; }catch(_){ return true; } }
+  async function loadTaken(){
+    var t = {};
+    try{ if(typeof sb !== 'undefined' && sb){ var r = await sb.from('maple_char_taken').select('staff_key,char_id,char_name,staff_name'); (r.data || []).forEach(function(x){ if(x && x.char_id) t[x.char_id] = x; }); } }catch(_){}
+    cur.taken = t;
+  }
+  function grid(){
+    var L = ko(), q = cur.q.trim().toLowerCase();
+    var items = list().filter(function(o){ return !q || o.name.toLowerCase().indexOf(q) >= 0 || String(o.id) === q; });
+    var MAX = 160, shown = items.slice(0, MAX);
+    var html = shown.map(function(o){
+      var tk = cur.taken[o.id], mine = tk && String(tk.staff_key) === String(cur.uid);
+      var cls = 'mcp-it' + (mine ? ' mine' : (tk ? ' taken' : ''));
+      return '<div class="' + cls + '" data-id="' + o.id + '" data-nm="' + esc(o.name) + '" title="' + esc(o.name) + (tk && !mine ? (' · ' + esc(tk.staff_name || '')) : '') + '">'
+        + '<img loading="lazy" src="' + icon(o.id) + '" alt="">'
+        + '<b>' + esc(o.name) + '</b>'
+        + (tk && !mine ? ('<i>' + esc(tk.staff_name || (L ? '사용 중' : 'taken')) + '</i>') : (mine ? ('<i style="color:var(--ac)">' + (L ? '내 캐릭터' : 'mine') + '</i>') : ''))
+        + '</div>';
+    }).join('');
+    if(items.length > MAX) html += '<div class="mcp-more">' + (L ? ('+' + (items.length - MAX) + '개 더 — 이름으로 찾아보세요') : ('+' + (items.length - MAX) + ' more — search by name')) + '</div>';
+    if(!items.length) html += '<div class="mcp-more">' + (L ? '없어요' : 'No match') + '</div>';
+    return html;
+  }
+  function render(){
+    var E = el(), L = ko();
+    var mine = cur.mine;
+    E.c.innerHTML = '<div class="mcp-hd"><b>' + (L ? '메이플 캐릭터 고르기' : 'Pick a Maple character') + '</b><span>' + esc(cur.name) + (mine ? (' · ' + (L ? '지금: ' : 'now: ') + esc(mine.name)) : '') + '</span><button class="mcp-x" type="button" onclick="_mapleCharClose()">✕</button></div>'
+      + '<input class="mcp-q" id="mcp-q" type="search" placeholder="' + (L ? '이름으로 찾기 — 예: 로저, 마리아' : 'Search by name') + '" value="' + esc(cur.q) + '">'
+      + '<div class="mcp-grid" id="mcp-grid">' + grid() + '</div>'
+      + '<div class="mcp-ft"><span>' + (L ? '한 캐릭터는 한 사람만 · 고르면 디스코드 프로필에 쓰는 캐릭터가 됩니다' : 'One character per person · used for your Discord profile') + '</span>'
+      + (mine ? ('<a onclick="_mapleCharClear()">' + (L ? '비우기' : 'clear') + '</a>') : '') + '</div>';
+    var q = document.getElementById('mcp-q');
+    if(q){ q.addEventListener('input', function(){ cur.q = q.value; var g = document.getElementById('mcp-grid'); if(g) g.innerHTML = grid(); }); setTimeout(function(){ try{ q.focus(); }catch(_){} }, 60); }
+    E.c.querySelector('#mcp-grid').addEventListener('click', function(e){ var it = e.target.closest('.mcp-it'); if(!it || it.classList.contains('taken')) return; pick(Number(it.getAttribute('data-id')), it.getAttribute('data-nm')); });
+  }
+  async function pick(id, name){
+    var L = ko();
+    if(!(await (typeof _askConfirm === 'function' ? _askConfirm(name + (L ? ' — 이 캐릭터로 할까요?' : ' — use this one?')) : Promise.resolve(confirm(name + (L ? ' — 이 캐릭터로 할까요?' : ' — use this one?')))))) return;
+    try{
+      var r = await sb.rpc('maple_char_set', { p_uid: cur.uid, p_id: id, p_name: name });
+      if(r.error) throw new Error(r.error.message);
+      try{ if(typeof STAFF_PROFILE !== 'undefined'){ if(!STAFF_PROFILE[cur.uid]) STAFF_PROFILE[cur.uid] = {}; if(!STAFF_PROFILE[cur.uid].personal) STAFF_PROFILE[cur.uid].personal = {}; STAFF_PROFILE[cur.uid].personal.maple_char = r.data || { id:id, name:name }; } }catch(_){}
+      try{ logAction('update', '메이플 캐릭터 · ' + name, cur.uid); }catch(_){}
+      toast('✓ ' + name + (L ? ' — 내 캐릭터로 정했어요' : ' — set as your character'));
+      close(); if(typeof cur.onDone === 'function') cur.onDone();
+    }catch(e){ toast((L ? '저장 실패 — ' : 'Failed — ') + (e && e.message), true); }
+  }
+  window._mapleCharClear = async function(){
+    var L = ko();
+    try{ var r = await sb.rpc('maple_char_set', { p_uid: cur.uid, p_id: 0, p_name: '' }); if(r.error) throw new Error(r.error.message);
+      try{ if(STAFF_PROFILE[cur.uid] && STAFF_PROFILE[cur.uid].personal) delete STAFF_PROFILE[cur.uid].personal.maple_char; }catch(_){}
+      toast(L ? '비웠어요' : 'Cleared'); close(); if(typeof cur.onDone === 'function') cur.onDone();
+    }catch(e){ toast((L ? '실패 — ' : 'Failed — ') + (e && e.message), true); }
+  };
+  window._mapleCharOpen = async function(uid, onDone){
+    uid = String(uid || (typeof currentUser !== 'undefined' && currentUser ? currentUser.id : '') || ''); if(!uid) return;
+    var nm = ''; try{ var s = (typeof staffById === 'function') ? staffById(uid) : null; nm = (s && (s.name || s.full_name)) || (currentUser && String(currentUser.id) === uid ? currentUser.name : '') || ''; }catch(_){}
+    cur = { uid:uid, name:nm, taken:{}, mine:null, q:'', onDone:onDone || null };
+    try{ var P = STAFF_PROFILE[uid] && STAFF_PROFILE[uid].personal; cur.mine = (P && P.maple_char && P.maple_char.id) ? P.maple_char : null; }catch(_){}
+    var E = el(); open = true; render();
+    requestAnimationFrame(function(){ E.b.classList.add('open'); E.c.classList.add('open'); });
+    await loadTaken(); if(open){ var g = document.getElementById('mcp-grid'); if(g) g.innerHTML = grid(); }
+  };
+  function close(){ if(!open) return; open = false; var E = el(); E.b.classList.remove('open'); E.c.classList.remove('open'); }
+  window._mapleCharClose = close;
+  document.addEventListener('keydown', function(e){ if(e.key === 'Escape' && open) close(); });
 })();
 </script>
 </body>
