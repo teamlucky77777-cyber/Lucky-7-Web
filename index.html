@@ -4,7 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
 <title>ARASAKA Corp</title>
-<!-- BUILD: v1464 | 온보딩 목록: 30일 넘게 묵은 옛 합격자는 안 보임 (코드 있으면 남김) -->
+<!-- BUILD: v1465 | 합격 카드가 Pass 칸에 남게 (v1462 부작용) · 온보딩은 business 없어도 합격자를 받음 -->
 <!-- v745 기록은 git 이력(v1302 이전 커밋)에 있다 — 100KB 변경사 주석을 배포에서 제거 -->
 <!-- [v677] a <link href> cannot read a CSS variable, so the favicon carries its own copy.
      64px: a browser tab draws it at 16-32px, so this is 2x-DPR sharp at 11KB. -->
@@ -16858,7 +16858,8 @@ function _apFinalizePass(id){
   toast(`${a.name} → ${getStageById('pass').name}`);
   /* [v1462] boss "패스로 하면 온보딩도 자연스럽게 연결" — 합격 즉시 ① 온보딩 목록에 뜨게(business) ② 초대 코드를 만들어 복사
      ③ 온보딩 화면의 그 사람에게로 간다. 고원 씨는 코드를 왓츠앱에 붙이기만 하면 된다. */
-  if(!a.business) a.business = 'buju';
+  /* [v1465] v1462 가 여기서 business 를 박아 버려 합격 카드가 Pass 칸을 건너뛰고 배치 영역으로 튀었다 — Pass 칸이 늘 0.
+     business 는 사람이 배치 영역에 끌어다 놓을 때만. 온보딩 목록은 business 없이도 합격자를 받는다. */
   saveRecruits();
   renderRecruit();
   (async function(){
@@ -47273,7 +47274,7 @@ async function renderOnboarding(pickId){
   }catch(_){}
   /* [v1456] 합격했지만 아직 직원 계정이 없는 사람도 목록 맨 위에 — 9번(공식 입사 등록)을 여기서 한다 */
   try{ (typeof APPLICANTS!=='undefined'?APPLICANTS:[]).forEach(function(a){
-    if(!a || a.stage!=='pass' || !(a.business==='buju'||a.business==='backup')) return;
+    if(!a || a.stage!=='pass' || (a.business && a.business!=='buju' && a.business!=='backup')) return;   /* [v1465] business 없어도 합격이면 온보딩 */
     if(a.staff_id && people.some(function(x){ return String(x.id)===String(a.staff_id); })) return;
     /* [v1464] 옛 합격자(코드도 없이 30일 넘게 묵은 사람)는 목록에서 뺀다 — 안 그러면 고원 씨가 이름 일곱을 뒤져야 한다.
        초대 코드가 있으면 진행 중이니 남긴다. */
