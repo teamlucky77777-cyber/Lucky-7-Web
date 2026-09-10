@@ -4,7 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
 <title>ARASAKA Corp</title>
-<!-- BUILD: v1469 | 캐릭터 고르면 웹 얼굴도 그 캐릭터 · 디스코드 닉네임 자동 · 그림은 DM 으로 · 13번은 봇이 아니라 디스코드 아이디 -->
+<!-- BUILD: v1470 | 서버가 죽으면 빈 화면 대신 띠로 알린다 (기록은 안전 · 저장 잠김 · 다시 불러오기) -->
 <!-- v745 기록은 git 이력(v1302 이전 커밋)에 있다 — 100KB 변경사 주석을 배포에서 제거 -->
 <!-- [v677] a <link href> cannot read a CSS variable, so the favicon carries its own copy.
      64px: a browser tab draws it at 16-32px, so this is 2x-DPR sharp at 11KB. -->
@@ -72922,6 +72922,81 @@ console.info('AUTO100 build applied',AUTO100_BUILD.version,v3Audit());
   function close(){ if(!open) return; open = false; var E = el(); E.b.classList.remove('open'); E.c.classList.remove('open'); }
   window._mapleCharClose = close;
   document.addEventListener('keydown', function(e){ if(e.key === 'Escape' && open) close(); });
+})();
+</script>
+<style id="cg-style">
+/* [v1470] 서버가 죽었을 때 — 빈 화면 대신 말을 한다. 데이터는 안전하고 저장이 잠겼다는 사실을 보여 준다. */
+#cg-bar{position:fixed;left:0;right:0;top:0;z-index:9998;display:none;align-items:center;gap:12px;
+  padding:10px 16px;background:#7a2620;color:#fff;font-size:13.5px;font-weight:600;
+  box-shadow:0 6px 20px rgba(0,0,0,.45);font-family:inherit}
+#cg-bar.on{display:flex}
+#cg-bar i{font-style:normal;font-size:15px}
+#cg-bar span{flex:1;font-weight:500;opacity:.92}
+#cg-bar button{font:inherit;font-size:12.5px;font-weight:700;padding:6px 13px;border-radius:8px;
+  border:1px solid rgba(255,255,255,.45);background:rgba(255,255,255,.12);color:#fff;cursor:pointer}
+#cg-bar button:hover{background:rgba(255,255,255,.22)}
+body.cg-shift{padding-top:40px}
+</style>
+<script>
+/* ═══ [v1470] 연결 감시 ═══════════════════════════════════════════════════════
+   boss 화면이 두 번 통째로 비었다(9/10 저녁, Supabase 순간 장애). 데이터는 멀쩡했고
+   저장도 잠겨 있었지만(v281 가드), 화면은 아무 말도 안 했다 — 빈 판만 보였다.
+   빈 화면은 "데이터가 사라졌다"로 읽힌다. 그게 제일 나쁘다.
+   그래서 실패했을 때 띠 하나를 띄운다: 무슨 일인지, 데이터는 안전한지, 무엇을 누르면 되는지. */
+(function(){
+  var bar = null, shown = false, checking = false;
+  function el(){
+    if(bar) return bar;
+    bar = document.createElement('div'); bar.id = 'cg-bar';
+    bar.innerHTML = '<i>⚠</i><b id="cg-t"></b><span id="cg-s"></span><button type="button" id="cg-r"></button>';
+    document.body.appendChild(bar);
+    bar.querySelector('#cg-r').addEventListener('click', function(){ location.reload(); });
+    return bar;
+  }
+  function ko(){ try{ return (typeof _uiLang === 'function' ? _uiLang() : 'ko') === 'ko'; }catch(_){ return true; } }
+  function show(){
+    if(shown) return; shown = true;
+    var L = ko(), b = el();
+    b.querySelector('#cg-t').textContent = L ? '서버에 연결하지 못했습니다' : 'Cannot reach the server';
+    b.querySelector('#cg-s').textContent = L ? '기록은 그대로 있습니다. 안전을 위해 저장이 잠겨 있으니, 지금 바꾼 것은 저장되지 않습니다.'
+                                             : 'Your data is safe. Saving is locked, so changes made now will not be kept.';
+    b.querySelector('#cg-r').textContent = L ? '다시 불러오기' : 'Reload';
+    b.classList.add('on'); try{ document.body.classList.add('cg-shift'); }catch(_){}
+  }
+  function hide(){ if(!shown) return; shown = false; if(bar) bar.classList.remove('on'); try{ document.body.classList.remove('cg-shift'); }catch(_){} }
+  /* 살아 있나 — 인증 설정은 로그인 없이도 200 을 준다(표를 건드리지 않는 가장 가벼운 확인) */
+  async function alive(){
+    try{
+      if(typeof SUPABASE_URL === 'undefined' || !SUPABASE_URL) return true;
+      var ctl = new AbortController(), tm = setTimeout(function(){ try{ ctl.abort(); }catch(_){} }, 7000);
+      var r = await fetch(SUPABASE_URL + '/auth/v1/settings', { headers:{ apikey: (typeof SUPABASE_KEY !== 'undefined' ? SUPABASE_KEY : '') }, signal: ctl.signal });
+      clearTimeout(tm); return r.ok;
+    }catch(_){ return false; }
+  }
+  /* 화면이 비었나 — PC 판이 안 불러졌거나(저장 잠김) 로그인했는데 메뉴가 한 칸도 없으면 */
+  function looksBroken(){
+    try{
+      if(typeof currentUser === 'undefined' || !currentUser) return false;    /* 로그인 화면은 원래 비어 있다 */
+      if(typeof _pcLoaded !== 'undefined' && _pcLoaded === false) return true;
+      var navHost = document.getElementById('sb-channels');
+      if(navHost && !navHost.children.length) return true;
+    }catch(_){}
+    return false;
+  }
+  async function check(){
+    if(checking) return; checking = true;
+    try{
+      if(!looksBroken()){ hide(); return; }
+      if(await alive()){
+        /* 서버는 살아 있는데 화면만 비었다 — 잠깐 뒤 다시 본다(부팅 중일 수 있다) */
+        setTimeout(function(){ if(looksBroken()) show(); }, 4000);
+      } else show();
+    } finally { checking = false; }
+  }
+  window.addEventListener('online', function(){ setTimeout(check, 1500); });
+  window.addEventListener('offline', show);
+  setTimeout(check, 9000);        /* 부팅이 끝날 시간을 준다 */
+  setInterval(check, 20000);
 })();
 </script>
 </body>
