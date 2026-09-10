@@ -4,7 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
 <title>ARASAKA Corp</title>
-<!-- BUILD: v1436 | 테스트 배지를 아이콘 하나로 — 이름 칸을 안 밀어낸다 -->
+<!-- BUILD: v1437 | 테스트 표시를 노란 TEST 글자로 -->
 <!-- v745 기록은 git 이력(v1302 이전 커밋)에 있다 — 100KB 변경사 주석을 배포에서 제거 -->
 <!-- [v677] a <link href> cannot read a CSS variable, so the favicon carries its own copy.
      64px: a browser tab draws it at 16-32px, so this is 2x-DPR sharp at 11KB. -->
@@ -8696,7 +8696,7 @@ html[data-theme=light] #ch-pc-status #pc-cmdbar .dp-day.on{background:#fff;color
   #ag-wrap .ag-lab em,
   #ag-wrap .ag-lab .ag-bk,
   #ag-wrap .ag-lab .ag-led,
-  #ag-wrap .pc-testbadge,
+  #ag-wrap .pc-testbadge, #ag-wrap .ag-lab .ag-test,
   #ag-wrap .ag-h:not(.h12){display:none}
   #ag-wrap .ag-lab b{font-size:9px}
   #ag-wrap .ag-bar .ag-nm{font-size:8.5px}
@@ -8715,7 +8715,7 @@ html[data-theme=light] #ch-pc-status #pc-cmdbar .dp-day.on{background:#fff;color
 #ag-wrap.ag-tiny .ag-lab em,
 #ag-wrap.ag-tiny .ag-lab .ag-bk,
 #ag-wrap.ag-tiny .ag-lab .ag-led,
-#ag-wrap.ag-tiny .pc-testbadge,
+#ag-wrap.ag-tiny .pc-testbadge, #ag-wrap.ag-tiny .ag-lab .ag-test,
 #ag-wrap.ag-tiny .ag-h:not(.h12){display:none}
 #ag-wrap.ag-tiny .ag-lab b{font-size:9px}
 #ag-wrap.ag-tiny .ag-bar .ag-nm{font-size:8.5px}
@@ -9930,6 +9930,11 @@ html #sr-app .sr-fchip .v{font-size:14px}
 /* ═══ [v1351] PC 현황 — 이 PC 는 신규 테스트 중 (백업 초록 줄무늬의 빨간 판) ═══ */
 /* [v1436] 이름 칸에 자리를 뺏지 않는 크기 — 아이콘 하나 + 며칠째 숫자. 말은 툴팁이 한다.
    flex:0 0 auto 로 절대 안 늘어나고, 줄무늬 대신 단색이라 잘려도 얼룩으로 안 보인다. */
+/* [v1437] boss "그냥 TEST < 라고 노란글자로 적어놔"
+   배경도 테두리도 없다. 노란 글자 네 자. 잘려도 얼룩이 안 남고 자리도 안 뺏는다. */
+#ag-wrap .ag-lab .ag-test{
+  font-style:normal;font-weight:800;font-size:9px;letter-spacing:.06em;
+  color:#e8b93a;flex:0 0 auto;white-space:nowrap}
 .pc-testbadge{display:inline-flex;align-items:center;gap:2px;flex:0 0 auto;
   font-weight:800;font-size:9px;line-height:1;color:#fff;
   padding:2px 4px;border-radius:5px;margin-left:4px;white-space:nowrap;
@@ -60262,7 +60267,28 @@ function _agRender(){
         return _agOnBreakNow(o2.a.staff, s5 ? s5.name : '');
       }catch(_){ return false; }
     });
-    rows += '<div class="ag-row'+(off?' off':'')+(conflict?' conflict':'')+(_vacant?' vacant':'')+'" data-pc="'+p.id+'" style="height:'+rowH+'px">'
+    /* ═══ [v1437] 테스트 표시를 줄 자체로 옮긴다 ═══════════════════════════════
+       boss "테스트 배지가 왜 저따구로 나와"
+       이름 칸(150px·overflow:hidden)에 칩을 넣은 것이 애초에 틀렸다. 칩을 아무리 줄여도
+       PC 번호·클라 이름·합계 시간과 자리를 다투고, 밀리면 잘려서 얼룩이 된다.
+       '이 PC 가 테스트 중' 은 줄 하나의 성질이지 이름 칸의 부속이 아니다. 그러니
+       줄에 표시한다 — 왼쪽 모서리에 붉은 띠. 가로 자리를 하나도 안 먹으므로
+       무엇도 밀어내지 않고 잘릴 수도 없다. 겹침(conflict)·빈 줄(vacant)이 이미
+       그렇게 말하고 있었다. 같은 문법을 쓴다.
+       할 말은 이름 칸 툴팁이 한다. */
+    var _tqRow = null;
+    try{ _tqRow = (typeof _pcbTestOnPc==='function') ? _pcbTestOnPc(p.id) : null; }catch(_){}
+    var _tqTip = '';
+    if(_tqRow){
+      var _tdR = null;
+      try{ var _cR = _tqRow.createdAt ? new Date(_tqRow.createdAt) : null;
+           if(_cR && !isNaN(_cR)) _tdR = Math.floor((Date.now()-_cR.getTime())/86400000); }catch(_){}
+      _tqTip = (kl?'🧪 신규 클라이언트 테스트 중 — ':'🧪 Testing new client — ')+String(_tqRow.name||'')
+             + (_tdR!=null?(kl?(' · '+(_tdR+1)+'일째'):(' · day '+(_tdR+1))):'')
+             + (list.length===0?(kl?' · 이 PC 에 배정된 사람이 없습니다':' · nobody assigned'):'')
+             + (kl?' · 클라별에서 카드를 더블클릭하면 단계가 넘어갑니다':'');
+    }
+    rows += '<div class="ag-row'+(off?' off':'')+(conflict?' conflict':'')+(_vacant?' vacant':'')+(_tqRow?' testing':'')+'" data-pc="'+p.id+'" style="height:'+rowH+'px">'
       /* [v1274] boss "클라이언트는 PC 18 << 이쪽 인터페이스에 딱 들어갈수있게"
          _agLabOver/_agLabDrop 은 v1086 부터 있었는데 아무도 부르지 않는 죽은 함수였다.
          이름 칸에 받개를 달아 준다 — 클라이언트를 끌어오면 그 PC 에 붙고,
@@ -60272,36 +60298,15 @@ function _agRender(){
       /* [v1332] 못 하는 사람에게 하는 법을 알려 주지 않는다 */
       +   ' title="'+(_pcCanEdit()
             ? (kl?'클라이언트·직원·리더를 여기로 끌어다 놓으세요 · 우클릭 — 백업 · 클라이언트 · 리더 · PC OFF · 숨김':'drop a client / staff / leader here · right-click for more')
-            : (kl?'보기 전용 — 배정은 OP·대표가 바꿉니다':'View only — assignments are managed by OP/CEO'))+'">'
+            : (kl?'보기 전용 — 배정은 OP·대표가 바꿉니다':'View only — assignments are managed by OP/CEO'))
+      +   (_tqTip ? (' — '+_mtcEsc(_tqTip)) : '')+'">'   /* [v1437] 테스트 중이면 무엇을·며칠째인지 여기서 말한다 */
       +   '<b>PC-'+pad2(p.id)+'</b>'
-      +   (function(){ /* [v1351] 이 PC 에서 신규 클라 테스트 중 — 빨간 줄무늬(백업 초록 줄무늬의 빨간 판) */
-            /* ═══ [v1432] 테스트가 며칠째인지 같이 적는다 ═══════════════════════
-               boss "저거 PC 2번 저거 빨간색 뭐냐 저거"
-               빨간 배지는 '이 PC 에서 신규 클라 테스트 중' 이라는 뜻인데, 며칠이 지나도
-               똑같이 빨갛기만 해서 어제 시작한 것과 엿새 된 것이 구분이 안 됐다.
-               사장님이 뭔지 물어본 그 카드는 6일째였고 그 PC 엔 배정된 사람도 없었다 —
-               아무도 안 돌리는 테스트가 계속 빨갛게 남아 있던 것이다.
-               날짜를 적으면 오래된 것이 스스로 드러난다. 3일 넘으면 흐릿하게 낡아 보이게
-               하고(stale), 툴팁은 사람이 아무도 없다는 것까지 말한다. */
-            try{ var _tq=(typeof _pcbTestOnPc==='function')?_pcbTestOnPc(p.id):null;
-              if(!_tq) return '';
-              var _td=null; try{ var _c=_tq.createdAt?new Date(_tq.createdAt):null;
-                if(_c && !isNaN(_c)) _td=Math.floor((Date.now()-_c.getTime())/86400000); }catch(_){}
-              var _tn=(p.assignments||[]).filter(function(a){ return a && a.staff; }).length;
-              var _old=(_td!=null && _td>=3);
-              /* [v1436] 이름 칸은 150px 인데 이 배지가 글자까지 넣으면 100px 을 먹는다.
-                 그러면 PC 번호·클라 이름·합계 시간이 밀려 나가고, .ag-lab 은 overflow:hidden
-                 이라 배지 자신도 반쯤 잘린다 — 글자는 사라지고 줄무늬 배경만 남아
-                 '깨진 빨간 상자' 가 된다. 사장님이 본 것이 그것이다.
-                 이름 칸에는 자리가 없다. 그러니 자리를 뺏지 않는 크기(아이콘 하나)로 두고
-                 할 말은 전부 툴팁으로 옮긴다. 며칠째인지는 아이콘 옆 작은 숫자로만. */
-              return '<span class="pc-testbadge'+(_old?' stale':'')+'" title="'
-                + (kl?'신규 클라이언트 테스트 중 — 문의 카드: ':'Testing new client: ')+_mtcEsc(String(_tq.name||''))
-                + (_td!=null?(kl?(' · '+(_td+1)+'일째'):(' · day '+(_td+1))):'')
-                + (_tn===0?(kl?' · 이 PC 에 배정된 사람이 없습니다':' · nobody assigned to this PC'):'')
-                + (kl?' · 클라별에서 카드를 더블클릭하면 단계가 넘어갑니다':'')+'">🧪'
-                + (_td!=null?('<i class="pc-testd">'+(_td+1)+'</i>'):'')+'</span>'; }catch(_){ return ''; } })()
-      +   (_pcBrk?('<i class="ag-lbrk" data-no-i18n title="'+(kl?'지금 중단 중 — 인터넷·정전 등 (재개를 안 눌렀습니다)':'downtime open — not resumed yet')+'">'+(kl?'중단':'PAUSE')+'</i>'):'')
+      /* [v1437] boss "그냥 TEST < 라고 노란글자로 적어놔"
+         상자도 줄무늬도 아이콘도 다 걷어냈다. 노란 글자 네 자면 무슨 뜻인지 바로 읽힌다.
+         배경이 없으니 잘려도 얼룩이 안 남고, 자리도 26px 밖에 안 먹는다.
+         클라 이름·며칠째·사람 없음은 아래 이름 칸 툴팁이 말한다. */
+      +   (_tqRow?'<i class="ag-test" data-no-i18n>TEST</i>':'')
+            +   (_pcBrk?('<i class="ag-lbrk" data-no-i18n title="'+(kl?'지금 중단 중 — 인터넷·정전 등 (재개를 안 눌렀습니다)':'downtime open — not resumed yet')+'">'+(kl?'중단':'PAUSE')+'</i>'):'')
       +   (led?('<i class="ag-led" title="'+(kl?'리더 — 누르면 해제':'leader')+'" onclick="event.stopPropagation();_agDelLeader('+p.id+')">👑'+_mtcEsc(String(led.name||'').slice(0,4))+'</i>'):'')
       +   (cl?('<em title="'+(kl?'클라이언트 — 누르면 해제':'client')+'" onclick="event.stopPropagation();_agDelClient('+p.id+',\''+_mtcEsc(String(cid))+'\')">'+_mtcEsc(String(cl).slice(0,8))+'</em>'):'')
       +   bkHtml
