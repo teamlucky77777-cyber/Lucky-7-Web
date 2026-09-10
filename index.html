@@ -4,7 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
 <title>ARASAKA Corp</title>
-<!-- BUILD: v1438 | 클라 이름 먼저 · TEST 는 그 뒤 · 버튼은 겹쳐 띄움 -->
+<!-- BUILD: v1439 | 백업으로 표시한 겹침은 붉게 경고하지 않는다 -->
 <!-- v745 기록은 git 이력(v1302 이전 커밋)에 있다 — 100KB 변경사 주석을 배포에서 제거 -->
 <!-- [v677] a <link href> cannot read a CSS variable, so the favicon carries its own copy.
      64px: a browser tab draws it at 16-32px, so this is 2x-DPR sharp at 11KB. -->
@@ -60038,7 +60038,16 @@ function _agRender(){
       while(mains.some(q => q!==o && lane[q.ai]===L && hit(q.a, o.a))) L++;
       lane[o.ai] = L; lanes = Math.max(lanes, L+1);
     });
-    const conflict = lanes > 1;
+    /* ═══ [v1439] 일부러 겹친 백업은 사고가 아니다 ═══════════════════════════════
+       boss "18번은 왜 빨간색 느낌표 표시 되어 있지?"
+       겹치면 무조건 붉게 경고했다. 그런데 이 판에서 겹침에는 두 종류가 있다:
+         · 실수로 두 사람을 같은 시간에 꽂은 것 — 경고가 맞다
+         · 백업으로 일부러 같이 넣은 것 — 그게 백업의 뜻이다. 경고가 아니다
+       위에 있는 막대(L>0)가 전부 '백업으로 표시' 된 것이면 붉게 하지 않는다.
+       하나라도 표시가 없으면 여전히 경고한다 — 실수를 조용히 넘기지는 않는다.
+       (막대 우클릭 → 백업으로 표시. bk===false 는 '백업 아님' 을 사람이 못 박은 것) */
+    var _stacked = mains.filter(function(o){ return (lane[o.ai]||0) > 0; });
+    const conflict = lanes > 1 && _stacked.some(function(o){ return o.a.bk !== true; });
     /* ═══ [v1185] 대타가 주인 이름을 덮고 있었다 ═══
        boss “이거 여전히 겹쳐있는것처럼 보이는데”
        대타 막대를 top:8 로 원래 막대 ‘위에’ 얹고 있었다. 줄 높이가 22px 이고
