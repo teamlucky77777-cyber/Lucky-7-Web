@@ -4,7 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
 <title>ARASAKA Corp</title>
-<!-- BUILD: v1446 | 변경 기록판 자동 번역 — 한국어↔인도네시아어, 열쇠 없이 -->
+<!-- BUILD: v1447 | 테스트 초록 테두리가 위로 · 기록판 인니어(한·EN·ID) -->
 <!-- v745 기록은 git 이력(v1302 이전 커밋)에 있다 — 100KB 변경사 주석을 배포에서 제거 -->
 <!-- [v677] a <link href> cannot read a CSS variable, so the favicon carries its own copy.
      64px: a browser tab draws it at 16-32px, so this is 2x-DPR sharp at 11KB. -->
@@ -8719,6 +8719,12 @@ html[data-theme=light] #ch-pc-status #pc-cmdbar .dp-day.on{background:#fff;color
 .pn-g:hover{color:var(--ac,#c2a04a);background:var(--bg-a,#232326)}
 .pn-g.busy{color:var(--tx4,#6c6b66);cursor:default}
 .pn-g.fail{color:var(--re,#c46a6a)}
+/* [v1447] 이 판만의 말 고르기 — 한 · EN · ID */
+.pn-langs{display:flex;justify-content:flex-end;gap:4px;padding:5px 4px 7px}
+.pn-langs button{font:inherit;font-size:10px;font-weight:700;letter-spacing:.03em;line-height:1.5;padding:2px 8px;
+  border-radius:999px;border:1px solid var(--br2,#33363d);background:transparent;color:var(--tx4,#6c6b66);cursor:pointer}
+.pn-langs button:hover{color:var(--tx2,#b9b8b4)}
+.pn-langs button.on{border-color:var(--ac,#c2a04a);color:var(--ac,#c2a04a);background:color-mix(in srgb,var(--ac,#c2a04a) 12%,transparent)}
 
 /* 시스템이 스스로 적은 줄 — 한 줄로 눕고, 얼굴도 절반 크기로 조용하다 */
 .pn-sys{display:flex;gap:7px;align-items:center;padding:4px 8px 4px 6px;border-radius:8px;
@@ -8972,26 +8978,41 @@ html[data-theme=light] #ag-wrap .ag-track{background:rgba(0,0,0,.04);
      ② 색 테 (2px)        — 실제로 읽히는 선
      ③ 안쪽 옅은 색 번짐   — 줄 전체가 그 상태라는 것을 면으로 말한다
 
-   막대는 z-index 6 까지 쓰므로 이 겹은 8. 모서리는 트랙과 같은 6px.
-   붉음(겹침)이 초록(테스트)보다 급한 말이라 한 줄에 둘이면 붉은 쪽만 그린다 —
-   테두리가 두 개면 둘 다 못 읽는다. */
+   막대는 z-index 6 까지 쓰므로 이 겹은 8. 모서리는 트랙과 같은 6px. */
+/* ═══ [v1447] 초록(테스트)이 붉음(겹침)보다 위로 ═════════════════════════════
+   boss "초록색 테스트 테두리가 먼저 우선순위가 위로 올라가서"
+
+   v1440 은 반대였다 — 둘이 겹치면 붉은 쪽만 그렸다. 그때 논리는 "겹침이 더 급한
+   말" 이었는데, 실제로는 거꾸로다. **테스트 중이라는 사실이 겹침을 설명한다.**
+   테스트 PC 는 원래 사람이 겹쳐 들어가고, 그걸 모르고 붉은 테두리만 보면 매번
+   "이거 왜 겹쳤지" 하고 들여다보게 된다. 상태를 먼저 알려 주는 쪽이 초록이다.
+
+   그렇다고 겹침을 지우지는 않는다 — 초록 테 **안쪽에 붉은 실선 한 줄**을 넣어
+   둘 다 읽히게 한다. 이름표의 ⚠ 도 그대로 남는다.
+     겹침만        → 붉은 테
+     테스트만      → 초록 테
+     테스트 + 겹침 → 초록 테 + 안쪽 붉은 실선 (+ 이름표 ⚠) */
 #ag-wrap .ag-row.conflict,
 #ag-wrap .ag-row.testing{position:relative}
-#ag-wrap .ag-row.conflict::after{content:'';position:absolute;left:var(--lab);right:0;top:0;bottom:0;
+#ag-wrap .ag-row.conflict:not(.testing)::after{content:'';position:absolute;left:var(--lab);right:0;top:0;bottom:0;
   border-radius:6px;pointer-events:none;z-index:8;
   box-shadow:inset 0 0 0 3px rgba(10,6,6,.55),
              inset 0 0 0 2px rgba(232,86,86,.98),
              inset 0 0 9px rgba(232,86,86,.22)}
-#ag-wrap .ag-row.testing:not(.conflict)::after{content:'';position:absolute;left:var(--lab);right:0;top:0;bottom:0;
+#ag-wrap .ag-row.testing::after{content:'';position:absolute;left:var(--lab);right:0;top:0;bottom:0;
   border-radius:6px;pointer-events:none;z-index:8;
   box-shadow:inset 0 0 0 3px rgba(6,10,7,.5),
              inset 0 0 0 2px rgba(52,190,116,.95),
              inset 0 0 9px rgba(52,190,116,.18)}
+#ag-wrap .ag-row.testing.conflict::before{content:'';position:absolute;left:calc(var(--lab) + 4px);right:4px;top:4px;bottom:4px;
+  border-radius:3px;pointer-events:none;z-index:8;
+  box-shadow:inset 0 0 0 2px rgba(10,6,6,.45),
+             inset 0 0 0 1.5px rgba(232,86,86,.98)}
 #ag-wrap .ag-row.conflict .ag-lab b::after{content:' ⚠';font-size:8px}
 /* ═══ [v1440] 테스트 들어간 PC 는 초록 테두리 ═══════════════════════════════════
    boss "테스트 들어가는 PC는 초록색 테두리라고 그려놓고 배정격자에"
    겹침(붉은 테두리)과 같은 문법으로 그린다 — 막대 위에 겹을 얹어 가려지지 않게.
-   붉은 겹침이 더 급한 말이므로 그 줄에서는 붉은 쪽이 이긴다(테두리가 둘이면 못 읽는다). */
+   v1447 부터 한 줄에 둘이면 초록이 바깥, 붉음은 안쪽 실선으로 들어간다. */
 /* [v1103] 빈 자리는 눌러서 채운다 — 손이 갈 자리라는 걸 보이게 한다.
    막대 위에서는 커서를 되돌린다(거기는 끄는 자리다). */
 #ag-wrap .ag-track{cursor:copy}
@@ -59958,13 +59979,14 @@ async function _pnSave(){
 function _pnWhen(ms){
   try{
     const d = Number(ms) || 0, gap = Date.now() - d;
-    if(gap < 60000) return '방금';
-    if(gap < 3600000) return Math.floor(gap/60000) + '분 전';
+    const W = (typeof PN_L !== 'undefined' && PN_L[_pnUiLang()]) || { now:'방금', ago:'분 전', today:'오늘 ' };
+    if(gap < 60000) return W.now;
+    if(gap < 3600000) return Math.floor(gap/60000) + W.ago;
     const k = new Date(d + 9*3600000), p = n => ('0'+n).slice(-2);
     const hm = p(k.getUTCHours()) + ':' + p(k.getUTCMinutes());
     const today = new Date(Date.now() + 9*3600000).toISOString().slice(0,10);
     const day = k.toISOString().slice(0,10);
-    return (day === today) ? ('오늘 ' + hm) : (day.slice(5) + ' ' + hm);
+    return (day === today) ? (W.today + hm) : (day.slice(5) + ' ' + hm);
   }catch(_){ return ''; }
 }
 /* ═══════════════════════════════════════════════════════════════════════════
@@ -60024,7 +60046,7 @@ window._pnPost = async function(){
   if(!txt){ ta.focus(); return; }
   if(!_pnCanPost()){ try{ toast('로그인이 필요합니다', true); }catch(_){} return; }
   _pnBusy = true;
-  const btn = document.getElementById('pn-post'); if(btn){ btn.disabled = true; btn.textContent = '남기는 중…'; }
+  const btn = document.getElementById('pn-post'); if(btn){ btn.disabled = true; btn.textContent = (PN_L[_pnUiLang()]||PN_L.ko).posting; }
   await _pnLoad();
   const note = { id:'n'+Date.now().toString(36)+Math.random().toString(36).slice(2,6),
                  ts:Date.now(), by:_pnWho(), text:txt.slice(0,500) };
@@ -60097,11 +60119,39 @@ function _pnFeed(){
   out.sort(function(x,y){ return y.ts - x.ts; });
   return out.slice(0, 60);
 }
+/* ═══ [v1447] 이 판만의 말 — 한 · EN · ID ══════════════════════════════════════
+   기계가 적는 줄은 문장이 정해져 있으니 번역기가 필요 없다(표에 인니어 칸을 붙였다).
+   사람이 쓴 댓글은 v1446 의 번역기가 원문 아래에 붙여 준다. 그래서 인니 직원은
+   ID 를 한 번 눌러 두면 판 전체가 읽히는 말이 된다. 고른 것은 그 브라우저에 남는다.
+   앱 전체 언어(_uiLang)는 건드리지 않는다 — 이 판만의 설정이다. */
+const PN_L = {
+  ko:{ ph:'왜 바꿨는지 한 줄 — 예: PC-18 Kal 백업 (Miru와 교대)', post:'남기기', posting:'남기는 중…',
+       now:'방금', ago:'분 전', today:'오늘 ',
+       login:'로그인하면 적을 수 있어요', busy:'번역 중…', retry:'번역 안 됨 · 다시', tr:'번역', del:'지우기',
+       hist:'내역 보기', load:'불러오는 중…',
+       empty:'아직 아무 일도 없었어요.<br><span>배정을 바꾸면 여기에 저절로 남고, 왜 그랬는지는 위에 한 줄 적어 두면 됩니다.</span>' },
+  en:{ now:'just now', ago:'m ago', today:'today ',
+       ph:'One line on why — e.g. PC-18 Kal on backup (swap with Miru)', post:'Post', posting:'Posting…',
+       login:'Sign in to write', busy:'translating…', retry:'not translated · retry', tr:'translate', del:'delete',
+       hist:'see history', load:'Loading…',
+       empty:'Nothing yet.<br><span>Shift changes land here on their own — add a line above saying why.</span>' },
+  id:{ now:'baru saja', ago:' mnt lalu', today:'hari ini ',
+       ph:'Satu baris alasannya — mis. PC-18 Kal jadi cadangan (tukar dengan Miru)', post:'Kirim', posting:'Mengirim…',
+       login:'Masuk dulu untuk menulis', busy:'menerjemahkan…', retry:'gagal · coba lagi', tr:'terjemahkan', del:'hapus',
+       hist:'lihat riwayat', load:'Memuat…',
+       empty:'Belum ada apa-apa.<br><span>Perubahan shift tercatat sendiri di sini — tulis alasannya satu baris di atas.</span>' }
+};
+function _pnUiLang(){
+  try{ const v = localStorage.getItem('l7_pn_lang'); if(PN_L[v]) return v; }catch(_){}
+  try{ return (typeof _uiLang === 'function' && _uiLang() !== 'ko') ? 'en' : 'ko'; }catch(_){ return 'ko'; }
+}
+window._pnSetLang = function(v){ if(!PN_L[v]) return; try{ localStorage.setItem('l7_pn_lang', v); }catch(_){} _pnRender(); };
 function _pnRender(){
   const host = _pnHost(); if(!host) return;
   const esc = (typeof _mtcEsc === 'function') ? _mtcEsc : (s => String(s==null?'':s));
+  const PL = _pnUiLang(), W = PN_L[PL] || PN_L.ko;
   if(!_pnLoaded){
-    host.innerHTML = '<div class="pn-box"><div class="pn-empty">불러오는 중…</div></div>';
+    host.innerHTML = '<div class="pn-box"><div class="pn-empty">'+W.load+'</div></div>';
     _pnLoad().then(function(){ _pnRender(); });
     return;
   }
@@ -60117,11 +60167,11 @@ function _pnRender(){
         +   (function(){                                         /* [v1446] 번역 자리 */
               const st = _pnTrState[n.id];
               if(n.tr) return '';
-              if(st === 'busy') return '<span class="pn-g busy">번역 중…</span>';
-              if(st === 'fail') return '<button class="pn-g fail" title="다시 시도" onclick="_pnTrOne(\''+esc(n.id)+'\')">번역 안 됨 · 다시</button>';
-              return '<button class="pn-g" title="번역" onclick="_pnTrOne(\''+esc(n.id)+'\')">🌐</button>';
+              if(st === 'busy') return '<span class="pn-g busy">'+W.busy+'</span>';
+              if(st === 'fail') return '<button class="pn-g fail" onclick="_pnTrOne(\''+esc(n.id)+'\')">'+W.retry+'</button>';
+              return '<button class="pn-g" title="'+W.tr+'" onclick="_pnTrOne(\''+esc(n.id)+'\')">🌐</button>';
             })()
-        +   (_pnCanDel(n) ? ('<button class="pn-x" title="지우기" onclick="_pnDel(\''+esc(n.id)+'\')">×</button>') : '')
+        +   (_pnCanDel(n) ? ('<button class="pn-x" title="'+W.del+'" onclick="_pnDel(\''+esc(n.id)+'\')">×</button>') : '')
         +   '</div><div class="pn-txt">'+esc(n.text||'')+'</div>'
         +   (n.tr ? ('<div class="pn-tr"><i>'+(n.trTo === 'ko' ? '한국어' : 'Bahasa')+'</i>'+esc(n.tr)+'</div>') : '')
         + '</div></div>';
@@ -60132,7 +60182,7 @@ function _pnRender(){
        옆(누가 뭘 바꿨나)은 v1444 에서 [PC][무슨 일] 로 갈라 놓았는데 여기만 옛말이면
        같은 사실이 두 가지 말투로 보인다. 서랍이 쓰는 해석기를 그대로 빌려 쓴다.
        번호를 누르면 그 PC 전체 내역이 열린다. */
-    const p = (typeof _pchParse === 'function') ? _pchParse(l) : null;
+    const p = (typeof _pchParse === 'function') ? _pchParse(l, PL) : null;
     if(!p) return '<div class="pn-sys">'
       + _pnFace(l.actor, 18)
       + '<span class="pn-sysa">'+esc(_pnPretty(l.action))+'</span>'
@@ -60142,7 +60192,7 @@ function _pnRender(){
     return '<div class="pn-sys'+(p.v ? ' v-'+p.v : '')+'" title="'+esc(String(l.action||'')+(l.target?' · '+l.target:''))+'">'
       + _pnFace(l.actor, 18)
       + (p.pc != null
-          ? '<b class="pn-sysn" title="PC-'+(p.pc<10?'0':'')+p.pc+' 내역 보기" onclick="event.stopPropagation();_pcHistForPC('+p.pc+')">'+(p.pc<10?'0':'')+p.pc+'</b>'
+          ? '<b class="pn-sysn" title="PC-'+(p.pc<10?'0':'')+p.pc+' '+W.hist+'" onclick="event.stopPropagation();_pcHistForPC('+p.pc+')">'+(p.pc<10?'0':'')+p.pc+'</b>'
           : '<b class="pn-sysn off">·</b>')
       + '<span class="pn-sysa">'+p.txt+(p.when ? ('<i>'+esc(p.when)+'</i>') : '')+(p.extra ? ('<i>'+p.extra+'</i>') : '')+'</span>'
       + '<span class="pn-sysw">'+esc(_pnWhen(it.ts))+'</span>'
@@ -60152,12 +60202,16 @@ function _pnRender(){
       '<div class="pn-box">'
     +   (can ? ('<div class="pn-write">'
     +     _pnFace(_pnWho(), 32)
-    +     '<textarea id="pn-input" rows="1" maxlength="500" placeholder="왜 바꿨는지 한 줄 — 예: PC-18 Kal 백업 (Miru와 교대)"'
+    +     '<textarea id="pn-input" rows="1" maxlength="500" placeholder="'+W.ph+'"'
     +     ' oninput="this.style.height=\'auto\';this.style.height=Math.min(this.scrollHeight,110)+\'px\'"'
     +     ' onkeydown="if((event.metaKey||event.ctrlKey)&&event.key===\'Enter\'){event.preventDefault();_pnPost();}"></textarea>'
-    +     '<button id="pn-post" onclick="_pnPost()">남기기</button></div>')
-    :     '<div class="pn-empty">로그인하면 적을 수 있어요</div>')
-    +   (list || '<div class="pn-empty">아직 아무 일도 없었어요.<br><span>배정을 바꾸면 여기에 저절로 남고, 왜 그랬는지는 위에 한 줄 적어 두면 됩니다.</span></div>')
+    +     '<button id="pn-post" onclick="_pnPost()">'+W.post+'</button></div>')
+    :     '<div class="pn-empty">'+W.login+'</div>')
+    +   '<div class="pn-langs">'
+    +     ['ko','en','id'].map(function(v){ return '<button class="'+(v===PL?'on':'')+'" onclick="_pnSetLang(\''+v+'\')">'
+    +       (v==='ko'?'한':v==='en'?'EN':'ID')+'</button>'; }).join('')
+    +   '</div>'
+    +   (list || '<div class="pn-empty">'+W.empty+'</div>')
     + '</div>';
 }
 window._pnRefresh = function(){ _pnLoad(true).then(function(){ _pnRender(); }); };
@@ -72007,45 +72061,55 @@ console.info('AUTO100 build applied',AUTO100_BUILD.version,v3Audit());
      같은 사람이 같은 일을 90초 안에 두 번 하면 한 줄로 묶고 ×2 를 붙인다.
      PC 번호를 누르면 그 PC 것만 남는다 — "PC-18 뭐 있었지" 가 한 번에 끝난다.
      왼쪽 색 띠는 종류다: 넣음 초록 · 뺌 빨강 · 옮김 금색 · 백업 파랑 · 클라 보라. */
+  /* [v1447] 세 번째 말 — 인도네시아어. 기계가 적는 줄은 문장이 정해져 있으므로
+     번역기를 부를 필요가 없다. 표에 한 칸 더 붙이면 그만이고, 이름(Kal·강원도쌤)은
+     그대로 남는다. 사람이 쓴 댓글만 v1446 의 번역기를 쓴다.
+     칸 순서: [규칙, 종류, 한글, 영어, 한글 덧말, 영어 덧말, 인니어, 인니어 덧말] */
   var VERB = [
-    [/^자리 옮김 · PC-(\d{2}) → PC-(\d{2})/, 'move', '$T 옮김', 'moved $T', 'PC-$1 에서', 'from PC-$1'],
-    [/^자리 옮김/,            'move', '$T 옮김',           'moved $T'],
-    [/^새로 배정/,            'add',  '$T 넣음',           'added $T'],
-    [/^예정 배치/,            'plan', '$T 미리 잡음',      'pre-booked $T'],
-    [/^배정 뺌/,              'del',  '$T 뺌',             'removed $T'],
-    [/^커버 투입 · PC-\d{2}[^·]*· (.+?) 자리/, 'bk', '$T 커버', '$T covers', '$1 자리', 'seat of $1'],
-    [/^커버 투입/,            'bk',   '$T 커버',           '$T covers'],
-    [/^백업 투입/,            'bk',   '$T 백업 투입',      '$T as backup'],
-    [/^백업으로 표시/,        'bk',   '$T 백업 표시',      'marked $T backup'],
-    [/^백업으로 넣음/,        'bk',   '$T 백업으로',       '$T to backup'],
-    [/^백업에서 뺌/,          'del',  '$T 백업에서 뺌',    '$T out of backup'],
-    [/^백업 추가/,            'bk',   '$T 백업 추가',      'backup $T'],
-    [/^백업 인원으로/,        'bk',   '$T 백업 인원으로',  '$T is backup staff'],
-    [/^백업에서 해제/,        'del',  '$T 백업 해제',      '$T no longer backup'],
-    [/^리더 지정/,            'add',  '$T 리더로',         '$T as leader'],
-    [/^클라 앉힘 · PC-\d{2} \(PC-(\d{2})에서\)/, 'cl', '$T 앉힘', 'seated $T', 'PC-$1 에서', 'from PC-$1'],
-    [/^클라 앉힘/,            'cl',   '$T 앉힘',           'seated $T'],
-    [/^클라 뺌/,              'del',  '$T 클라 뺌',        'unseated $T'],
-    [/^같은 클라로 겹침 · (.+?) → (.+)$/, 'cl', '$1 → $2 겹침', '$1 → $2 merged'],
-    [/^겹친 클라 뗌 · (.+)$/, 'del',  '$1 겹침 뗌',        'unmerged $1'],
-    [/^문의 배치$|^inquiry placed$/, 'cl', '$Q 문의 앉힘',  'seated inquiry $Q'],
-    [/^inquiry → PC/,         'cl',   '$Q 문의 옮김',      'moved inquiry $Q'],
-    [/^seat via inquiry$/,    'add',  '$Q 앉힘',           'seated $Q', '문의로', 'via inquiry'],
-    [/^added PC \(문의 카드\)/, 'add', 'PC 추가',           'PC added', '문의 카드로', 'from inquiry'],
-    [/^added PC/,             'add',  'PC 추가',           'PC added'],
-    [/^deleted PC$/,          'del',  'PC 삭제',           'PC deleted'],
-    [/^PC 숨김 해제$/,        'pc',   '다시 보이게',       'unhidden'],
-    [/^PC 숨김$/,             'pc',   '숨김',              'hidden'],
-    [/^PC OFF · 배정 (\d+)건/, 'del', 'PC 껐음',           'PC switched off', '배정 $1건 해제', '$1 shifts cleared'],
-    [/^PC OFF/,               'del',  'PC 껐음',           'PC switched off'],
-    [/^PC 가동 복귀$/,        'add',  'PC 다시 켬',        'PC back on'],
-    [/^PC order/,             'pc',   '순서 바꿈',         'reordered', '$T', '$T'],
-    [/^edited PC spec$/,      'pc',   '$T 사양 수정',      'spec edited · $T'],
-    [/^added pool client$/,   'cl',   '$T 클라 풀에 추가', '$T added to pool'],
-    [/^deleted pool client$/, 'del',  '$T 클라 풀에서 삭제', '$T removed from pool'],
-    [/^전체 배정 해제$/,      'del',  '전체 배정 해제',    'all shifts cleared', '$T', '$T'],
-    [/^데모 초기화$/,         'del',  '데모 초기화',       'demo reset']
+    [/^자리 옮김 · PC-(\d{2}) → PC-(\d{2})/, 'move', '$T 옮김', 'moved $T', 'PC-$1 에서', 'from PC-$1', '$T dipindahkan', 'dari PC-$1'],
+    [/^자리 옮김/,            'move', '$T 옮김',           'moved $T',            '', '', '$T dipindahkan'],
+    [/^새로 배정/,            'add',  '$T 넣음',           'added $T',            '', '', '$T ditugaskan'],
+    [/^예정 배치/,            'plan', '$T 미리 잡음',      'pre-booked $T',       '', '', '$T dijadwalkan'],
+    [/^배정 뺌/,              'del',  '$T 뺌',             'removed $T',          '', '', '$T dilepas'],
+    [/^커버 투입 · PC-\d{2}[^·]*· (.+?) 자리/, 'bk', '$T 커버', '$T covers', '$1 자리', 'seat of $1', '$T menggantikan', 'kursi $1'],
+    [/^커버 투입/,            'bk',   '$T 커버',           '$T covers',           '', '', '$T menggantikan'],
+    [/^백업 투입/,            'bk',   '$T 백업 투입',      '$T as backup',        '', '', '$T jadi cadangan'],
+    [/^백업으로 표시/,        'bk',   '$T 백업 표시',      'marked $T backup',    '', '', '$T ditandai cadangan'],
+    [/^백업으로 넣음/,        'bk',   '$T 백업으로',       '$T to backup',        '', '', '$T ke cadangan'],
+    [/^백업에서 뺌/,          'del',  '$T 백업에서 뺌',    '$T out of backup',    '', '', '$T keluar dari cadangan'],
+    [/^백업 추가/,            'bk',   '$T 백업 추가',      'backup $T',           '', '', 'cadangan $T'],
+    [/^백업 인원으로/,        'bk',   '$T 백업 인원으로',  '$T is backup staff',  '', '', '$T jadi staf cadangan'],
+    [/^백업에서 해제/,        'del',  '$T 백업 해제',      '$T no longer backup', '', '', '$T bukan cadangan lagi'],
+    [/^리더 지정/,            'add',  '$T 리더로',         '$T as leader',        '', '', '$T jadi leader'],
+    [/^클라 앉힘 · PC-\d{2} \(PC-(\d{2})에서\)/, 'cl', '$T 앉힘', 'seated $T', 'PC-$1 에서', 'from PC-$1', '$T didudukkan', 'dari PC-$1'],
+    [/^클라 앉힘/,            'cl',   '$T 앉힘',           'seated $T',           '', '', '$T didudukkan'],
+    [/^클라 뺌/,              'del',  '$T 클라 뺌',        'unseated $T',         '', '', '$T dilepas dari kursi'],
+    [/^같은 클라로 겹침 · (.+?) → (.+)$/, 'cl', '$1 → $2 겹침', '$1 → $2 merged', '', '', '$1 → $2 digabung'],
+    [/^겹친 클라 뗌 · (.+)$/, 'del',  '$1 겹침 뗌',        'unmerged $1',         '', '', '$1 dipisah'],
+    [/^문의 배치$|^inquiry placed$/, 'cl', '$Q 문의 앉힘',  'seated inquiry $Q',  '', '', 'inquiry $Q didudukkan'],
+    [/^inquiry → PC/,         'cl',   '$Q 문의 옮김',      'moved inquiry $Q',    '', '', 'inquiry $Q dipindahkan'],
+    [/^seat via inquiry$/,    'add',  '$Q 앉힘',           'seated $Q', '문의로', 'via inquiry', '$Q didudukkan', 'lewat inquiry'],
+    [/^added PC \(문의 카드\)/, 'add', 'PC 추가',           'PC added', '문의 카드로', 'from inquiry', 'PC ditambahkan', 'dari inquiry'],
+    [/^added PC/,             'add',  'PC 추가',           'PC added',            '', '', 'PC ditambahkan'],
+    [/^deleted PC$/,          'del',  'PC 삭제',           'PC deleted',          '', '', 'PC dihapus'],
+    [/^PC 숨김 해제$/,        'pc',   '다시 보이게',       'unhidden',            '', '', 'ditampilkan lagi'],
+    [/^PC 숨김$/,             'pc',   '숨김',              'hidden',              '', '', 'disembunyikan'],
+    [/^PC OFF · 배정 (\d+)건/, 'del', 'PC 껐음',           'PC switched off', '배정 $1건 해제', '$1 shifts cleared', 'PC dimatikan', '$1 shift dihapus'],
+    [/^PC OFF/,               'del',  'PC 껐음',           'PC switched off',     '', '', 'PC dimatikan'],
+    [/^PC 가동 복귀$/,        'add',  'PC 다시 켬',        'PC back on',          '', '', 'PC dinyalakan lagi'],
+    [/^PC order/,             'pc',   '순서 바꿈',         'reordered', '$T', '$T', 'urutan diubah', '$T'],
+    [/^edited PC spec$/,      'pc',   '$T 사양 수정',      'spec edited · $T',    '', '', 'spesifikasi $T diubah'],
+    [/^added pool client$/,   'cl',   '$T 클라 풀에 추가', '$T added to pool',    '', '', '$T ditambah ke pool'],
+    [/^deleted pool client$/, 'del',  '$T 클라 풀에서 삭제', '$T removed from pool', '', '', '$T dihapus dari pool'],
+    [/^전체 배정 해제$/,      'del',  '전체 배정 해제',    'all shifts cleared', '$T', '$T', 'semua shift dihapus', '$T'],
+    [/^데모 초기화$/,         'del',  '데모 초기화',       'demo reset',          '', '', 'demo direset']
   ];
+  /* 그 언어의 [본문, 덧말]. 인니어 칸이 비면 영어로, 영어도 비면 한글로 떨어진다 */
+  function say(r, L){
+    if(L === 'id') return [r[6] || r[3] || r[2], r[7] || r[5] || r[4] || ''];
+    if(L === 'en') return [r[3] || r[2], r[5] || r[4] || ''];
+    return [r[2], r[4] || ''];
+  }
   var TIME_RE = /(\d{1,2}:\d{2}\s*[~-]\s*\d{1,2}:\d{2})/;
   function fill(tpl, T, Q, m){
     return String(tpl == null ? '' : tpl)
@@ -72054,7 +72118,7 @@ console.info('AUTO100 build applied',AUTO100_BUILD.version,v3Audit());
       .replace(/\$(\d)/g, function(_, d){ return (m && m[Number(d)] != null) ? esc(String(m[Number(d)]).trim()) : ''; });
   }
   /* 로그 한 줄 → { pc, v, txt, when, extra } */
-  function parse(l){
+  function parse(l, lang){
     var A = String(l.action || ''), T0 = String(l.target || '');
     var mv = /자리 옮김 · PC-(\d{2}) → PC-(\d{2})/.exec(A);
     var pc = null, pm;
@@ -72063,18 +72127,17 @@ console.info('AUTO100 build applied',AUTO100_BUILD.version,v3Audit());
     else if((pm = /PC-(\d{2})/.exec(T0))) pc = Number(pm[1]);
     var tm = TIME_RE.exec(A) || TIME_RE.exec(T0);
     var when = tm ? tm[1].replace(/\s/g, '') : '';
-    var L = ko();
+    var L = lang || (ko() ? 'ko' : 'en');
     var Q = esc(T0.split(/->|→/)[0].trim());
     var T = esc(T0.replace(/\s*(->|→)\s*PC-\d{2}\s*/g, ' ').replace(TIME_RE, '').trim() || T0.trim());
     /* 'PC-01 after PC-02' 는 사람 말이 아니다 */
     var om = /^PC-(\d{2}) (after|before) PC-(\d{2})$/.exec(T0);
-    if(om && L) T = 'PC-' + om[1] + ' 을 PC-' + om[3] + (om[2] === 'after' ? ' 뒤로' : ' 앞으로');
+    if(om && L === 'ko') T = 'PC-' + om[1] + ' 을 PC-' + om[3] + (om[2] === 'after' ? ' 뒤로' : ' 앞으로');
+    if(om && L === 'id') T = 'PC-' + om[1] + (om[2] === 'after' ? ' setelah ' : ' sebelum ') + 'PC-' + om[3];
     for(var i = 0; i < VERB.length; i++){
       var m = VERB[i][0].exec(A); if(!m) continue;
-      return { pc:pc, v:VERB[i][1],
-               txt:fill(L ? VERB[i][2] : VERB[i][3], T, Q, m),
-               when:when,
-               extra:fill(L ? (VERB[i][4] || '') : (VERB[i][5] || VERB[i][4] || ''), T, Q, m) };
+      var s = say(VERB[i], L);
+      return { pc:pc, v:VERB[i][1], txt:fill(s[0], T, Q, m), when:when, extra:fill(s[1], T, Q, m) };
     }
     /* 규칙에 없는 줄 — PC 번호·시간만 떼고 그대로 */
     return { pc:pc, v:(l.type === 'delete' ? 'del' : l.type === 'create' ? 'add' : ''),
