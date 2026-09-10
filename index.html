@@ -4,7 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
 <title>ARASAKA Corp</title>
-<!-- BUILD: v1461 | 직원 풀 온보딩 패널: 10시간 추가 · 바깥 누르면 닫힘 (구원 씨) -->
+<!-- BUILD: v1462 | 합격 처리하면 초대 코드가 바로 만들어져 복사되고 온보딩 화면으로 넘어간다 -->
 <!-- v745 기록은 git 이력(v1302 이전 커밋)에 있다 — 100KB 변경사 주석을 배포에서 제거 -->
 <!-- [v677] a <link href> cannot read a CSS variable, so the favicon carries its own copy.
      64px: a browser tab draws it at 16-32px, so this is 2x-DPR sharp at 11KB. -->
@@ -16856,8 +16856,16 @@ function _apFinalizePass(id){
   a.updated = _todayKST(); a.updatedAt = Date.now();
   try{ logAction('update', 'moved applicant → ' + getStageById('pass').name, a.name); }catch(_){}
   toast(`${a.name} → ${getStageById('pass').name}`);
+  /* [v1462] boss "패스로 하면 온보딩도 자연스럽게 연결" — 합격 즉시 ① 온보딩 목록에 뜨게(business) ② 초대 코드를 만들어 복사
+     ③ 온보딩 화면의 그 사람에게로 간다. 고원 씨는 코드를 왓츠앱에 붙이기만 하면 된다. */
+  if(!a.business) a.business = 'buju';
   saveRecruits();
   renderRecruit();
+  (async function(){
+    try{ if(typeof _obInviteCode === 'function'){ var code = await _obInviteCode(a);
+      if(code){ try{ copyText(code); }catch(_){} toast('초대 코드 ' + code + ' 복사됨 — 왓츠앱으로 보내면 가입하는 순간 직원으로 이어집니다'); } } }catch(_){}
+    try{ window._obCur = 'app:' + a.id; setActiveChannel('op-onboarding'); }catch(_){}
+  })();
 }
 // [v471] Pass choice modal — "Hire directly" (normal pass, unchanged flow) vs
 // "Move to backup pool" (asks for desired shift + readiness, then relocates the
@@ -47187,16 +47195,23 @@ window._obPick = function(id){ renderOnboarding(id); };
    ② 가입한 계정을 지원자 기록과 잇는다 — 코드로 가입했으면 저절로, 아니면 이름으로 찾아 한 번 누른다.
    ③ 디스코드 데일리보드를 만든다 — 리포트 서버의 봇이 스레드를 만들고 소개 카드를 고정한다.
    계좌번호 같은 개인정보는 디스코드로 가지 않는다. */
+/* [v1462] 코드 만들기만 따로 — 합격 처리(_apFinalizePass)와 온보딩 9번 버튼이 같이 쓴다. 이미 있으면 그 코드를 돌려준다. */
+window._obInviteCode = async function(a){
+  if(!a) return null;
+  if(a.invite_code) return a.invite_code;
+  if(typeof sb==='undefined' || !sb){ toast('DB 연결 없음', true); return null; }
+  var code='STAFF-'+Math.random().toString(36).slice(2,7).toUpperCase();
+  try{ var r=await sb.from('invite_codes').insert({ code:code, role:'staff', used:false }); if(r.error){ toast('코드 생성 실패: '+r.error.message, true); return null; } }
+  catch(e){ toast('코드 생성 실패: '+(e&&e.message), true); return null; }
+  a.invite_code=code; a.invite_at=_todayKST(); saveRecruits(true);
+  try{ logAction('create', '초대 코드 발급 · '+a.name+' · '+code, a.id); }catch(_){}
+  return code;
+};
 window._obInvite = async function(appId){
   if(!_obCanEdit()){ toast('권한이 없습니다', true); return; }
   var a=(typeof APPLICANTS!=='undefined'?APPLICANTS:[]).find(function(x){ return x && String(x.id)===String(appId); }); if(!a) return;
-  if(typeof sb==='undefined' || !sb){ toast('DB 연결 없음', true); return; }
-  var code='STAFF-'+Math.random().toString(36).slice(2,7).toUpperCase();
-  try{ var r=await sb.from('invite_codes').insert({ code:code, role:'staff', used:false }); if(r.error){ toast('코드 생성 실패: '+r.error.message, true); return; } }
-  catch(e){ toast('코드 생성 실패: '+(e&&e.message), true); return; }
-  a.invite_code=code; a.invite_at=_todayKST(); saveRecruits(true);
+  var code = await _obInviteCode(a); if(!code) return;
   try{ copyText(code); }catch(_){}
-  try{ logAction('create', '초대 코드 발급 · '+a.name+' · '+code, a.id); }catch(_){}
   toast('초대 코드 '+code+' — 복사됐습니다. 왓츠앱으로 보내 주세요');
   renderOnboarding('app:'+a.id);
 };
