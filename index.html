@@ -4,7 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
 <title>ARASAKA Corp</title>
-<!-- BUILD: v1467 | 합격 처리: 저장을 먼저 기다린 뒤 온보딩으로 (카드가 제자리로 돌아가던 것) -->
+<!-- BUILD: v1468 | 메이플 캐릭터 826개 전부 보이게 (160개에서 잘리던 것) -->
 <!-- v745 기록은 git 이력(v1302 이전 커밋)에 있다 — 100KB 변경사 주석을 배포에서 제거 -->
 <!-- [v677] a <link href> cannot read a CSS variable, so the favicon carries its own copy.
      64px: a browser tab draws it at 16-32px, so this is 2x-DPR sharp at 11KB. -->
@@ -72838,7 +72838,7 @@ console.info('AUTO100 build applied',AUTO100_BUILD.version,v3Audit());
   function grid(){
     var L = ko(), q = cur.q.trim().toLowerCase();
     var items = list().filter(function(o){ return !q || o.name.toLowerCase().indexOf(q) >= 0 || String(o.id) === q; });
-    var MAX = 160, shown = items.slice(0, MAX);
+    var MAX = 2000, shown = items.slice(0, MAX);   /* [v1468] boss "다 가져온 게 아닌 것 같은데" — 826개 전부 보여 준다(그림은 보일 때 내려받음) */
     var html = shown.map(function(o){
       var tk = cur.taken[o.id], mine = tk && String(tk.staff_key) === String(cur.uid);
       var cls = 'mcp-it' + (mine ? ' mine' : (tk ? ' taken' : ''));
@@ -72855,7 +72855,7 @@ console.info('AUTO100 build applied',AUTO100_BUILD.version,v3Audit());
   function render(){
     var E = el(), L = ko();
     var mine = cur.mine;
-    E.c.innerHTML = '<div class="mcp-hd"><b>' + (L ? '메이플 캐릭터 고르기' : 'Pick a Maple character') + '</b><span>' + esc(cur.name) + (mine ? (' · ' + (L ? '지금: ' : 'now: ') + esc(mine.name)) : '') + '</span><button class="mcp-x" type="button" onclick="_mapleCharClose()">✕</button></div>'
+    E.c.innerHTML = '<div class="mcp-hd"><b>' + (L ? '메이플 캐릭터 고르기' : 'Pick a Maple character') + '</b><span>' + esc(cur.name) + ' · ' + list().length + (L ? '개' : '') + (mine ? (' · ' + (L ? '지금: ' : 'now: ') + esc(mine.name)) : '') + '</span><button class="mcp-x" type="button" onclick="_mapleCharClose()">✕</button></div>'
       + '<input class="mcp-q" id="mcp-q" type="search" placeholder="' + (L ? '이름으로 찾기 — 예: 로저, 마리아' : 'Search by name') + '" value="' + esc(cur.q) + '">'
       + '<div class="mcp-grid" id="mcp-grid">' + grid() + '</div>'
       + '<div class="mcp-ft"><span>' + (L ? '한 캐릭터는 한 사람만 · 고르면 디스코드 프로필에 쓰는 캐릭터가 됩니다' : 'One character per person · used for your Discord profile') + '</span>'
