@@ -4,7 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
 <title>ARASAKA Corp</title>
-<!-- BUILD: v1449 | 겹친 줄 칸 계산 · 번역 빠진 옛 댓글은 판을 열면 알아서 붙는다 -->
+<!-- BUILD: v1450 | 인니어에 한국 클라 이름이 섞여도 한국어로 번역된다 -->
 <!-- v745 기록은 git 이력(v1302 이전 커밋)에 있다 — 100KB 변경사 주석을 배포에서 제거 -->
 <!-- [v677] a <link href> cannot read a CSS variable, so the favicon carries its own copy.
      64px: a browser tab draws it at 16-32px, so this is 2x-DPR sharp at 11KB. -->
@@ -60006,11 +60006,26 @@ function _pnWhen(ms){
    버린다 — 같은 문장을 두 번 보여 주는 것은 도움이 아니라 방해다. */
 const PN_TR_URL = 'https://translate.googleapis.com/translate_a/single';
 const _pnTrState = {};                                   /* id → 'busy' | 'fail' (저장 안 함) */
-function _pnLang(s){ return /[가-힣]/.test(String(s||'')) ? 'ko' : 'id'; }
-async function _pnTr(text, to){
-  const t = String(text||'').trim(); if(!t) return null;
-  const tgt = to || (_pnLang(t) === 'ko' ? 'id' : 'ko');
-  const url = PN_TR_URL + '?client=gtx&sl=auto&tl=' + tgt + '&dt=t&q=' + encodeURIComponent(t.slice(0,500));
+/* ═══ [v1450] 어느 쪽으로 옮길지 — 한글이 '있느냐' 가 아니라 '많으냐' ══════════
+   v1446 은 한글이 한 글자라도 있으면 한국어로 봤다. 그런데 이 판에서 인니 직원이
+   쓰는 말에는 한국어 클라 이름이 늘 섞인다:
+     "지옥도깨비 PC nya mati, saya sudah ganti ke PC lain."
+   이건 인니어인데 한글 다섯 자 때문에 한국어로 판정돼 → 인니어로 옮기라고
+   시켰고 → 같은 글이 그대로 돌아왔다. 한국 사람은 못 읽는다.
+
+   두 겹으로 막는다.
+     ① 어림잡기 — 한글 수와 알파벳 수를 세서 많은 쪽을 원문 말로 본다.
+     ② 되물어 확인 — 구글이 알아본 원문 말(j[2])이 우리가 옮기려던 말과 같으면
+        방향이 거꾸로다. 반대로 뒤집어 한 번 더 부른다.
+   ②가 있어서 ①이 틀려도 결과는 맞는다. 보통은 한 번, 어긋날 때만 두 번 부른다. */
+function _pnLang(s){
+  const t = String(s||'');
+  const ko = (t.match(/[가-힣]/g) || []).length;
+  const la = (t.match(/[A-Za-z]/g) || []).length;
+  return ko > la ? 'ko' : 'id';
+}
+async function _pnTrRaw(t, tgt){
+  const url = PN_TR_URL + '?client=gtx&sl=auto&tl=' + tgt + '&dt=t&q=' + encodeURIComponent(t);
   let ctl = null, tm = null;
   try{ ctl = new AbortController(); tm = setTimeout(function(){ try{ ctl.abort(); }catch(_){} }, 6000); }catch(_){}
   try{
@@ -60019,11 +60034,23 @@ async function _pnTr(text, to){
     const j = await r.json();
     let out = '';
     ((j && j[0]) || []).forEach(function(seg){ if(seg && seg[0]) out += seg[0]; });
-    out = out.trim();
-    if(!out || out === t) return null;
-    return { to: tgt, out: out.slice(0, 800) };
+    return { det: (typeof (j && j[2]) === 'string' ? j[2].slice(0,2) : ''), out: out.trim() };
   }catch(_){ return null; }
   finally{ if(tm) clearTimeout(tm); }
+}
+async function _pnTr(text, to){
+  const t = String(text||'').trim().slice(0, 500); if(!t) return null;
+  let tgt = to || (_pnLang(t) === 'ko' ? 'id' : 'ko');
+  let r = await _pnTrRaw(t, tgt);
+  if(!r) return null;
+  if(!to && r.det && r.det === tgt){                 /* 넣은 말 = 내놓을 말 → 뒤집는다 */
+    const flip = (tgt === 'ko') ? 'id' : 'ko';
+    const r2 = await _pnTrRaw(t, flip);
+    if(r2 && r2.out){ r = r2; tgt = flip; }
+  }
+  const out = (r.out || '').trim();
+  if(!out || out === t) return null;
+  return { to: tgt, out: out.slice(0, 800) };
 }
 /* 한 줄을 번역해 붙인다. 저장은 그 글을 건드릴 수 있는 사람만 — 남의 글을 번역해도
    보이기는 하되 서버에는 안 쓴다(권한 없이 쓰면 실패 알림만 뜬다). */
