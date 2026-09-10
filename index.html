@@ -4,7 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
 <title>ARASAKA Corp</title>
-<!-- BUILD: v1450 | 인니어에 한국 클라 이름이 섞여도 한국어로 번역된다 -->
+<!-- BUILD: v1451 | 기본 배치 고정 — 배정격자·변경기록·시계·PC카드 차례, 모두 한 번 새로 -->
 <!-- v745 기록은 git 이력(v1302 이전 커밋)에 있다 — 100KB 변경사 주석을 배포에서 제거 -->
 <!-- [v677] a <link href> cannot read a CSS variable, so the favicon carries its own copy.
      64px: a browser tab draws it at 16-32px, so this is 2x-DPR sharp at 11KB. -->
@@ -58238,7 +58238,11 @@ function toggleOverrideWorkDays(){
    안의 DOM에 물려 있고, renderPools()가 #client-pool·#pool-cats 를 id로 찾아
    채운다. 노드를 그대로 옮기면 둘 다 손댈 필요가 없다.
    ═══════════════════════════════════════════════════════════════════════════ */
-const PB_KEY = "lucky7_poolbox_v8";   /* [v1077] 키를 올려 옛 배치를 한 번 버린다 — 안 그러면 새 배치가 영영 안 깔린다 */
+/* [v1451] v8 → v9. boss "기본 레이아웃 이렇게 고정해줘 · 모두에게".
+   배치는 각자 브라우저에 저장되므로, 기본값만 고치면 이미 쓰던 사람은 옛 배치를
+   그대로 본다. 키를 올려 모두 한 번 새 기본값에서 시작하게 한다.
+   (그 뒤에 각자 옮기는 것은 그대로 자기 브라우저에 남는다) */
+const PB_KEY = "lucky7_poolbox_v9";
 /* [v1066] boss "더 자유롭게" — 상한을 화면 크기까지 열어둔다 */
 const PB_MINW = 190, PB_MINH = 110, PB_MAXW = 1400;
 /* [v1067] PC 카드·타임라인도 같은 박스로. w/x 가 null 이면 화면 크기에서 계산한다
@@ -58249,12 +58253,15 @@ const PB_DEF = {
   /* [v1182] 470 은 16대 × 24px 로 잡은 옛 숫자다. 실제 줄 높이(28px)로 다시 셈하면
      18대에 560 이 필요하다. 이 값은 ‘아직 아무것도 저장 안 된 첫 화면’ 에만 쓰이고,
      그 직후 pcTidyBoxes 가 실제 대수로 다시 맞춘다 — 첫 그림부터 안 잘리게 둔다. */
+  /* [v1451] 왼쪽 차례는 배정 격자 → 변경 기록 → 시계 → PC 카드.
+     boss 가 손으로 맞춰 둔 그 차례이고, pcTidyBoxes 의 LEFTS 와 같아야 한다 —
+     두 곳이 다르면 ⊞ 를 누를 때마다 배치가 튄다. */
   assign:  { x:16,   y:96,  w:null, h:560, col:false },   /* [v1079] 배정 격자 — 이제 이게 주 화면 */
-  clock:   { x:16,   y:596, w:null, h:320, col:true  },   /* 한 대를 자세히 볼 때만 편다 */
-  pc:      { x:16,   y:632, w:null, h:300, col:true  },   /* [v1078] 시계로 다 되므로 기본 접힘 */
   /* [v1441] 변경 기록 — boss "댓글을 적을수있는칸? 그럼 우리가 변경이 어떻게 됐는지 적을수있겠지"
      기본으로 펴 둔다(col:false). 적는 판은 보여야 적는다 — 접혀 있으면 아무도 안 연다. */
-  note:    { x:16,   y:668, w:null, h:300, col:false },
+  note:    { x:16,   y:668, w:null, h:260, col:false },
+  clock:   { x:16,   y:940, w:null, h:320, col:true  },   /* 한 대를 자세히 볼 때만 편다 */
+  pc:      { x:16,   y:992, w:null, h:300, col:true  },   /* [v1078] 시계로 다 되므로 기본 접힘 */
   /* ═══ [v1179] 스타팅 포인트 ═══
      boss “직원풀 세로 2줄 · 클라이언트풀 세로 3줄”
      줄 수는 따로 정하는 값이 아니다 — 격자가 auto-fill 이라 상자 폭이 곧 줄 수다.
@@ -59019,11 +59026,16 @@ function pcTidyBoxes(silent){
 
   /* [v1079] 왼쪽은 배정 격자가 주인공이다 — 시간축이 하나뿐이라 배치는 여기서 끝난다.
      시계·PC 카드는 한 대를 자세히 볼 때만 펴는 보조라 아래에 쌓는다. */
-  const openers = ['assign','clock','pc'].filter(k => !st[k].col);
-  const closers = ['assign','clock','pc'].filter(k => st[k].col);
+  /* ═══ [v1451] 왼쪽 열 차례를 한 곳에 적는다 ═══════════════════════════════════
+     boss "기본 레이아웃 이렇게 고정해줘 다른 직원도 마찬가지고 모두에게"
+     변경 기록판(v1441)을 만들면서 여기(박스 정리)에는 안 넣었다. 그래서 ⊞ 를
+     누르면 배정·시계·PC 카드만 줄을 서고 변경 기록판은 제자리에 남아 겹쳤다.
+     차례는 배정 격자 → 변경 기록 → 시계 → PC 카드. 사장님이 맞춰 둔 그 차례다. */
+  const LEFTS = ['assign','note','clock','pc'];
+  const openers = LEFTS.filter(k => !st[k].col);
+  const closers = LEFTS.filter(k => st[k].col);
   let y = TOP;
-  const spare = colH - closers.length*(BAR+M);
-  const share = openers.length ? Math.floor((spare - (openers.length-1)*M) / openers.length) : spare;
+  const spare = colH - closers.length*(BAR+M) - Math.max(0, openers.length-1)*M;
   /* [v1098] boss "배정 격자도 좀 축소" — 격자는 한 PC 가 한 줄(22px+2)이라
      필요한 높이가 정해져 있다. 남는 세로를 다 먹고 아래 절반을 비워 두고 있었다.
      16대면 440 근처면 되는데 846 을 쓰고 있었다. 내용만큼만 쓴다. */
@@ -59046,22 +59058,28 @@ function pcTidyBoxes(silent){
       agNeed = Math.max(agNeed, _agEl.scrollHeight + _bar + 10);
     }
   }catch(_){}
-  ['assign','clock','pc'].forEach(k => {
+  /* ═══ [v1451] 격자가 먼저 제 몫을 가져가고 남는 것을 나머지가 나눈다 ══════════
+     여태는 열린 상자끼리 똑같이 나눈 뒤 격자만 내용 높이(agNeed)로 깎았다.
+     깎인 만큼은 아무도 안 쓰는 빈 띠로 남았다 — 화면 아래가 늘 허전하던 이유.
+     격자는 필요한 만큼만, 남는 세로는 아래 상자(변경 기록)가 받는다. */
+  const MIN_H = 160;
+  const others = openers.filter(k => k !== 'assign');
+  const agH = (openers.indexOf('assign') >= 0)
+    ? Math.max(220, Math.min(agNeed, spare - others.length*MIN_H))
+    : 0;
+  const rest = others.length ? Math.max(MIN_H, Math.floor((spare - agH) / others.length)) : 0;
+  LEFTS.forEach(k => {
     st[k].x = L+M; st[k].w = leftW;
     st[k].y = y;
     const open = !st[k].col;
-    if(open){
-      let hh = (k==='assign' && openers.length>1) ? Math.round(share*1.25) : share;
-      if(k==='assign') hh = Math.min(hh, agNeed);
-      st[k].h = Math.max(180, hh);
-    }
+    if(open) st[k].h = Math.max(MIN_H, (k === 'assign') ? agH : rest);
     y += (open ? st[k].h : BAR) + M;
   });
-  /* 넘치면 마지막 것부터 줄인다 */
+  /* 넘치면 가장 큰 것부터 줄인다 */
   const over = y - M - parkY;
   if(over > 0){ const big = openers[0] || 'assign';
-    st[big].h = Math.max(180, st[big].h - over);
-    let yy = TOP; ['assign','clock','pc'].forEach(k => { st[k].y = yy; yy += ((st[k].col?BAR:st[k].h) + M); }); }
+    st[big].h = Math.max(MIN_H, st[big].h - over);
+    let yy = TOP; LEFTS.forEach(k => { st[k].y = yy; yy += ((st[k].col?BAR:st[k].h) + M); }); }
 
   /* 오른쪽: 직원 풀이 크고 클라이언트 풀이 작다 — 끌어오는 쪽에 자리를 준다 */
   /* [v1098] L 이 빠져 있었다. 사이드바 폭(248)만큼 왼쪽으로 밀려서 오른쪽 열이
