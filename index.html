@@ -4,7 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
 <title>ARASAKA Corp</title>
-<!-- BUILD: v1453 | 테두리가 막대 글자를 자르던 것 · 변경기록 짧게, 격자 우선 -->
+<!-- BUILD: v1454 | 저장된 배치 한 번 새로 — 변경기록 짧아진 것이 바로 반영되게 -->
 <!-- v745 기록은 git 이력(v1302 이전 커밋)에 있다 — 100KB 변경사 주석을 배포에서 제거 -->
 <!-- [v677] a <link href> cannot read a CSS variable, so the favicon carries its own copy.
      64px: a browser tab draws it at 16-32px, so this is 2x-DPR sharp at 11KB. -->
@@ -58255,7 +58255,7 @@ function toggleOverrideWorkDays(){
    배치는 각자 브라우저에 저장되므로, 기본값만 고치면 이미 쓰던 사람은 옛 배치를
    그대로 본다. 키를 올려 모두 한 번 새 기본값에서 시작하게 한다.
    (그 뒤에 각자 옮기는 것은 그대로 자기 브라우저에 남는다) */
-const PB_KEY = "lucky7_poolbox_v9";
+const PB_KEY = "lucky7_poolbox_v10";   /* [v1454] v1453 의 새 세로 배분이 이미 쓰던 사람에게도 한 번 깔리게 */
 /* [v1066] boss "더 자유롭게" — 상한을 화면 크기까지 열어둔다 */
 const PB_MINW = 190, PB_MINH = 110, PB_MAXW = 1400;
 /* [v1067] PC 카드·타임라인도 같은 박스로. w/x 가 null 이면 화면 크기에서 계산한다
@@ -59083,8 +59083,8 @@ function pcTidyBoxes(silent){
      아니라 **적는 판**이라 그만큼 길 필요가 없다 — 쓰는 칸과 최근 몇 줄이면 된다.
      순서를 뒤집는다: 격자가 24대를 다 보여 줄 만큼(agNeed) 먼저 가져가고,
      변경 기록은 남는 것을 받되 280px 을 넘지 않는다.
-     좁은 화면에서는 격자가 양보해 변경 기록에 최소 170px 은 남긴다. */
-  const NOTE_MIN = 170, NOTE_MAX = 280;
+     좁은 화면에서는 격자가 양보해 변경 기록에 최소 140px 은 남긴다(쓰는 칸 + 두어 줄). */
+  const NOTE_MIN = 140, NOTE_MAX = 280;   /* [v1454] 140 이면 쓰는 칸+두어 줄. 격자가 24대를 다 보여 주는 쪽이 먼저다 */
   const others = openers.filter(k => k !== 'assign');
   const agH = (openers.indexOf('assign') >= 0)
     ? Math.max(220, Math.min(agNeed, spare - others.length*NOTE_MIN))
