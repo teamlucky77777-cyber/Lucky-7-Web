@@ -4,7 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
 <title>ARASAKA Corp</title>
-<!-- BUILD: v1460 | 클라별 쌀: 상세 머리 칩이 계정 이름으로 세고, 판 위에 총 작업량 한 줄 -->
+<!-- BUILD: v1461 | 직원 풀 온보딩 패널: 10시간 추가 · 바깥 누르면 닫힘 (구원 씨) -->
 <!-- v745 기록은 git 이력(v1302 이전 커밋)에 있다 — 100KB 변경사 주석을 배포에서 제거 -->
 <!-- [v677] a <link href> cannot read a CSS variable, so the favicon carries its own copy.
      64px: a browser tab draws it at 16-32px, so this is 2x-DPR sharp at 11KB. -->
@@ -16734,6 +16734,7 @@ function openOnboarding(applicantId){
         <div class="ap-section-title">⏱ 근무 형태 <span class="ob-fixed-tag">주 6일 고정</span></div>
         <div class="ob-choice-row">
           <button class="ob-choice ob-hours" data-hours="8" onclick="obSelectHours(this,8)">8시간</button>
+          <button class="ob-choice ob-hours" data-hours="10" onclick="obSelectHours(this,10)">10시간</button>   <!-- [v1461] 구원 씨 "10시간이 없다" -->
           <button class="ob-choice ob-hours on" data-hours="12" onclick="obSelectHours(this,12)">12시간</button>
         </div>
       </div>
@@ -16750,11 +16751,17 @@ function openOnboarding(applicantId){
   // 선택 상태 초기화 — 주 6일 고정, 12시간 기본
   window.obState = { shift:'night', days:6, hours:12 };
   requestAnimationFrame(() => panel.classList.add('open'));
+  /* [v1461] 구원 씨 "바깥 아무 데나 누르면 닫혀야지" — 패널 밖을 누르면 닫는다. 연 직후의 같은 클릭은 건너뛴다. */
+  try{ if(window._obOutside) document.removeEventListener('mousedown', window._obOutside, true);
+       window._obOutside = function(e){ var p = document.getElementById('onboard-panel'); if(!p){ document.removeEventListener('mousedown', window._obOutside, true); return; }
+         if(p.contains(e.target)) return; closeOnboarding(); };
+       setTimeout(function(){ document.addEventListener('mousedown', window._obOutside, true); }, 50); }catch(_){}
 }
 function closeOnboarding(){
   const p = document.getElementById('onboard-panel');
   if(p){ p.classList.remove('open'); setTimeout(() => p.remove(), 260); }
   onboardingApplicantId = null;
+  try{ if(window._obOutside){ document.removeEventListener('mousedown', window._obOutside, true); window._obOutside = null; } }catch(_){}   /* [v1461] */
 }
 function obSelectShift(btn, shift){
   document.querySelectorAll('.ob-shift').forEach(b => b.classList.remove('on'));
