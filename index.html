@@ -4,7 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
 <title>ARASAKA Corp</title>
-<!-- BUILD: v1471 | 채용 저장이 조용히 거부되던 것 — 되살려 보고, 안 되면 화면에 말한다 -->
+<!-- BUILD: v1472 | 변경 기록판이 서버를 초당 9번 두들기던 눈덩이 차단 (받는 중이면 안 또 보냄) -->
 <!-- v745 기록은 git 이력(v1302 이전 커밋)에 있다 — 100KB 변경사 주석을 배포에서 제거 -->
 <!-- [v677] a <link href> cannot read a CSS variable, so the favicon carries its own copy.
      64px: a browser tab draws it at 16-32px, so this is 2x-DPR sharp at 11KB. -->
@@ -60196,23 +60196,37 @@ function _pnCanDel(n){
     return String(n && n.by || '') === _pnWho();      /* 제 글은 제가 지운다 */
   }catch(_){ return false; }
 }
+/* ═══ [v1472] 눈덩이 차단 ═══════════════════════════════════════════════════════
+   9/10 밤 서버가 20분에 11,174번 두들겨 맞았다(초당 9번). 전부 이 한 줄이었다.
+   판을 다시 그릴 때마다(_agRender → _pnRender) 아직 안 온 요청을 기다리지 않고 새로 보냈다.
+   서버가 느려지면 요청이 안 끝나고 → 더 많이 보내고 → 더 느려진다. 눈덩이가 서버를 죽였다.
+   ① 받는 중이면 그 약속을 같이 쓴다 ② 3초 안에는 다시 안 부른다 ③ 8초 안에 안 오면 포기한다.
+   포기해도 판은 그린다 — 빈 판이 멈춘 판보다 낫다. */
+var _pnLoadP = null, _pnLoadAt = 0;
 async function _pnLoad(force){
   if(_pnLoaded && !force) return PC_NOTES;
-  try{
-    if(typeof sb !== 'undefined' && sb){
-      const { data } = await sb.from('trust_state').select('data').eq('id','pc_notes').maybeSingle();
-      PC_NOTES = (data && Array.isArray(data.data)) ? data.data : [];
-    }
-  }catch(_){ }
-  _pnLoaded = true;
-  return PC_NOTES;
+  if(_pnLoadP) return _pnLoadP;                                   /* ① 이미 받는 중 */
+  if(!force && (Date.now() - _pnLoadAt) < 3000){ _pnLoaded = true; return PC_NOTES; }   /* ② 너무 잦음 */
+  _pnLoadP = (async function(){
+    try{
+      if(typeof sb !== 'undefined' && sb){
+        const q = sb.from('trust_state').select('data').eq('id','pc_notes').maybeSingle();
+        const r = await Promise.race([ q, new Promise(function(res){ setTimeout(function(){ res(null); }, 8000); }) ]);   /* ③ */
+        if(r && r.data && Array.isArray(r.data.data)) PC_NOTES = r.data.data;
+        else if(r && !r.error && r.data === null) PC_NOTES = [];
+      }
+    }catch(_){ }
+    _pnLoaded = true; _pnLoadAt = Date.now();
+    return PC_NOTES;
+  })();
+  try{ return await _pnLoadP; } finally { _pnLoadP = null; _pnLoadAt = Date.now(); }
 }
-async function _pnSave(){
+async function _pnSave(quiet){   /* [v1472] quiet = 알림 없이 (번역만 붙였을 때) */
   try{
     if(typeof sb === 'undefined' || !sb) return false;
     const { error } = await sb.from('trust_state').upsert({ id:'pc_notes', data:PC_NOTES, updated_at:new Date().toISOString() });
     if(error) throw error;
-    try{ if(typeof _pcRT !== 'undefined' && _pcRT) _pcRT.send({ type:'broadcast', event:'note', payload:{ id:_pcRTMe(), tab:_PC_TAB_ID } }); }catch(_){}
+    if(!quiet) try{ if(typeof _pcRT !== 'undefined' && _pcRT) _pcRT.send({ type:'broadcast', event:'note', payload:{ id:_pcRTMe(), tab:_PC_TAB_ID } }); }catch(_){}
     return true;
   }catch(e){ try{ toast((_pnUiLang()==='ko'?'메모 저장 실패 — ':_pnUiLang()==='id'?'Gagal menyimpan — ':'Could not save — ') + ((e && e.message) || ''), true); }catch(_){} return false; }
 }
@@ -60310,7 +60324,9 @@ async function _pnTrFill(n){
      안 그러면 번역이 떨어져 나간 옛 객체에 붙고 저장되는 블롭에는 안 들어간다. */
   const cur = PC_NOTES.find(x => x && x.id === id) || n;
   if(tr){ cur.trs = Object.assign({}, cur.trs || {}, tr.trs); cur.src = tr.src; delete _pnTrState[id]; _pnRender();
-          if(_pnCanDel(cur)) await _pnSave(); }
+          /* [v1472] 번역을 붙였다고 남의 판까지 다시 부르지 않는다 — 서로 번역을 채워 주며 도는 되먹임이 있었다.
+             저장은 하되 알림(broadcast)은 안 쏜다. 다음에 판을 열 때 자연스럽게 따라온다. */
+          if(_pnCanDel(cur)) await _pnSave(true); }
   else { _pnTrState[id] = 'fail'; _pnRender(); }
 }
 /* ═══ [v1449] 번역 없는 글은 알아서 채운다 ═══════════════════════════════════════
@@ -60527,7 +60543,9 @@ function _pnRender(){
     +   '</div>'
     +   (list || '<div class="pn-empty">'+W.empty+'</div>')
     + '</div>';
-  setTimeout(_pnTrSweep, 0);        /* [v1449] 번역 빠진 글 채우기 — 그리기가 끝난 뒤에 */
+  /* [v1472] 훑기도 아껴 부른다 — 그릴 때마다 돌면 번역 요청이 판 그리는 횟수만큼 나간다 */
+  clearTimeout(window._pnSweepT);
+  window._pnSweepT = setTimeout(_pnTrSweep, 1200);
 }
 window._pnRefresh = function(){ _pnLoad(true).then(function(){ _pnRender(); }); };
 function _agHost(){ return document.getElementById('ag-wrap'); }
