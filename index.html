@@ -4,7 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
 <title>ARASAKA Corp</title>
-<!-- BUILD: v1439 | 백업으로 표시한 겹침은 붉게 경고하지 않는다 -->
+<!-- BUILD: v1440 | 테스트 들어간 PC 는 초록 테두리 -->
 <!-- v745 기록은 git 이력(v1302 이전 커밋)에 있다 — 100KB 변경사 주석을 배포에서 제거 -->
 <!-- [v677] a <link href> cannot read a CSS variable, so the favicon carries its own copy.
      64px: a browser tab draws it at 16-32px, so this is 2x-DPR sharp at 11KB. -->
@@ -8875,11 +8875,37 @@ html[data-theme=light] #ag-wrap .ag-track{background:rgba(0,0,0,.04);
 
    줄 자체에 겹을 하나 더 얹어 막대보다 위에 놓는다(z-index 8 · 격자 안에서
    가장 높은 것이 6). 두께는 1px 그대로, 세기만 .55 → .9 로 올린다. */
-#ag-wrap .ag-row.conflict{position:relative}
+/* ═══ [v1440] 테두리가 막대에 묻히던 것 ═══════════════════════════════════════
+   boss "빨간색 테두리 뜨는거 좋은데 시간 막대에 겹쳐서 빨간색이 안보여"
+
+   1px 선 하나를 막대 위에 얹어 뒀는데, 26px 줄이 막대로 꽉 차 있으면 그 선은
+   막대의 밝은 색과 붙어 버려 눈에 안 들어온다. 색이 가려진 게 아니라 **대비가
+   없어서** 안 보이는 것이다. 그래서 세 겹으로 그린다:
+
+     ① 바깥 어두운 테 (1px) — 어떤 막대 색 위에서도 선이 뜨게 만드는 받침
+     ② 색 테 (2px)        — 실제로 읽히는 선
+     ③ 안쪽 옅은 색 번짐   — 줄 전체가 그 상태라는 것을 면으로 말한다
+
+   막대는 z-index 6 까지 쓰므로 이 겹은 8. 모서리는 트랙과 같은 6px.
+   붉음(겹침)이 초록(테스트)보다 급한 말이라 한 줄에 둘이면 붉은 쪽만 그린다 —
+   테두리가 두 개면 둘 다 못 읽는다. */
+#ag-wrap .ag-row.conflict,
+#ag-wrap .ag-row.testing{position:relative}
 #ag-wrap .ag-row.conflict::after{content:'';position:absolute;left:var(--lab);right:0;top:0;bottom:0;
   border-radius:6px;pointer-events:none;z-index:8;
-  box-shadow:inset 0 0 0 1px rgba(226,92,92,.9)}
+  box-shadow:inset 0 0 0 3px rgba(10,6,6,.55),
+             inset 0 0 0 2px rgba(232,86,86,.98),
+             inset 0 0 9px rgba(232,86,86,.22)}
+#ag-wrap .ag-row.testing:not(.conflict)::after{content:'';position:absolute;left:var(--lab);right:0;top:0;bottom:0;
+  border-radius:6px;pointer-events:none;z-index:8;
+  box-shadow:inset 0 0 0 3px rgba(6,10,7,.5),
+             inset 0 0 0 2px rgba(52,190,116,.95),
+             inset 0 0 9px rgba(52,190,116,.18)}
 #ag-wrap .ag-row.conflict .ag-lab b::after{content:' ⚠';font-size:8px}
+/* ═══ [v1440] 테스트 들어간 PC 는 초록 테두리 ═══════════════════════════════════
+   boss "테스트 들어가는 PC는 초록색 테두리라고 그려놓고 배정격자에"
+   겹침(붉은 테두리)과 같은 문법으로 그린다 — 막대 위에 겹을 얹어 가려지지 않게.
+   붉은 겹침이 더 급한 말이므로 그 줄에서는 붉은 쪽이 이긴다(테두리가 둘이면 못 읽는다). */
 /* [v1103] 빈 자리는 눌러서 채운다 — 손이 갈 자리라는 걸 보이게 한다.
    막대 위에서는 커서를 되돌린다(거기는 끄는 자리다). */
 #ag-wrap .ag-track{cursor:copy}
@@ -9946,7 +9972,7 @@ html #sr-app .sr-fchip .v{font-size:14px}
    배경도 테두리도 없다. 노란 글자 네 자. 잘려도 얼룩이 안 남고 자리도 안 뺏는다. */
 #ag-wrap .ag-lab .ag-test{
   font-style:normal;font-weight:800;font-size:9px;letter-spacing:.06em;
-  color:#e8b93a;flex:0 0 auto;white-space:nowrap}
+  color:#3ab06e;flex:0 0 auto;white-space:nowrap}   /* [v1440] 테두리와 같은 초록 — 두 표시가 한 가지를 말한다 */
 .pc-testbadge{display:inline-flex;align-items:center;gap:2px;flex:0 0 auto;
   font-weight:800;font-size:9px;line-height:1;color:#fff;
   padding:2px 4px;border-radius:5px;margin-left:4px;white-space:nowrap;
