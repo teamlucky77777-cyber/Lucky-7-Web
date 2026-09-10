@@ -4,7 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
 <title>ARASAKA Corp</title>
-<!-- BUILD: v1476 | 온보딩 목록에서 ATS 자리표 빼기 -->
+<!-- BUILD: v1477 | 노란색 겹침 풀기 — 노랑 두 자리에 걸린 사람만 다섯 색으로 (나머지는 그대로) -->
 <!-- v745 기록은 git 이력(v1302 이전 커밋)에 있다 — 100KB 변경사 주석을 배포에서 제거 -->
 <!-- [v677] a <link href> cannot read a CSS variable, so the favicon carries its own copy.
      64px: a browser tab draws it at 16-32px, so this is 2x-DPR sharp at 11KB. -->
@@ -56826,8 +56826,16 @@ function _pcv2Host(){
 }
 function _pcv2Live(a, nowH){ const st=((Number(a.start)||0)%24+24)%24, e=st+(Number(a.len)||0);
   return (nowH>=st && nowH<e) || (e>24 && nowH<e-24); }
+/* [v1477] boss "노란색이 너무 많은데 — 다른 색은 건들지 말고 노란색만".
+   팔레트에 노랑이 둘(#c2a04a·#d9a53a) 있었는데 눈으로는 거의 같은 색이라 일곱 명이 다 노랗게 보였다.
+   그 두 자리에 걸린 사람만 다른 색으로 흩는다 — 나머지 여덟 색의 배정은 하나도 안 바뀐다. */
 function _pcv2Col(n){ const pal=['#5fa3d9','#b074ec','#4E9A62','#c2a04a','#c0574f','#6ba59d','#a88fa0','#d9a53a','#7c8fd9','#c46a9a'];
-  let h=0; const s=String(n); for(let i=0;i<s.length;i++) h=(h*31+s.charCodeAt(i))>>>0; return pal[h%pal.length]; }
+  let h=0; const s=String(n); for(let i=0;i<s.length;i++) h=(h*31+s.charCodeAt(i))>>>0;
+  const i = h%pal.length;
+  if(i !== 3 && i !== 7) return pal[i];
+  const YEL=['#c2a04a','#d9793a','#93b03f','#3fa9c9','#a87a55'];   /* 노랑·주황·올리브·청록·갈색 */
+  let g=0; for(let k=0;k<s.length;k++) g=(g*131+s.charCodeAt(k)+7)>>>0;
+  return YEL[g%YEL.length]; }
 /* DAY OFF 승인 건 중 가장 가까운 미래 날짜까지 D-n (없으면 null) */
 function _pcv2DdayOf(name){
   try{ if(typeof ensureOffLoaded==='function') ensureOffLoaded(); }catch(_){}
