@@ -4,7 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
 <title>ARASAKA Corp</title>
-<!-- BUILD: v1434 | 구원씨 절차 3·5·6·8을 지원자 카드의 진짜 칸으로 -->
+<!-- BUILD: v1435 | 격자 접힘을 브라우저가 직접 판단하게 (컨테이너 질의) -->
 <!-- v745 기록은 git 이력(v1302 이전 커밋)에 있다 — 100KB 변경사 주석을 배포에서 제거 -->
 <!-- [v677] a <link href> cannot read a CSS variable, so the favicon carries its own copy.
      64px: a browser tab draws it at 16-32px, so this is 2x-DPR sharp at 11KB. -->
@@ -8672,7 +8672,36 @@ html[data-theme=light] #ch-pc-status #pc-cmdbar .dp-day.on{background:#fff;color
 /* ═══ [v1433] 판이 좁아지면 이름 칸이 먼저 물러난다 ═══════════════════════════
    막대는 끝까지 남긴다 — 이 판은 '누가 언제 있나' 를 보는 판이고 그건 막대만 한다.
    지키는 순서: PC 번호 > 클라 이름 > 합계 시간 > 버튼. 뒤에서부터 내려놓는다. */
-#ag-wrap.ag-narrow{--lab:94px}
+/* [v1435] 폭 판단을 자바스크립트에서 브라우저로 넘긴다.
+   v1433 은 _agRender 안에서 host.clientWidth 를 재서 클래스를 붙였는데 실제 판에서
+   안 먹었다 — 처음 그릴 때 아직 폭이 0 이거나, 판이 접혀 있거나, 옮겨 다니는 노드라
+   재는 순간이 맞지 않는 경우가 있다. 컨테이너 질의는 브라우저가 진짜 폭으로 매번
+   스스로 판단하므로 잴 필요도, 다시 그릴 필요도 없다.
+   아래 .ag-narrow/.ag-tiny 클래스 규칙도 남겨 둔다 — 컨테이너 질의를 모르는 브라우저의 그물. */
+#ag-wrap{container-type:inline-size}
+@container (max-width: 430px){
+  #ag-wrap .ag-row{--lab:94px}   /* 컨테이너 질의는 컨테이너 자신을 못 바꾼다 — 안쪽 줄에 건다 */
+  #ag-wrap .ag-lab{gap:4px;padding:0 4px 0 2px}
+  #ag-wrap .ag-lab b{font-size:9.5px}
+  #ag-wrap .ag-lab em{font-size:8.5px}
+  #ag-wrap .ag-lab u,
+  #ag-wrap .ag-lab .ag-btns,
+  #ag-wrap .ag-bar .ag-hh,
+  #ag-wrap .pc-testbadge .pc-testd,
+  #ag-wrap .ag-h:not(.h6){display:none}
+  #ag-wrap .pc-testbadge{margin-left:3px;padding:1px 4px;font-size:8px;gap:2px}
+}
+@container (max-width: 320px){
+  #ag-wrap .ag-row{--lab:56px}
+  #ag-wrap .ag-lab em,
+  #ag-wrap .ag-lab .ag-bk,
+  #ag-wrap .ag-lab .ag-led,
+  #ag-wrap .pc-testbadge,
+  #ag-wrap .ag-h:not(.h12){display:none}
+  #ag-wrap .ag-lab b{font-size:9px}
+  #ag-wrap .ag-bar .ag-nm{font-size:8.5px}
+}
+#ag-wrap.ag-narrow .ag-row{--lab:94px}
 #ag-wrap.ag-narrow .ag-lab{gap:4px;padding:0 4px 0 2px}
 #ag-wrap.ag-narrow .ag-lab b{font-size:9.5px}
 #ag-wrap.ag-narrow .ag-lab em{font-size:8.5px}
@@ -8681,11 +8710,13 @@ html[data-theme=light] #ch-pc-status #pc-cmdbar .dp-day.on{background:#fff;color
 #ag-wrap.ag-narrow .pc-testbadge{margin-left:3px;padding:1px 4px;font-size:8px;gap:2px}
 #ag-wrap.ag-narrow .pc-testbadge .pc-testd{display:none}
 #ag-wrap.ag-narrow .ag-bar .ag-hh{display:none}
-#ag-wrap.ag-tiny{--lab:56px}
+#ag-wrap.ag-narrow .ag-h:not(.h6){display:none}
+#ag-wrap.ag-tiny .ag-row{--lab:56px}
 #ag-wrap.ag-tiny .ag-lab em,
 #ag-wrap.ag-tiny .ag-lab .ag-bk,
 #ag-wrap.ag-tiny .ag-lab .ag-led,
-#ag-wrap.ag-tiny .pc-testbadge{display:none}
+#ag-wrap.ag-tiny .pc-testbadge,
+#ag-wrap.ag-tiny .ag-h:not(.h12){display:none}
 #ag-wrap.ag-tiny .ag-lab b{font-size:9px}
 #ag-wrap.ag-tiny .ag-bar .ag-nm{font-size:8.5px}
 #ag-wrap .ag-track{position:relative;flex:1 1 auto;min-width:0;border-radius:6px;
@@ -59948,7 +59979,9 @@ function _agRender(){
   try{ _mpStampSince(pcs); }catch(_){}
   let head = '<div class="ag-row ag-head"><div class="ag-lab"></div><div class="ag-track">';
   for(let h=0; h<24; h++){
-    if(h % _tickStep) continue;                     /* [v1433] 3 / 6 / 12 시간 — 좁아질수록 성기게. 24개는 촘촘해서 못 읽는다 */
+    if(h % 3) continue;                             /* 3시간마다 — 24개는 촘촘해서 못 읽는다.
+       [v1435] 좁을 때 6·12시간으로 성기게 가는 것은 CSS(컨테이너 질의)가 h6·h12 표를 보고
+       고른다. 여기서 미리 솎으면 판이 넓어져도 성긴 채로 남는다 — 다시 그려야 돌아온다. */
     /* ═══ [v1159] 눈금이 오른쪽으로 밀려 있던 것 ═══
        boss “이거 잘 안보여 그리고 눈금은 왜 살짝 오른쪽으로 가있는거야?”
        left 만 주고 끝냈다. 글자는 그 지점에서 '오른쪽으로' 자라므로, 눈금선은
@@ -59958,7 +59991,9 @@ function _agRender(){
     /* [v1420] 눈금은 이제 그냥 그 자리의 시각이다. 예전엔 막대는 안 움직이고 눈금
        글자만 _tzH 로 돌려서, WIB 로 바꾸면 축이 22-01-04… 로 시작하는 이상한 자가
        됐다. 이제 막대 쪽(_agSegs)이 옮겨 오므로 축은 언제나 00-03-06… 이다. */
-    head += '<span class="ag-h'+(h%6===0?' big':' mid')+(h===0?' first':'')+'" style="left:'+(h/24*100)+'%">'+pad2(h)+'</span>';
+    head += '<span class="ag-h'+(h%6===0?' big':' mid')+(h===0?' first':'')
+          + (h%6===0?' h6':'')+(h%12===0?' h12':'')      /* [v1435] 좁을 때 CSS 가 골라 숨긴다 */
+          + '" style="left:'+(h/24*100)+'%">'+pad2(h)+'</span>';
   }
   head += '</div></div>';
   let rows = '';
