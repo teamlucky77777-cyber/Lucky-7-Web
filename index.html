@@ -4,7 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
 <title>ARASAKA Corp</title>
-<!-- BUILD: v1431 | 온보딩 화면 — 구원씨 19단계를 한 사람씩 한 화면에서 -->
+<!-- BUILD: v1432 | 테스트 배지에 며칠째인지 · PC18 클라 id 바로잡음 -->
 <!-- v745 기록은 git 이력(v1302 이전 커밋)에 있다 — 100KB 변경사 주석을 배포에서 제거 -->
 <!-- [v677] a <link href> cannot read a CSS variable, so the favicon carries its own copy.
      64px: a browser tab draws it at 16-32px, so this is 2x-DPR sharp at 11KB. -->
@@ -9882,6 +9882,12 @@ html #sr-app .sr-fchip .v{font-size:14px}
   padding:2px 8px;border-radius:6px;margin-left:6px;
   background:repeating-linear-gradient(45deg,#c24d42 0 6px,#a03a30 6px 12px);
   animation:iqTestPulse 1.8s ease-in-out infinite}
+/* [v1432] 며칠째인지 — 오래된 테스트는 스스로 낡아 보이게. 빨갛기만 하면 어제 것과
+   엿새 된 것이 같아 보이고, 같아 보이면 아무도 안 치운다. */
+.pc-testbadge .pc-testd{font-style:normal;font-weight:700;font-size:8.5px;opacity:.72;
+  padding-left:5px;margin-left:1px;border-left:1px solid rgba(255,255,255,.35);font-variant-numeric:tabular-nums}
+.pc-testbadge.stale{animation:none;opacity:.62;
+  background:repeating-linear-gradient(45deg,#8a4a43 0 6px,#6e3a34 6px 12px)}
 @media (prefers-reduced-motion:reduce){.st-test .sr-iqstage,.pc-testbadge{animation:none}}
 /* 잡힌 것은 살짝 숨을 쉰다 — 지금 누가 손대고 있다는 뜻 */
 .pc-held::after{content:"";position:absolute;inset:-2px;border-radius:inherit;pointer-events:none;
@@ -60150,8 +60156,27 @@ function _agRender(){
             : (kl?'보기 전용 — 배정은 OP·대표가 바꿉니다':'View only — assignments are managed by OP/CEO'))+'">'
       +   '<b>PC-'+pad2(p.id)+'</b>'
       +   (function(){ /* [v1351] 이 PC 에서 신규 클라 테스트 중 — 빨간 줄무늬(백업 초록 줄무늬의 빨간 판) */
+            /* ═══ [v1432] 테스트가 며칠째인지 같이 적는다 ═══════════════════════
+               boss "저거 PC 2번 저거 빨간색 뭐냐 저거"
+               빨간 배지는 '이 PC 에서 신규 클라 테스트 중' 이라는 뜻인데, 며칠이 지나도
+               똑같이 빨갛기만 해서 어제 시작한 것과 엿새 된 것이 구분이 안 됐다.
+               사장님이 뭔지 물어본 그 카드는 6일째였고 그 PC 엔 배정된 사람도 없었다 —
+               아무도 안 돌리는 테스트가 계속 빨갛게 남아 있던 것이다.
+               날짜를 적으면 오래된 것이 스스로 드러난다. 3일 넘으면 흐릿하게 낡아 보이게
+               하고(stale), 툴팁은 사람이 아무도 없다는 것까지 말한다. */
             try{ var _tq=(typeof _pcbTestOnPc==='function')?_pcbTestOnPc(p.id):null;
-              return _tq?('<span class="pc-testbadge" title="'+(kl?'신규 클라이언트 테스트 중 — 문의 카드: ':'Testing new client: ')+_mtcEsc(String(_tq.name||''))+'">🧪 '+(kl?'테스트':'TEST')+' · '+_mtcEsc(String(_tq.name||'').slice(0,6))+'</span>'):''; }catch(_){ return ''; } })()
+              if(!_tq) return '';
+              var _td=null; try{ var _c=_tq.createdAt?new Date(_tq.createdAt):null;
+                if(_c && !isNaN(_c)) _td=Math.floor((Date.now()-_c.getTime())/86400000); }catch(_){}
+              var _tn=(p.assignments||[]).filter(function(a){ return a && a.staff; }).length;
+              var _old=(_td!=null && _td>=3);
+              return '<span class="pc-testbadge'+(_old?' stale':'')+'" title="'
+                + (kl?'신규 클라이언트 테스트 중 — 문의 카드: ':'Testing new client: ')+_mtcEsc(String(_tq.name||''))
+                + (_td!=null?(kl?(' · '+(_td+1)+'일째'):(' · day '+(_td+1))):'')
+                + (_tn===0?(kl?' · 이 PC 에 배정된 사람이 없습니다':' · nobody assigned to this PC'):'')
+                + (kl?' · 클라별에서 카드를 더블클릭하면 단계가 넘어갑니다':'')+'">🧪 '+(kl?'테스트':'TEST')
+                + ' · '+_mtcEsc(String(_tq.name||'').slice(0,6))
+                + (_td!=null?('<i class="pc-testd">'+(_td+1)+'일</i>'):'')+'</span>'; }catch(_){ return ''; } })()
       +   (_pcBrk?('<i class="ag-lbrk" data-no-i18n title="'+(kl?'지금 중단 중 — 인터넷·정전 등 (재개를 안 눌렀습니다)':'downtime open — not resumed yet')+'">'+(kl?'중단':'PAUSE')+'</i>'):'')
       +   (led?('<i class="ag-led" title="'+(kl?'리더 — 누르면 해제':'leader')+'" onclick="event.stopPropagation();_agDelLeader('+p.id+')">👑'+_mtcEsc(String(led.name||'').slice(0,4))+'</i>'):'')
       +   (cl?('<em title="'+(kl?'클라이언트 — 누르면 해제':'client')+'" onclick="event.stopPropagation();_agDelClient('+p.id+',\''+_mtcEsc(String(cid))+'\')">'+_mtcEsc(String(cl).slice(0,8))+'</em>'):'')
