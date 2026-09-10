@@ -4,7 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
 <title>ARASAKA Corp</title>
-<!-- BUILD: v1475 | 직원 풀 OP TEAM 에 ATS 자리표 카드 (계정 없이 화면에만) -->
+<!-- BUILD: v1476 | 온보딩 목록에서 ATS 자리표 빼기 -->
 <!-- v745 기록은 git 이력(v1302 이전 커밋)에 있다 — 100KB 변경사 주석을 배포에서 제거 -->
 <!-- [v677] a <link href> cannot read a CSS variable, so the favicon carries its own copy.
      64px: a browser tab draws it at 16-32px, so this is 2x-DPR sharp at 11KB. -->
@@ -47344,7 +47344,7 @@ async function renderOnboarding(pickId){
   /* 사람 목록 — 재직자를 새로 온 순서로. 온보딩은 늘 '최근에 온 사람' 을 본다. */
   var people = [];
   try{
-    people = (typeof STAFF!=='undefined' && Array.isArray(STAFF) ? STAFF : []).filter(function(s){ return s && s.id; })
+    people = (typeof STAFF!=='undefined' && Array.isArray(STAFF) ? STAFF : []).filter(function(s){ return s && s.id && !s.virtual; })   /* [v1476] ATS 자리표는 사람이 아니다 */
       .map(function(s){
         var p = (STAFF_PROFILE[s.id] && STAFF_PROFILE[s.id].personal) || {};
         return { id:s.id, name:s.name || p.full_name || '?', start:String(p.start_work||'') };
