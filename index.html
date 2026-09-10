@@ -4,7 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
 <title>ARASAKA Corp</title>
-<!-- BUILD: v1459 | 팀 기본 배치 모두에게 한 번 깔기 (PB_KEY v12) -->
+<!-- BUILD: v1460 | 클라별 쌀: 상세 머리 칩이 계정 이름으로 세고, 판 위에 총 작업량 한 줄 -->
 <!-- v745 기록은 git 이력(v1302 이전 커밋)에 있다 — 100KB 변경사 주석을 배포에서 제거 -->
 <!-- [v677] a <link href> cannot read a CSS variable, so the favicon carries its own copy.
      64px: a browser tab draws it at 16-32px, so this is 2x-DPR sharp at 11KB. -->
@@ -39457,7 +39457,12 @@ function _srRecCardHTML(data){
         +'<div class="sr-focus-hd">'
           +'<div class="sr-focus-av" style="background:#3a6ea5">🎮</div>'
           +'<div style="min-width:0"><div class="sr-focus-nm">'+esc(co.client||curC)+((co.pc!=null&&String(co.pc)!=='')?'<span class="sr-focus-gb">PC'+esc(String(co.pc))+'</span>':'')+'</div>'
-            +'<div class="sr-focus-chips">'+chipC(_L?'평균 EXP%':'Average EXP%',(cst.avg!=null?cst.avg.toFixed(2)+'%':'—'))+chipC(_L?'기준 대비':'vs Standard',(cst.perf!=null?Math.round(cst.perf)+'%':'—'))+(function(){ /* [v1407] boss "카드에 적지 말고 자세히 눌렀을 때" — 작업량(쌀)은 여기서만 */ try{ if(typeof clientSsal!=='function' || !(currentUserRole==='admin'||currentUserRole==='op')) return ''; var _s=clientSsal(co.client||curC); return _s?chipC('🌾 '+(_L?'작업량':'Workload'),esc(fmtSsal(_s))):''; }catch(_){ return ''; } })()+chipC(_L?'투입 직원':'Staff Deployed',cst.nStaff+(_L?'명':''))+chipC(_L?'보고':'Reports',(co.reps||0)+(_L?'건':''))+chipC(_L?'장비셋':'Gear Set',_L?'미수집':'Not collected')+'</div></div>'
+            +'<div class="sr-focus-chips">'+chipC(_L?'평균 EXP%':'Average EXP%',(cst.avg!=null?cst.avg.toFixed(2)+'%':'—'))+chipC(_L?'기준 대비':'vs Standard',(cst.perf!=null?Math.round(cst.perf)+'%':'—'))+(function(){ /* [v1407] boss "카드에 적지 말고 자세히 눌렀을 때" — 작업량(쌀)은 여기서만 */ try{ if(typeof clientSsal!=='function' || !(currentUserRole==='admin'||currentUserRole==='op')) return '';
+                   /* [v1460] boss "몇 쌀인지 어떻게 합쳐진 거임" — 리포트 이름(남강쌤)과 계정 이름이 다르면 0쌀이 나와 칩이 사라졌다.
+                      계정을 먼저 찾아 그 이름으로 센다. 계정이 없거나 0이면 '—' 로라도 보인다. */
+                   var _nmC=co.client||curC, _accC=null; try{ _accC=(typeof _srClAcctFor==='function')?_srClAcctFor(_srClNorm(_nmC)):null; }catch(_){}
+                   var _s=clientSsal(_accC&&_accC.name?_accC.name:_nmC); if(!_s && _accC && _accC.name!==_nmC) _s=clientSsal(_nmC);
+                   return chipC('🌾 '+(_L?'작업량':'Workload'), _s?esc(fmtSsal(_s)):'—'); }catch(_){ return ''; } })()+chipC(_L?'투입 직원':'Staff Deployed',cst.nStaff+(_L?'명':''))+chipC(_L?'보고':'Reports',(co.reps||0)+(_L?'건':''))+chipC(_L?'장비셋':'Gear Set',_L?'미수집':'Not collected')+'</div></div>'
         +'</div>'
         /* [v1410] 오늘 채운 칸은 뺐다 — boss "그냥 빼". 같은 정보는 내 클라 카드(직원용)의 줄 목록에 이미 있다 */
         /* [v1398] boss "투입 타임라인도 기본값은 접어서, 펼쳐서 볼 수 있게" — 머리말을 누르면 펼침/접힘, 상태는 기억 */
@@ -40285,7 +40290,12 @@ function _srRecCardHTML(data){
   var body = (mode==='clock')
     ? _clockBoardHTML(sessions)
     : (mode==='client')
-    ? ('<div class="sr-clgrid">'+clientCards+'</div>'+_restSec+(_trainN?('<div class="sr-cltrain-hd">'+(_uiLang()==='ko'?'\ud83c\udf93 \ud2b8\ub808\uc774\ub2dd \ud074\ub77c · 기준 없음':'\ud83c\udf93 Training · no standard')+'<span class="sr-cltrain-cnt">'+_trainN+'</span></div><div class="sr-clgrid">'+_trainCards+'</div>'):''))
+    ? ((function(){ /* [v1460] 옛 클라이언트 탭의 "총 작업량" — boss "총 작업량 위에 뜨는 건 괜찮다". 카드 겉엔 안 적고 판 위에 한 줄. */
+          try{ if(!(currentUserRole==='admin'||currentUserRole==='op') || typeof clientSsal!=='function' || typeof CLIENT_ACCOUNTS==='undefined') return '';
+               var _tot=0,_n=0; (CLIENT_ACCOUNTS||[]).forEach(function(a){ if(!a||a.active===false) return; var v=clientSsal(a.name); if(v>0){ _tot+=v; _n++; } });
+               if(!_tot) return '';
+               return '<div class="sr-cltrain-hd sr-clssal-hd">🌾 '+(_uiLang()==='ko'?'총 작업량':'Total workload')+'<span class="sr-cltrain-cnt">'+esc(fmtSsal(_tot))+'</span><span class="sr-clrest-sub">'+(_uiLang()==='ko'?(_n+'개 클라 · 10시간 = 1쌀 · 카드를 열면 클라별 작업량'):(_n+' clients · 10h = 1 · open a card for each'))+'</span></div>'; }catch(_){ return ''; } })()
+       +'<div class="sr-clgrid">'+clientCards+'</div>'+_restSec+(_trainN?('<div class="sr-cltrain-hd">'+(_uiLang()==='ko'?'\ud83c\udf93 \ud2b8\ub808\uc774\ub2dd \ud074\ub77c · 기준 없음':'\ud83c\udf93 Training · no standard')+'<span class="sr-cltrain-cnt">'+_trainN+'</span></div><div class="sr-clgrid">'+_trainCards+'</div>'):''))
     /* [v1302] 아래 막대(일일 기록 · N + 버튼 셋)를 걷었다. 건수는 머리말 오른쪽으로,
        도구는 탭 줄 오른쪽으로 갔다 — 화면을 가로지르는 줄이 셋에서 둘이 된다. */
     : ((curG==='all'?'':seg)+bands+resignedSec);
