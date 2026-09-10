@@ -4,7 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
 <title>ARASAKA Corp</title>
-<!-- BUILD: v1473 | 초대 코드 누르면 왓츠앱 안내문이 통째로 복사된다 (한국어+인니어) -->
+<!-- BUILD: v1474 | ATS 자리표 카드 — 기준 없는 시간 경고에서 빼기 (자동사냥은 채점 대상이 아니다) -->
 <!-- v745 기록은 git 이력(v1302 이전 커밋)에 있다 — 100KB 변경사 주석을 배포에서 제거 -->
 <!-- [v677] a <link href> cannot read a CSS variable, so the favicon carries its own copy.
      64px: a browser tab draws it at 16-32px, so this is 2x-DPR sharp at 11KB. -->
@@ -40408,7 +40408,10 @@ function _srHealthHTML(daily, sessions){
     });
     /* [v775] boss: "아직 트레이닝이잖아". 교육 계정은 기준이 없는 게 정상이다 — 그걸 경고로 띄우면
        진짜 문제(실 클라이언트인데 기준이 없는 EL·Gali)가 소음에 묻힌다. 교육은 따로, 조용히 센다. */
-    var isTrainClient = function(nm){ return /training|훈련|연습/i.test(String(nm||'')); };
+    /* [v1474] ATS(자동사냥)도 기준이 없는 게 정상이다 — 클라이언트가 "ATS 돌려 주세요" 하면
+       그 시간은 사람이 사냥한 게 아니라 프로그램이 돈 시간이라 채점 대상이 아니다.
+       교육 계정과 같이 조용히 센다. 안 그러면 진짜 문제(실 클라인데 기준 없음)가 소음에 묻힌다. */
+    var isTrainClient = function(nm){ return /training|훈련|연습/i.test(String(nm||'')) || /^\s*ats\s*$/i.test(String(nm||'')); };
     /* 1) 진짜 문제 — 실제 클라이언트인데 기준이 없어 채점이 안 되는 시간 */
     var un = {}, train = {};
     rows.forEach(function(s){
