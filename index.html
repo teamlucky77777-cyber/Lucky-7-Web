@@ -4,7 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
 <title>ARASAKA Corp</title>
-<!-- BUILD: v1454 | 저장된 배치 한 번 새로 — 변경기록 짧아진 것이 바로 반영되게 -->
+<!-- BUILD: v1455 | 배정 격자는 안 깎는다 — PC 전부 보이는 높이 먼저, 남는 걸로 변경기록 -->
 <!-- v745 기록은 git 이력(v1302 이전 커밋)에 있다 — 100KB 변경사 주석을 배포에서 제거 -->
 <!-- [v677] a <link href> cannot read a CSS variable, so the favicon carries its own copy.
      64px: a browser tab draws it at 16-32px, so this is 2x-DPR sharp at 11KB. -->
@@ -58255,7 +58255,7 @@ function toggleOverrideWorkDays(){
    배치는 각자 브라우저에 저장되므로, 기본값만 고치면 이미 쓰던 사람은 옛 배치를
    그대로 본다. 키를 올려 모두 한 번 새 기본값에서 시작하게 한다.
    (그 뒤에 각자 옮기는 것은 그대로 자기 브라우저에 남는다) */
-const PB_KEY = "lucky7_poolbox_v10";   /* [v1454] v1453 의 새 세로 배분이 이미 쓰던 사람에게도 한 번 깔리게 */
+const PB_KEY = "lucky7_poolbox_v11";   /* [v1455] 격자를 안 깎는 새 배분이 모두에게 한 번 깔리게 */
 /* [v1066] boss "더 자유롭게" — 상한을 화면 크기까지 열어둔다 */
 const PB_MINW = 190, PB_MINH = 110, PB_MAXW = 1400;
 /* [v1067] PC 카드·타임라인도 같은 박스로. w/x 가 null 이면 화면 크기에서 계산한다
@@ -59045,10 +59045,7 @@ function pcTidyBoxes(silent){
      누르면 배정·시계·PC 카드만 줄을 서고 변경 기록판은 제자리에 남아 겹쳤다.
      차례는 배정 격자 → 변경 기록 → 시계 → PC 카드. 사장님이 맞춰 둔 그 차례다. */
   const LEFTS = ['assign','note','clock','pc'];
-  const openers = LEFTS.filter(k => !st[k].col);
-  const closers = LEFTS.filter(k => st[k].col);
   let y = TOP;
-  const spare = colH - closers.length*(BAR+M) - Math.max(0, openers.length-1)*M;
   /* [v1098] boss "배정 격자도 좀 축소" — 격자는 한 PC 가 한 줄(22px+2)이라
      필요한 높이가 정해져 있다. 남는 세로를 다 먹고 아래 절반을 비워 두고 있었다.
      16대면 440 근처면 되는데 846 을 쓰고 있었다. 내용만큼만 쓴다. */
@@ -59084,27 +59081,46 @@ function pcTidyBoxes(silent){
      순서를 뒤집는다: 격자가 24대를 다 보여 줄 만큼(agNeed) 먼저 가져가고,
      변경 기록은 남는 것을 받되 280px 을 넘지 않는다.
      좁은 화면에서는 격자가 양보해 변경 기록에 최소 140px 은 남긴다(쓰는 칸 + 두어 줄). */
-  const NOTE_MIN = 140, NOTE_MAX = 280;   /* [v1454] 140 이면 쓰는 칸+두어 줄. 격자가 24대를 다 보여 주는 쪽이 먼저다 */
-  const others = openers.filter(k => k !== 'assign');
-  const agH = (openers.indexOf('assign') >= 0)
-    ? Math.max(220, Math.min(agNeed, spare - others.length*NOTE_MIN))
-    : 0;
-  const rest = others.length
-    ? Math.max(NOTE_MIN, Math.min(NOTE_MAX, Math.floor((spare - agH) / others.length)))
-    : 0;
-  const MIN_H = NOTE_MIN;
+  /* ═══ [v1455] 배정 격자는 깎지 않는다 ═════════════════════════════════════════
+     boss "배정격자는 크기 줄이지말고 다 보이게끔 배치해달라고"
+
+     v1452~v1454 는 늘 격자를 조금씩 깎아서 아래 상자를 채웠다. 비율을 어떻게
+     바꿔도 결국 마지막 몇 줄이 잘렸다. 순서를 못 박는다:
+
+       ① 배정 격자가 **PC 전부를 보여 줄 높이(agNeed)** 를 먼저 가져간다. 끝.
+       ② 남는 세로로 변경 기록을 편다 — 최대 280px.
+       ③ 남는 것이 모자라면 **변경 기록을 접는다.** 격자를 깎지 않는다.
+          접혀도 막대는 남으니 한 번 눌러 펴면 된다.
+
+     그래도 화면이 모자라면 격자만 제 키를 지키고 아래로 넘친다 — 그때는 자리가
+     진짜 없는 것이고, 잘린 격자를 보여 주는 것보다 낫다. */
+  const NOTE_MIN = 120, NOTE_MAX = 280;
+  const agH = Math.max(220, agNeed);                 /* 격자는 필요한 만큼, 언제나 */
+  const others = LEFTS.filter(k => k !== 'assign');
+  /* 격자와 접힌 막대들이 쓰고 남는 세로 */
+  let budget = colH - agH - M;
+  others.forEach(k => { if(st[k].col) budget -= (BAR + M); });
+  const openOthers = others.filter(k => !st[k].col);
+  let rest = openOthers.length ? Math.floor((budget - (openOthers.length-1)*M) / openOthers.length) : 0;
+  if(openOthers.length && rest < NOTE_MIN){         /* 펼 자리가 없으면 접는다 */
+    openOthers.forEach(k => { st[k].col = true; });
+    rest = 0;
+  } else {
+    rest = Math.min(NOTE_MAX, rest);
+  }
   LEFTS.forEach(k => {
     st[k].x = L+M; st[k].w = leftW;
     st[k].y = y;
-    const open = !st[k].col;
-    if(open) st[k].h = Math.max(MIN_H, (k === 'assign') ? agH : rest);
-    y += (open ? st[k].h : BAR) + M;
+    if(!st[k].col) st[k].h = (k === 'assign') ? agH : rest;
+    y += (st[k].col ? BAR : st[k].h) + M;
   });
-  /* 넘치면 가장 큰 것부터 줄인다 */
+  /* 다 접고도 화면 밖으로 밀리면(작은 노트북) 그때만 격자를 줄인다 —
+     접힌 막대까지 화면 밖으로 나가면 펼 수조차 없다. 사장님 화면에서는 안 걸린다. */
   const over = y - M - parkY;
-  if(over > 0){ const big = openers[0] || 'assign';
-    st[big].h = Math.max(MIN_H, st[big].h - over);
-    let yy = TOP; LEFTS.forEach(k => { st[k].y = yy; yy += ((st[k].col?BAR:st[k].h) + M); }); }
+  if(over > 0 && !st.assign.col){
+    st.assign.h = Math.max(220, st.assign.h - over);
+    let yy = TOP; LEFTS.forEach(k => { st[k].y = yy; yy += ((st[k].col ? BAR : st[k].h) + M); });
+  }
 
   /* 오른쪽: 직원 풀이 크고 클라이언트 풀이 작다 — 끌어오는 쪽에 자리를 준다 */
   /* [v1098] L 이 빠져 있었다. 사이드바 폭(248)만큼 왼쪽으로 밀려서 오른쪽 열이
