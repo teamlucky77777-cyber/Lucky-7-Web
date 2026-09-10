@@ -4,7 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
 <title>ARASAKA Corp</title>
-<!-- BUILD: v1444 | 변경 내역 한 줄에 하나 — PC 번호 눌러 그 PC만, 사람 이름은 바뀔 때만 -->
+<!-- BUILD: v1445 | 변경 기록판 시스템 줄도 서랍과 같은 말로 — PC 번호 눌러 그 PC 내역 -->
 <!-- v745 기록은 git 이력(v1302 이전 커밋)에 있다 — 100KB 변경사 주석을 배포에서 제거 -->
 <!-- [v677] a <link href> cannot read a CSS variable, so the favicon carries its own copy.
      64px: a browser tab draws it at 16-32px, so this is 2x-DPR sharp at 11KB. -->
@@ -8713,7 +8713,21 @@ html[data-theme=light] #ch-pc-status #pc-cmdbar .dp-day.on{background:#fff;color
   font-size:11.5px;line-height:1.5;min-width:0}
 .pn-sys:hover{background:var(--bg-h,#1f2025)}
 .pn-sys .pn-face{opacity:.75;font-size:7.5px}
-.pn-sysa{color:var(--tx3,#8a8a92);overflow:hidden;text-overflow:ellipsis;white-space:nowrap;min-width:0}
+.pn-sysa{color:var(--tx3,#8a8a92);overflow:hidden;text-overflow:ellipsis;white-space:nowrap;min-width:0;flex:1 1 auto}
+/* [v1445] 시스템 줄 — 서랍(누가 뭘 바꿨나)과 같은 모양. PC 번호는 눌러서 그 PC 내역으로 */
+.pn-sysa i{font-style:normal;color:var(--tx4,#6c6b66);font-variant-numeric:tabular-nums;margin-left:6px;font-size:11px}
+.pn-sysa b{color:var(--tx2,#b9b8b4);font-weight:600}
+.pn-sysn{flex:0 0 auto;width:24px;text-align:center;font-size:10.5px;font-weight:800;letter-spacing:-.02em;
+  font-variant-numeric:tabular-nums;color:var(--tx3,#8a8a92);background:var(--bg-a,#232326);border-radius:5px;padding:2px 0;cursor:pointer}
+.pn-sysn:hover{background:var(--ac,#c2a04a);color:#151517}
+.pn-sysn.off{opacity:.3;cursor:default;background:transparent}
+.pn-sys{border-left:2px solid transparent}
+.pn-sys.v-add{border-left-color:#4fb07a}
+.pn-sys.v-del{border-left-color:#e0655a}
+.pn-sys.v-move{border-left-color:#c9963a}
+.pn-sys.v-bk{border-left-color:#6e9ec9}
+.pn-sys.v-cl{border-left-color:#b087cf}
+.pn-sys.v-plan{border-left-color:rgba(201,150,58,.4)}
 .pn-syst{flex:0 0 auto;font-size:11px;font-weight:700;color:var(--tx2,#b9b8b4)}
 .pn-sysw{flex:0 0 auto;margin-left:auto;padding-left:8px;font-size:10px;color:var(--tx4,#6c6b66);
   font-variant-numeric:tabular-nums;white-space:nowrap}
@@ -60040,10 +60054,24 @@ function _pnRender(){
         + '</div></div>';
     }
     const l = it.l;
-    return '<div class="pn-sys">'
+    /* ═══ [v1445] 시스템 줄도 서랍과 같은 말로 ═══════════════════════════════════
+       여태 여기는 로그 문장을 그대로 뿌렸다 — "새로 배정 · PC-18 00:00~08:00 Kal".
+       옆(누가 뭘 바꿨나)은 v1444 에서 [PC][무슨 일] 로 갈라 놓았는데 여기만 옛말이면
+       같은 사실이 두 가지 말투로 보인다. 서랍이 쓰는 해석기를 그대로 빌려 쓴다.
+       번호를 누르면 그 PC 전체 내역이 열린다. */
+    const p = (typeof _pchParse === 'function') ? _pchParse(l) : null;
+    if(!p) return '<div class="pn-sys">'
       + _pnFace(l.actor, 18)
       + '<span class="pn-sysa">'+esc(_pnPretty(l.action))+'</span>'
       + (l.target ? ('<b class="pn-syst">'+esc(l.target)+'</b>') : '')
+      + '<span class="pn-sysw">'+esc(_pnWhen(it.ts))+'</span>'
+      + '</div>';
+    return '<div class="pn-sys'+(p.v ? ' v-'+p.v : '')+'" title="'+esc(String(l.action||'')+(l.target?' · '+l.target:''))+'">'
+      + _pnFace(l.actor, 18)
+      + (p.pc != null
+          ? '<b class="pn-sysn" title="PC-'+(p.pc<10?'0':'')+p.pc+' 내역 보기" onclick="event.stopPropagation();_pcHistForPC('+p.pc+')">'+(p.pc<10?'0':'')+p.pc+'</b>'
+          : '<b class="pn-sysn off">·</b>')
+      + '<span class="pn-sysa">'+p.txt+(p.when ? ('<i>'+esc(p.when)+'</i>') : '')+(p.extra ? ('<i>'+p.extra+'</i>') : '')+'</span>'
       + '<span class="pn-sysw">'+esc(_pnWhen(it.ts))+'</span>'
       + '</div>';
   }).join('');
@@ -72087,6 +72115,8 @@ console.info('AUTO100 build applied',AUTO100_BUILD.version,v3Audit());
     try{ if(typeof sb !== 'undefined' && sb && typeof syncLogsFromCloud === 'function'){ syncLogsFromCloud().then(function(){ try{ _logSynced = true; _logSig = JSON.stringify(LOG_DATA); }catch(_){} if(H.open) draw(); }).catch(function(){}); } }catch(_){}
     setTimeout(function(){ var i = box.querySelector('input'); if(i) i.focus(); }, 340);
   };
+  /* [v1445] 변경 기록판도 같은 눈으로 읽는다 — 판이 둘인데 말투가 둘이면 안 된다 */
+  window._pchParse = parse;
   /* 다른 데서 "이 PC 내역" 으로 바로 열 수 있게 */
   window._pcHistForPC = function(pc){ H.pc = Number(pc); H.filter = 'all'; H.q = '';
     var b = ensure(); var i = b.querySelector('input'); if(i) i.value = ''; _pcHistToggle(true); };
