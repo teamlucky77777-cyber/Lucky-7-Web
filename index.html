@@ -4,7 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
 <title>ARASAKA Corp</title>
-<!-- BUILD: v1466 | 온보딩 Loading 멈춤 고침 · 메이플 캐릭터 고르기(내 시프트·온보딩 10번) -->
+<!-- BUILD: v1467 | 합격 처리: 저장을 먼저 기다린 뒤 온보딩으로 (카드가 제자리로 돌아가던 것) -->
 <!-- v745 기록은 git 이력(v1302 이전 커밋)에 있다 — 100KB 변경사 주석을 배포에서 제거 -->
 <!-- [v677] a <link href> cannot read a CSS variable, so the favicon carries its own copy.
      64px: a browser tab draws it at 16-32px, so this is 2x-DPR sharp at 11KB. -->
@@ -16256,7 +16256,7 @@ async function _doSaveRecruits(){
       var wait = Math.max(3000, backoffLeft + 800);
       clearTimeout(_recruitSaveTimer);
       _recruitSaveTimer = setTimeout(_doSaveRecruits, wait);
-      return;
+      return res;   /* [v1467] 부르는 쪽(합격 처리)이 실패를 안다 */
     }
     // still failing after many tries — tell the user gently (data is safe locally, will retry on next edit)
     _recruitSaveTries = 0;
@@ -16860,11 +16860,15 @@ function _apFinalizePass(id){
      ③ 온보딩 화면의 그 사람에게로 간다. 고원 씨는 코드를 왓츠앱에 붙이기만 하면 된다. */
   /* [v1465] v1462 가 여기서 business 를 박아 버려 합격 카드가 Pass 칸을 건너뛰고 배치 영역으로 튀었다 — Pass 칸이 늘 0.
      business 는 사람이 배치 영역에 끌어다 놓을 때만. 온보딩 목록은 business 없이도 합격자를 받는다. */
-  saveRecruits();
   renderRecruit();
+  /* [v1467] 고원 씨 "Pass 에 넣었더니 제자리로 돌아갔다" — 저장(700ms 뒤)이 끝나기 전에 온보딩으로 넘어가면서
+     들어오는 길에 클라우드 사본을 다시 받아 되돌아갔다. 이제 저장을 먼저 기다리고, 실패하면 그 자리에 남아 말해 준다. */
   (async function(){
+    var saved = false;
+    try{ var r = await saveRecruits(true); saved = !(r && (r.error || r.deferred)); }catch(_){ saved = false; }
+    if(!saved){ toast('저장이 안 됐습니다 — 잠시 뒤 다시 합격 처리해 주세요 (카드는 그대로 둡니다)', true); return; }
     try{ if(typeof _obInviteCode === 'function'){ var code = await _obInviteCode(a);
-      if(code){ try{ copyText(code); }catch(_){} toast('초대 코드 ' + code + ' 복사됨 — 왓츠앱으로 보내면 가입하는 순간 직원으로 이어집니다'); } } }catch(_){}
+      if(code){ try{ copyText(code); }catch(_){} toast('초대 코드 ' + code + ' 복사됨 — 왓츠앱으로 보내면 가입하는 순간 직원으로 이어집니다'); } } }catch(e){ toast('초대 코드는 못 만들었어요 — 온보딩 9번에서 다시 누르면 됩니다 (' + (e && e.message) + ')', true); }
     try{ window._obCur = 'app:' + a.id; setActiveChannel('op-onboarding'); }catch(_){}
   })();
 }
