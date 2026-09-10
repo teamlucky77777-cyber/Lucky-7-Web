@@ -4,7 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
 <title>ARASAKA Corp</title>
-<!-- BUILD: v1437 | 테스트 표시를 노란 TEST 글자로 -->
+<!-- BUILD: v1438 | 클라 이름 먼저 · TEST 는 그 뒤 · 버튼은 겹쳐 띄움 -->
 <!-- v745 기록은 git 이력(v1302 이전 커밋)에 있다 — 100KB 변경사 주석을 배포에서 제거 -->
 <!-- [v677] a <link href> cannot read a CSS variable, so the favicon carries its own copy.
      64px: a browser tab draws it at 16-32px, so this is 2x-DPR sharp at 11KB. -->
@@ -8664,7 +8664,19 @@ html[data-theme=light] #ch-pc-status #pc-cmdbar .dp-day.on{background:#fff;color
 #ag-wrap{--lab:150px;--now:0%;font-variant-numeric:tabular-nums;user-select:none}
 #ag-wrap .ag-row{display:flex;align-items:stretch;height:26px}
 #ag-wrap .ag-row+.ag-row{margin-top:2px}
-#ag-wrap .ag-lab{flex:0 0 var(--lab);display:flex;align-items:center;gap:5px;padding:0 7px 0 2px;overflow:hidden}
+#ag-wrap .ag-lab{flex:0 0 var(--lab);display:flex;align-items:center;gap:5px;padding:0 7px 0 2px;overflow:hidden;position:relative}
+/* ═══ [v1438] ⏻🙈 버튼이 클라 이름 자리를 먹고 있었다 ═══════════════════════════
+   150px 안에서 PC 번호(36) + 버튼(34) + 시간(14) + 여백이 고정으로 100px 을 넘게 먹고,
+   줄어들 수 있는 것은 클라 이름뿐이라 이름이 늘 먼저 잘렸다. 버튼은 가끔 쓰는 것이니
+   평소엔 자리를 안 차지하게 겹쳐 두고 줄에 마우스를 올릴 때만 뜬다. */
+#ag-wrap .ag-lab .ag-btns{position:absolute;right:3px;top:50%;transform:translateY(-50%);
+  opacity:0;pointer-events:none;transition:opacity .12s ease;
+  background:linear-gradient(90deg,transparent 0,var(--bg-c,#1b1c20) 14px,var(--bg-c,#1b1c20) 100%);
+  padding-left:16px}
+#ag-wrap .ag-row:hover .ag-lab .ag-btns,
+#ag-wrap .ag-lab:focus-within .ag-btns{opacity:1;pointer-events:auto}
+/* 앉히지 않은 문의 이름 — 아직 손님이 아니라는 뜻으로 조금 흐리게 */
+#ag-wrap .ag-lab em.iq{opacity:.72;font-style:italic}
 #ag-wrap .ag-lab b{font:800 10.5px ui-monospace,monospace;color:var(--tx2,#b9b9b4);flex:0 0 auto}
 #ag-wrap .ag-lab em{font-style:normal;font-size:9px;color:var(--ac,#c9963a);overflow:hidden;
   text-overflow:ellipsis;white-space:nowrap;flex:1 1 auto;min-width:0}
@@ -60305,10 +60317,28 @@ function _agRender(){
          상자도 줄무늬도 아이콘도 다 걷어냈다. 노란 글자 네 자면 무슨 뜻인지 바로 읽힌다.
          배경이 없으니 잘려도 얼룩이 안 남고, 자리도 26px 밖에 안 먹는다.
          클라 이름·며칠째·사람 없음은 아래 이름 칸 툴팁이 말한다. */
-      +   (_tqRow?'<i class="ag-test" data-no-i18n>TEST</i>':'')
             +   (_pcBrk?('<i class="ag-lbrk" data-no-i18n title="'+(kl?'지금 중단 중 — 인터넷·정전 등 (재개를 안 눌렀습니다)':'downtime open — not resumed yet')+'">'+(kl?'중단':'PAUSE')+'</i>'):'')
       +   (led?('<i class="ag-led" title="'+(kl?'리더 — 누르면 해제':'leader')+'" onclick="event.stopPropagation();_agDelLeader('+p.id+')">👑'+_mtcEsc(String(led.name||'').slice(0,4))+'</i>'):'')
-      +   (cl?('<em title="'+(kl?'클라이언트 — 누르면 해제':'client')+'" onclick="event.stopPropagation();_agDelClient('+p.id+',\''+_mtcEsc(String(cid))+'\')">'+_mtcEsc(String(cl).slice(0,8))+'</em>'):'')
+      /* ═══ [v1438] 클라 이름이 먼저다. TEST 는 그 뒤에 붙는다 ═══════════════════
+         boss "클라이언트 이름이 안보이잖아" / "클라이름도 제대로 들어가고 그 뒤에 TEST가 딱 붙어야지"
+         v1437 은 TEST 를 PC 번호 바로 뒤에 넣었다. TEST 는 안 줄어드는 조각이라
+         줄어들 수 있는 유일한 조각인 클라 이름에서 26px 을 뺏었고, 이름이 '인…' 으로
+         잘렸다. 읽는 순서도 이름이 먼저다 — 어느 손님을 테스트하는지가 먼저이고
+         '테스트 중' 은 그 손님에 대한 말이다.
+         그리고 아직 자리에 앉히지 않은 손님(문의 카드만 붙은 PC-02 같은 경우)은
+         이름 칸이 비어 있었다. 앉은 클라가 없으면 테스트 중인 문의 이름을 쓴다 —
+         그 PC 에서 지금 누구를 보고 있는지가 화면에 있어야 한다. */
+      +   (function(){
+            var _nm = cl, _isIq = false;
+            if(!_nm && _tqRow && String(_tqRow.name||'').trim()){ _nm = String(_tqRow.name).trim(); _isIq = true; }
+            if(!_nm) return '';
+            return '<em class="'+(_isIq?'iq':'')+'" title="'+(_isIq
+                     ? (kl?'테스트 중인 문의 — 아직 자리에 앉지 않았습니다':'inquiry under test — not seated yet')
+                     : (kl?'클라이언트 — 누르면 해제':'client'))+'"'
+                 + (_isIq ? '' : (' onclick="event.stopPropagation();_agDelClient('+p.id+',\''+_mtcEsc(String(cid))+'\')"'))
+                 + '>'+_mtcEsc(_nm.slice(0,10))+'</em>';
+          })()
+      +   (_tqRow?'<i class="ag-test" data-no-i18n>TEST</i>':'')
       +   bkHtml
       +   '<u>'+hours+'h</u>'
       +   '<span class="ag-btns">'
