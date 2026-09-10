@@ -4,7 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
 <title>ARASAKA Corp</title>
-<!-- BUILD: v1462 | 합격 처리하면 초대 코드가 바로 만들어져 복사되고 온보딩 화면으로 넘어간다 -->
+<!-- BUILD: v1463 | 영어 화면에서 클라 이름이 반만 바뀌던 것 — 전체 일치는 가림막 전에 바로 번역, 이름 넷 추가 -->
 <!-- v745 기록은 git 이력(v1302 이전 커밋)에 있다 — 100KB 변경사 주석을 배포에서 제거 -->
 <!-- [v677] a <link href> cannot read a CSS variable, so the favicon carries its own copy.
      64px: a browser tab draws it at 16-32px, so this is 2x-DPR sharp at 11KB. -->
@@ -65010,6 +65010,10 @@ setInterval(renderTimeline, 60000);
   "안개기사":"Angae Gisa",
   "담배쌤":"Dambae-ssaem",
   "순수쌤":"Sunsu-ssaem",
+  "라이어쌤":"Liar-ssaem",
+  "강원도쌤":"Gangwondo-ssaem",
+  "남강쌤":"Namgang-ssaem",
+  "경상도쌤":"Gyeongsangdo-ssaem",
   "젠틀쌤":"Gentle-ssaem",
   "지존쌤":"Jijon-ssaem",
   "검쌤":"Geom-ssaem",
@@ -67610,6 +67614,10 @@ setInterval(renderTimeline, 60000);
   // so app-label behaviour is unchanged; only user text is now off limits.
   function _trText(raw){
     var D=I18N; if(!D||typeof D!=='object') return raw;
+    /* [v1463] boss "영어인데 클라 이름이 아직도 한국어" — 글 전체가 사전의 열쇠와 똑같으면 그건 우리가 정한 번역이다.
+       가림막(사용자 글 보호)을 거치기 전에 바로 바꾼다. 가림막은 짧은 라벨("순수" 같은)이 이름 안에 들어 있으면
+       이름을 토막 내서 열쇠가 안 맞게 만들었다 — 카드 절반만 영어가 되던 이유. */
+    try{ var _k0=String(raw).trim(); if(_k0 && D[_k0]!=null) return raw.replace(_k0, D[_k0]); }catch(_){}
     var U=_userTexts(), prot=[], out=raw;
     for(var i=0;i<U.length;i++){
       var u=U[i];
