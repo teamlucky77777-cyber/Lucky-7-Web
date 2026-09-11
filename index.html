@@ -4,7 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
 <title>ARASAKA Corp</title>
-<!-- BUILD: v1486 | 온보딩 간소화 — X 칸 없애고 번호가 상태를 말한다 · 기록 없는 단계는 안 센다 · 영어 화면 정리 -->
+<!-- BUILD: v1487 | 메이플은 마릿수로 채점한다 — 목표 6,500 · 적응 기간 4,500(7일) -->
 <!-- v745 기록은 git 이력(v1302 이전 커밋)에 있다 — 100KB 변경사 주석을 배포에서 제거 -->
 <!-- [v677] a <link href> cannot read a CSS variable, so the favicon carries its own copy.
      64px: a browser tab draws it at 16-32px, so this is 2x-DPR sharp at 11KB. -->
@@ -39377,6 +39377,14 @@ function _srRecCompute(reports, clients){
     // hand-played ATS block (2h+ ) is flagged atsManual=true at submit (boss 7/9). An ATS session (booster+
     // client+day) scores ONLY if flagged manual AND its card carries an ATS standard; everything else stays out.
     var _atsMan={}; allRs.forEach(function(r){ if(r&&isBreakMap(r)&&r.atsManual===true){ _atsMan[normName(r.booster)+'|'+shiftDateOf(r)+'|'+String(r.client||'').trim()]=1; } });
+    /* [v1487] 메이플 적응 기간의 기준점 = 그 사람의 첫 메이플 리포트 날.
+       배정 날짜는 채점기에 없다(PC 화면에만 있다). 리포트는 배정 뒤에 나오므로
+       이 기준이면 적응 기간이 짧아지는 일은 없다 — 틀려도 직원에게 유리한 쪽이다. */
+    var _mpFirst={}; allRs.forEach(function(r){
+      if(!r || r.tag==='checkin') return;
+      if(String(r.game||'') !== 'maple') return;
+      var k=normName(r.booster), d=shiftDateOf(r); if(!k || !d) return;
+      if(!_mpFirst[k] || d < _mpFirst[k]) _mpFirst[k]=d; });
     allRs.forEach(function(r){
       if(isTestMap(r)) return;
       var _rd=shiftDateOf(r);
@@ -39392,10 +39400,43 @@ function _srRecCompute(reports, clients){
       var _ade=(_tag==='checkin')?0:(_dup?0:(segAde[r.id]||0));   /* [v1176] */
       var _pd=_prevDead; if(_tag!=='checkin') _prevDead=(Number(r.dead)||0)>0;   // [v695] 직전 리포트 사망 여부 (체크인은 상태 유지)
       var _flag=(_gain!=null)&&(_gain>80 || _gain>_jThr || (_pd && _gain>_dThr));   // [v695] 사망 직후엔 낮은 기준으로 복구 점프 차단
+      /* ═══ [v1487] 메이플은 EXP 가 아니라 마릿수로 잰다 ══════════════════════════
+         사장님 "메이플은 처치 마릿수". 기준표의 unit:'kills' 가 그 신호다(PC23 · Bugi).
+         여기까지는 목표(target)가 비어 있어서 메이플 시간이 전부 'NoStd' 로 떨어졌다 —
+         리포트는 들어오는데 점수도 상금도 안 붙는 상태였다. 레이스·기록·하루 판정이
+         모두 이 한 곳(_srRecCompute)의 target/gain 을 보므로 여기만 고치면 셋 다 붙는다.
+         안정(sh)·컷(sl)은 사장님이 아직 안 주셨다. 없는 값을 지어내지 않고 비워 둔다 —
+         목표 하나로만 판정하는 길(target-only)이 이미 있다. 값을 주시면 기준표에서 읽는다. */
+      if(_rmo && String(_rmo.unit||'') === 'kills'){
+        var _kg=Number(_rmo.killGoal);
+        if(isFinite(_kg) && _kg>0){
+          _tgt=_kg;
+          var _kgn=Number(_rmo.killGoalNew), _nd=Number(_rmo.newDays);
+          if(isFinite(_kgn) && _kgn>0 && isFinite(_nd) && _nd>0){
+            var _f0=_mpFirst[normName(r.booster)];
+            if(_f0 && _rd){
+              var _used=Math.round((Date.parse(_rd+'T00:00:00Z') - Date.parse(_f0+'T00:00:00Z'))/86400000);
+              if(_used>=0 && _used<_nd) _tgt=_kgn;      /* 적응 기간 — 낮은 목표 */
+            }
+          }
+        }
+        /* 안정·컷이 기준표에 있으면 그것을 쓰고, 없으면 목표의 80% 를 컷으로 둔다.
+           이 80% 는 내가 지어낸 숫자가 아니다 — v1428 부터 리포트 화면이 직원에게
+           '통과 / 미달' 로 이미 보여 주고 있는 바로 그 선이다. 두 화면이 다른 말을
+           하면 직원은 어느 쪽을 믿어야 할지 모른다. 사장님이 기준표에 안정·컷을
+           적어 주시면 그때부터 그 값이 이긴다.
+           이 줄이 없으면 sl 이 0 이 되어 아무리 못 해도 'Stable' 이 된다 —
+           메이플만 영원히 컷이 없는 상태가 된다(3,000마리 66% 가 Stable 로 찍혔다). */
+        if(_tgt!=null && _tgt>0){
+          if(_sh==null) _sh=_tgt;
+          if(_sl==null) _sl=Math.round(_tgt*0.8);
+        }
+        if(_tag!=='checkin') _gain = _dup ? 0 : (Number(r.kills)||0);
+      }
       var _rms=reportMs(r);
       var _ignored=!!r.ignored;   // [v447] 미반영 — excluded from performance calc/averages/stats, but still shown (greyed) in the session log
       var _isBreak=isBreakMap(r) && !(_tgt!=null && _tgt>0 && _atsMan[normName(r.booster)+'|'+_rd+'|'+String(r.client||'').trim()]);   // [v588] ATS scores ONLY when it has a real standard AND the session was flagged hand-played (2h+ submit prompt); otherwise excluded (auto/rest-time). Race engine follows via sess.brk.
-      sessions.push({ id:r.id, name:g.name, key:normName(g.name), date:_rd, ms:_rms, tag:_tag, client:r.client||'', pc:r.pc, lv:(r.lvAfter!=null?r.lvAfter:r.lv), map:r.map||'', gain:_gain, ade:_ade, adeCut:(!!segAdeCut[r.id]), expAt:(Number(r.expAfter)||0), target:_tgt, sh:_sh, sl:_sl, dup:_dup, flag:_flag, ignored:_ignored, brk:_isBreak });
+      sessions.push({ id:r.id, name:g.name, key:normName(g.name), date:_rd, ms:_rms, tag:_tag, client:r.client||'', pc:r.pc, lv:(r.lvAfter!=null?r.lvAfter:r.lv), map:r.map||'', unit:((_rmo && String(_rmo.unit||'')==='kills') ? 'kills' : 'exp'), gain:_gain, ade:_ade, adeCut:(!!segAdeCut[r.id]), expAt:(Number(r.expAfter)||0), target:_tgt, sh:_sh, sl:_sl, dup:_dup, flag:_flag, ignored:_ignored, brk:_isBreak });
       if(_rd){
         if(!recAgg[g.name]) recAgg[g.name]={};
         if(!recAgg[g.name][_rd]) recAgg[g.name][_rd]={hours:0,gain:0,ade:0,quota:0,flags:0,cleanGain:0,scored:0,scoredClean:0,minMs:null,maxMs:null,hb:{}};
