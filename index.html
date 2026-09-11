@@ -4,7 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
 <title>ARASAKA Corp</title>
-<!-- BUILD: v1497 | 손 시트에서 저금통과 겹치는 줄을 화면이 말한다 (두 번 주지 않게) -->
+<!-- BUILD: v1498 | 손 시트가 언제 것인지 화면이 먼저 말한다 (내용이 7월이었다) -->
 <!-- v745 기록은 git 이력(v1302 이전 커밋)에 있다 — 100KB 변경사 주석을 배포에서 제거 -->
 <!-- [v677] a <link href> cannot read a CSS variable, so the favicon carries its own copy.
      64px: a browser tab draws it at 16-32px, so this is 2x-DPR sharp at 11KB. -->
@@ -34917,8 +34917,10 @@ async function loadSettlementState(){
   if(!sb) return;
   if(!_payrollCanReadAll()) return;
   try{
-    const { data, error } = await sb.from('settlement_state').select('data').eq('id','default').maybeSingle();
+    const { data, error } = await sb.from('settlement_state').select('data,updated_at').eq('id','default').maybeSingle();
     if(error){ console.warn('settlement_state load:', error.message); return; }
+    /* [v1498] 이 시트가 언제 것인지 화면이 말해야 한다 — 아래 _payStale 참고 */
+    try{ window._paySheetAt = (data && data.updated_at) ? String(data.updated_at).slice(0,10) : ''; }catch(_){}
     if(data && data.data){
       const d = data.data;
       if(Array.isArray(d.manual)) MANUAL_PAYROLL = d.manual;
@@ -46933,6 +46935,30 @@ function expShiftUpdate(i, hrs){
    그래서 "왜 이 금액이냐" 를 언제든 되짚을 수 있다. 지우는 길은 두지 않았다. */
 window._payView = (window._payView === undefined) ? 'bank' : window._payView;
 window._paySetView = function(v){ window._payView = v; renderSettlement(); };
+/* ═══ [v1498] 이 손 시트가 언제 것인지 화면이 말한다 ════════════════════════
+   2026-09-12 에 열어 보니 안의 글이 전부 7월이다 — "Probation ended mid-month on
+   24 July", "Joined 2 July". 이미 나간 사람들(mr.sid · tory · eric · luke)도 그대로 있다.
+   마지막 수정 시각은 9/1 00:35 인데, 그건 사람이 고친 게 아니라 리더 수당이
+   저절로 얹힌 순간이다(v1021 backfill). 즉 **7월 이후 아무도 안 고쳤다.**
+
+   이걸 이번 달 급여로 읽으면 숫자가 전부 틀린다. 그런데 화면은 맨 위에 이번 달을
+   적어 두고 있어서, 열면 이번 달 것처럼 보인다. 그게 위험하다.
+   지우지 않는다 — 7월 기록이다. 대신 **언제 것인지 화면이 먼저 말한다.** */
+function _payStale(){
+  try{
+    var at = String(window._paySheetAt || '');
+    if(!at) return '';
+    var days = Math.floor((Date.now() - new Date(at + 'T00:00:00+09:00').getTime()) / 86400000);
+    if(!(days >= 7)) return '';
+    var ko = (typeof _uiLang !== 'function' || _uiLang() === 'ko');
+    return '<div class="bnk-warn" style="margin:10px 0 0">'
+      + '<b>' + (ko ? ('⚠ 이 시트는 ' + at + ' 이후 아무도 안 고쳤습니다 · ' + days + '일째')
+                    : ('⚠ Nobody has touched this sheet since ' + at + ' · ' + days + ' days')) + '</b><br>'
+      + (ko ? '안의 숫자는 그때 것입니다. 이번 달 급여로 읽으면 안 됩니다 — 이번 달은 <b>🏦 저금통</b> 에 있습니다.'
+            : 'The numbers are from then. Do not read them as this month — this month lives in the ledger tab.')
+      + '</div>';
+  }catch(_){ return ''; }
+}
 function _payTabs(){
   var b = window._payView === 'bank';
   return '<div class="bnk-bar" style="margin:0 0 6px">'
@@ -47294,6 +47320,7 @@ async function renderSettlement(){
     <div class="att-eyebrow">운영 · 정산</div>
     <div class="ph">${settlementTitle}</div>
     <div class="psub">${isMaster ? monthLabel+' · 매출 · 인건비 · 순익' : monthLabel+' · 직원 급여'}</div>
+    ${isMaster ? '' : _payStale()}
     ${isMaster ? '' : _payTabs()}
 
     ${summaryHTML}
