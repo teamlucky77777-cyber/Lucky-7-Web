@@ -4,7 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
 <title>ARASAKA Corp</title>
-<!-- BUILD: v1491 | 리더 수당이 저금통 안으로 — 월급 밖에서 따로 나가던 것 -->
+<!-- BUILD: v1492 | 돈은 나갔는데 성적을 못 잰 날을 저금통이 먼저 말한다 -->
 <!-- v745 기록은 git 이력(v1302 이전 커밋)에 있다 — 100KB 변경사 주석을 배포에서 제거 -->
 <!-- [v677] a <link href> cannot read a CSS variable, so the favicon carries its own copy.
      64px: a browser tab draws it at 16-32px, so this is 2x-DPR sharp at 11KB. -->
@@ -3961,6 +3961,11 @@ html[data-theme=light] .sfx-cut::after{background:linear-gradient(90deg,rgba(0,0
 .bnk-tile b{display:block;font-size:18px;font-weight:700;color:var(--tx);font-variant-numeric:tabular-nums;letter-spacing:-.02em}
 .bnk-tile.up b{color:var(--gr)}
 .bnk-tile.dn b{color:var(--re,#e0504a)}
+.bnk-tile.nr{border-color:var(--ac-bord);background:var(--ac-bg)}
+.bnk-tile.nr b{color:var(--ac-strong)}
+.bnk-nr{font-size:9.5px;font-weight:700;color:var(--ac-strong);background:var(--ac-bg);
+  padding:2px 6px;border-radius:5px;margin-left:7px;white-space:nowrap}
+.bnk-dtbl tr.nr td{background:var(--ac-bg)}
 
 .bnk-scroll{overflow-x:auto;border:1px solid var(--br);border-radius:13px;background:var(--bg-c)}
 .bnk-tbl{width:100%;min-width:860px;border-collapse:collapse;font-variant-numeric:tabular-nums}
@@ -47145,11 +47150,20 @@ async function _bnkRender(host){
     return;
   }
 
+  /* [v1492] 돈이 새는 쪽을 화면이 먼저 말한다 — 안 그러면 아무도 안 본다 */
+  var nrN = d.rows.filter(function(r){ return (r.no_report_days||0) > 0; }).length;
+  var nrD = sum('no_report_days');
+  var warnBar = nrD ? ('<div class="bnk-warn"><b>⚠ 성적을 못 잰 날이 ' + nrD + '일 있습니다 · ' + nrN + '명</b><br>'
+    + '돈은 나갔는데 그 시간에 무엇을 했는지 잴 수가 없습니다. 리포트를 안 썼거나, 썼는데 기준표에 그 사냥터가 없어 점수가 안 붙었습니다.<br>'
+    + '<span class="bnk-z">깎지는 않았습니다 — 깎을지는 사장님이 정할 일입니다. 사람을 눌러 어느 날인지 보세요.</span></div>') : '';
   var tiles = '<div class="bnk-tiles">'
     + '<div class="bnk-tile"><s>합계</s><b>' + _bnkM(sum('total')) + ' Rp</b></div>'
     + '<div class="bnk-tile"><s>기본급</s><b>' + _bnkM(sum('base_pay')) + '</b></div>'
     + '<div class="bnk-tile dn"><s>깎인 것</s><b>−' + _bnkM(sum('goal_cut') + sum('warn_cut') + sum('race_penalty')) + '</b></div>'
     + '<div class="bnk-tile up"><s>더한 것</s><b>+' + _bnkM(sum('race_pay') + sum('trust_bonus') + sum('allow_pay')) + '</b></div>'
+    /* [v1492] 돈은 나갔는데 성적을 못 잰 날. 이 숫자가 크면 채점이 새고 있다는 뜻이다. */
+    + (sum('no_report_days') > 0
+        ? ('<div class="bnk-tile nr"><s>성적 못 잼</s><b>' + sum('no_report_days') + '일</b></div>') : '')
     + '</div>';
 
   var rows = d.rows.map(function(r){
@@ -47159,7 +47173,9 @@ async function _bnkRender(host){
     var tr = '<tr class="bnk-p' + (on?' on':'') + '" onclick="_bnkPick(\'' + esc(uid) + '\')">'
       + '<td><span class="bnk-nm"><span class="bnk-cx">▶</span>'
       +   '<span class="bnk-av">' + (ph ? ('<img src="' + esc(ph) + '" alt="">') : esc(ini)) + '</span>'
-      +   esc(r.name || '?') + '</span></td>'
+      +   esc(r.name || '?')
+      +   ((r.no_report_days||0) > 0 ? ('<span class="bnk-nr" title="' + (r.no_report_days) + '일은 돈이 나갔는데 성적을 못 쟀습니다 — 리포트를 안 썼거나, 썼는데 점수가 안 붙었습니다">⚠ ' + r.no_report_days + '일</span>') : '')
+      +   '</span></td>'
       + '<td>' + (r.days||0) + '</td>'
       + '<td>' + _bnkH(r.work_min) + '</td>'
       + '<td>' + _bnkC(r.base_pay) + '</td>'
@@ -47183,7 +47199,7 @@ async function _bnkRender(host){
     + '<td>+' + _bnkM(sum('allow_pay')) + '</td>'
     + '<td>' + _bnkM(sum('adjust')) + '</td><td>' + _bnkM(sum('total')) + '</td></tr>';
 
-  host.innerHTML = head + nav + tiles
+  host.innerHTML = head + nav + warnBar + tiles
     + '<div class="bnk-scroll"><table class="bnk-tbl"><thead><tr>'
     +   '<th>사람</th><th>일수</th><th>시간</th><th>기본</th><th>미달</th><th>상금</th>'
     +   '<th>벌금</th><th>경고</th><th>트러스트</th><th>수당</th><th>조정</th><th>합계</th>'
@@ -47200,7 +47216,9 @@ function _bnkDayHtml(uid, esc, canEdit){
   if(!days) return '<div class="bnk-daywrap"><div class="bnk-note">불러오는 중…</div></div>';
   if(!days.length) return '<div class="bnk-daywrap"><div class="bnk-note">이 달에 굳은 줄이 없습니다.</div></div>';
   var rows = days.map(function(r){
-    return '<tr><td>' + String(r.day).slice(5) + (r.probation ? ' <span class="bnk-z">수습</span>' : '') + '</td>'
+    return '<tr' + (r.no_report ? ' class="nr" title="' + esc(r.note || '성적을 못 쟀습니다') + '"' : '') + '>'
+      + '<td>' + String(r.day).slice(5) + (r.probation ? ' <span class="bnk-z">수습</span>' : '')
+      +   (r.no_report ? ' <span class="bnk-nr">⚠</span>' : '') + '</td>'
       + '<td>' + esc(r.shift_key || '-') + '</td>'
       + '<td>' + _bnkH(r.work_min) + '</td>'
       + '<td>' + _bnkM(r.hour_rate) + '</td>'
