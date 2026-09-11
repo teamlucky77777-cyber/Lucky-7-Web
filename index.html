@@ -4,7 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
 <title>ARASAKA Corp</title>
-<!-- BUILD: v1477 | 노란색 겹침 풀기 — 노랑 두 자리에 걸린 사람만 다섯 색으로 (나머지는 그대로) -->
+<!-- BUILD: v1478 | 남이 쓴 초대 코드로 엉뚱한 계정이 이어지던 것 (퇴사 계정은 안 잇는다) -->
 <!-- v745 기록은 git 이력(v1302 이전 커밋)에 있다 — 100KB 변경사 주석을 배포에서 제거 -->
 <!-- [v677] a <link href> cannot read a CSS variable, so the favicon carries its own copy.
      64px: a browser tab draws it at 16-32px, so this is 2x-DPR sharp at 11KB. -->
@@ -47418,8 +47418,12 @@ async function renderOnboarding(pickId){
           if(app.invite_code && window._obAutoLinked !== String(app.id)){
             var ic = await TO(sb.from('invite_codes').select('used_by').eq('code', app.invite_code).maybeSingle(), 4000);
             var em2 = ic && ic.data && ic.data.used_by;
-            if(em2){ var up = await TO(sb.from('user_profiles').select('id').eq('email', em2).maybeSingle(), 4000);
-              if(up && up.data && up.data.id){ window._obAutoLinked = String(app.id); await _obLink(app.id, up.data.id); return; } }
+            if(em2){ var up = await TO(sb.from('user_profiles').select('id,name,resigned_at').eq('email', em2).maybeSingle(), 4000);
+              /* [v1478] 코드에는 이름이 붙어 있지 않다. 다른 사람이 그 코드로 가입하면(9/11 Ilmi 코드를 Phil 이 씀)
+                 엉뚱한 계정이 이 지원자로 이어진다. 퇴사한 계정이면 절대 잇지 않는다. */
+              if(up && up.data && up.data.id && !up.data.resigned_at){ window._obAutoLinked = String(app.id); await _obLink(app.id, up.data.id); return; }
+              if(up && up.data && up.data.resigned_at){ window._obAutoLinked = String(app.id);
+                try{ toast('이 초대 코드는 이미 다른 사람('+(up.data.name||'퇴사자')+')이 썼습니다 — 코드를 새로 만들어 주세요', true); }catch(_){} } }
           }
           var fn = String(app.name||'').trim().split(' ')[0];
           if(fn.length >= 2){ var cq = await TO(sb.from('user_profiles').select('id,name,email').ilike('name', fn+'%').is('resigned_at', null).limit(5), 4000);
