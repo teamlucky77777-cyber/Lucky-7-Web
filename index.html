@@ -4,7 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
 <title>ARASAKA Corp</title>
-<!-- BUILD: v1479 | 온보딩 목록은 채용에서 들어온 사람만 (전체 직원은 버튼으로) -->
+<!-- BUILD: v1480 | 채용에서 탈락시키면 저장까지 하고, 웹 계정이 있으면 퇴사도 같이 묻는다 -->
 <!-- v745 기록은 git 이력(v1302 이전 커밋)에 있다 — 100KB 변경사 주석을 배포에서 제거 -->
 <!-- [v677] a <link href> cannot read a CSS variable, so the favicon carries its own copy.
      64px: a browser tab draws it at 16-32px, so this is 2x-DPR sharp at 11KB. -->
@@ -17200,6 +17200,33 @@ function onApDropToReject(e, fromStage){
   const stageName = _rsName(KANBAN_STAGES.find(s => s.id === fromStage)) || fromStage;
   toast(`${a.name} 거절 · ${stageName}에서 탈락`);
   renderRecruit();
+  /* [v1480] boss "채용 쪽에서 탈락에 넣으면 알아서 빠지게" — 온보딩 목록은 stage='pass' 만 보므로 이미 빠진다.
+     여기서는 저장을 확실히 하고(안 그러면 다음 렌더까지 서버에 안 감), 웹 계정까지 있는 사람이면 퇴사도 같이 묻는다.
+     묻는 이유: 카드를 잘못 끌면 멀쩡히 일하는 사람의 로그인이 끊긴다. 되돌리려면 사람이 풀어야 한다. */
+  (async function(){
+    try{ await saveRecruits(true); }catch(_){}
+    try{
+      const sid = String(a.staff_id || '');
+      if(!/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(sid)) return;   /* 옛 가짜 id(s_xxx)는 계정이 아니다 */
+      if(typeof sb === 'undefined' || !sb) return;
+      const u = await sb.from('user_profiles').select('id,name,resigned_at').eq('id', sid).maybeSingle();
+      if(!u || !u.data || u.data.resigned_at) return;
+      const nm = u.data.name || a.name;
+      if(!await _askC(nm + ' 님은 웹 계정이 있습니다.\n\n퇴사 처리까지 할까요?\n\n· 직원 목록 · PC 현황 · 온보딩에서 빠집니다\n· 로그인이 끊깁니다\n· 출근 · 리포트 기록은 그대로 남습니다')) return;
+      const r = await sb.from('user_profiles').update({ resigned_at: new Date().toISOString() }).eq('id', sid);
+      if(r && r.error){ toast('퇴사 처리 실패 — ' + r.error.message, true); return; }
+      try{ let ch = false;
+        (typeof PCS !== 'undefined' ? PCS : []).forEach(function(p){
+          const n0 = (p.assignments || []).length;
+          p.assignments = (p.assignments || []).filter(function(x){ return String(x && x.staff) !== sid; });
+          if((p.assignments || []).length !== n0) ch = true; });
+        if(ch){ savePCState(); if(typeof render === 'function') render(); } }catch(_){}
+      try{ _teamCache = null; await loadTeamMembers(); }catch(_){}
+      try{ await loadStaffPool(); }catch(_){}
+      try{ logAction('update', '탈락 → 퇴사 처리 · ' + nm, sid); }catch(_){}
+      toast('🚪 ' + nm + ' 퇴사 처리 · 로그인 끊김');
+    }catch(e){ toast('퇴사 처리 실패 — ' + (e && e.message), true); }
+  })();
 }
 
 // [v471] BACKUP APPLICANTS page — see the persistence/modal functions above.
