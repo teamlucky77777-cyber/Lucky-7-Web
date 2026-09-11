@@ -4,7 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
 <title>ARASAKA Corp</title>
-<!-- BUILD: v1494 | 경고 잠금 되돌림 — 그 점수는 사장님이 진짜로 넣은 것이었다 -->
+<!-- BUILD: v1495 | 온보딩 화면 롤백 (전 화면이 더 간단) · 기본값 전체 직원 보기 -->
 <!-- v745 기록은 git 이력(v1302 이전 커밋)에 있다 — 100KB 변경사 주석을 배포에서 제거 -->
 <!-- [v677] a <link href> cannot read a CSS variable, so the favicon carries its own copy.
      64px: a browser tab draws it at 16-32px, so this is 2x-DPR sharp at 11KB. -->
@@ -4013,156 +4013,51 @@ html[data-theme=light] .sfx-cut::after{background:linear-gradient(90deg,rgba(0,0
 .bnk-empty{padding:34px 20px;text-align:center;color:var(--tx3);font-size:13px;line-height:1.8}
 @media (max-width:560px){ .bnk-tiles{grid-template-columns:repeat(2,1fr)} }
 
-/* ═══ [v1483] 온보딩 화면 — 다시 지음 ═══════════════════════════════════════
-   사장님 "온보딩 쪽 퀄리티 200%". v1431 화면은 이름 드롭다운 하나에 열아홉 줄이
-   평평하게 깔려 있었다. 구원 씨는 사람을 바꿀 때마다 열아홉 줄을 눈으로 훑어
-   '지금 뭘 해야 하나' 를 찾아야 했고, 몇 사람이 진행 중인지는 드롭다운을 열어야 알았다.
-   진행 중인 사람이 하나일 때는 견딜 만했지만, 다섯 명을 동시에 넣는 날에는 못 쓴다.
-
-   세 가지를 바꾼다.
-   ① 왼쪽에 사람 줄 — 얼굴·며칠 됐는지·다음 할 일이 카드마다 적혀 있다. 파이프라인이 보인다.
-   ② 맨 위에 '지금 할 일' 한 장 — 열아홉 중 다음 하나만 크게, 버튼도 거기 있다.
-   ③ 끝난 묶음은 접는다 — 채용 여덟 단계가 다 끝났으면 한 줄. 남은 것만 펼쳐 둔다.
-   그리고 줄마다 '누구를 기다리나'(OP TEAM · 본인 · 자동)를 적는다 — 막히는 이유의 절반이 그것이다.
-
-   v1431 의 규칙은 그대로다: 알 수 있는 것은 시스템이 답하고, 사람만 아는 것만 묻는다. */
-.ob-wrap{max-width:1120px;margin:0 auto;padding:20px 18px 64px;
-  display:grid;grid-template-columns:252px minmax(0,1fr);gap:20px;align-items:start}
-.ob-head{grid-column:1/-1}
-.ob-head h2{font-size:19px;font-weight:700;margin:0 0 3px;color:var(--tx);letter-spacing:-.01em}
-.ob-sub{font-size:12.5px;color:var(--tx3);margin-bottom:14px}
+/* ═══ [v1431] 온보딩 화면 — 한 사람을 처음부터 끝까지 ═══════════════════════
+   읽는 순서가 곧 일의 순서다. 번호는 왼쪽에 세로로 흐르고, 끝난 줄은 조용해지고,
+   안 끝난 줄만 눈에 남는다. '해야 할 일' 이 아니라 '아직 안 된 것' 이 보여야 한다. */
+.ob-wrap{max-width:760px;margin:0 auto;padding:22px 18px 60px}
+.ob-head h2{font-size:19px;font-weight:700;margin:0 0 4px;color:var(--tx)}
+.ob-sub{font-size:12.5px;color:var(--tx3);margin-bottom:16px}
 .ob-sub b{color:var(--tx2)}
-.ob-load{grid-column:1/-1;padding:40px;text-align:center;color:var(--tx3);font-size:13px}
-
-/* ── 왼쪽 사람 줄 ───────────────────────────────────────────── */
-.ob-rail{position:sticky;top:12px;display:flex;flex-direction:column;gap:4px;
-  max-height:calc(100vh - 34px);overflow:auto;padding-right:3px}
-.ob-rh{display:flex;align-items:center;gap:7px;padding:1px 3px 7px}
-.ob-rh-t{font-size:10px;font-weight:700;letter-spacing:.11em;text-transform:uppercase;color:var(--tx3)}
-.ob-rh-n{font-size:11px;font-weight:700;color:var(--tx2);font-variant-numeric:tabular-nums;margin-right:auto}
-.ob-p{display:grid;grid-template-columns:34px minmax(0,1fr);gap:9px;align-items:center;width:100%;
-  padding:8px 9px;border-radius:11px;border:1px solid transparent;background:transparent;
-  cursor:pointer;text-align:left;font:inherit;color:inherit;
-  transition:background .14s ease,border-color .14s ease}
-.ob-p:hover{background:var(--bg-h)}
-.ob-p.on{background:var(--bg-c);border-color:var(--ac-bord);box-shadow:0 1px 3px rgba(0,0,0,.06)}
-.ob-p:focus-visible{outline:2px solid var(--ac);outline-offset:1px}
-.ob-av{width:34px;height:34px;border-radius:9px;background:var(--bg-h);overflow:hidden;flex:0 0 34px;
-  display:flex;align-items:center;justify-content:center;font-size:13px;font-weight:700;color:var(--tx2)}
-.ob-av img{width:100%;height:100%;object-fit:contain;image-rendering:pixelated}
-.ob-pn{font-size:12.5px;font-weight:650;color:var(--tx);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
-.ob-pm{font-size:10.5px;color:var(--tx3);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;margin-top:1px}
-.ob-p.on .ob-pm{color:var(--tx2)}
-.ob-pb{height:3px;border-radius:99px;background:var(--bg-h);overflow:hidden;margin-top:6px}
-.ob-p.on .ob-pb{background:var(--br)}
-.ob-pb i{display:block;height:100%;background:var(--ac);border-radius:99px;transition:width .3s ease}
-.ob-p.fin .ob-pb i{background:var(--gr)}
-.ob-rail-e{padding:14px 10px;font-size:11.5px;color:var(--tx3);line-height:1.6}
-.ob-bar{display:flex;flex-wrap:wrap;gap:5px;margin-top:9px;padding:9px 3px 0;border-top:1px solid var(--br)}
-
-/* ── 사람 머리 ──────────────────────────────────────────────── */
-.ob-hero{display:grid;grid-template-columns:auto minmax(0,1fr) auto;gap:15px;align-items:center;
-  padding:15px 17px;border:1px solid var(--br);border-radius:14px;background:var(--bg-c);margin-bottom:12px}
-.ob-hav{width:54px;height:54px;border-radius:13px;background:var(--bg-h);overflow:hidden;flex:0 0 54px;
-  display:flex;align-items:center;justify-content:center;font-size:19px;font-weight:700;color:var(--tx2)}
-.ob-hav img{width:100%;height:100%;object-fit:contain;image-rendering:pixelated;padding:3px}
-.ob-hn{font-size:18px;font-weight:700;color:var(--tx);letter-spacing:-.01em;line-height:1.2}
-.ob-chips{display:flex;flex-wrap:wrap;gap:5px;margin-top:8px}
-.ob-chip{font-size:10.5px;font-weight:600;padding:3px 8px;border-radius:99px;
-  background:var(--bg-h);color:var(--tx2);white-space:nowrap}
-.ob-chip.ac{background:var(--ac-bg);color:var(--ac-strong)}
-.ob-chip.gr{background:var(--gr-bg);color:var(--gr)}
-.ob-ring{position:relative;width:62px;height:62px;flex:0 0 62px}
-.ob-ring svg{display:block;transform:rotate(-90deg)}
-.ob-ring b{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;
-  font-size:12px;font-weight:700;color:var(--tx);font-variant-numeric:tabular-nums;letter-spacing:-.02em}
-
-/* ── 지금 할 일 ─────────────────────────────────────────────── */
-.ob-now{border:1px solid var(--ac-bord);background:var(--ac-bg);border-radius:14px;
-  padding:15px 17px;margin-bottom:18px}
-.ob-now.fin{border-color:var(--br);background:var(--gr-bg)}
-.ob-now-k{font-size:9.5px;font-weight:700;letter-spacing:.13em;text-transform:uppercase;
-  color:var(--ac-strong);margin-bottom:7px}
-.ob-now.fin .ob-now-k{color:var(--gr)}
-.ob-now-t{font-size:16px;font-weight:700;color:var(--tx);line-height:1.35}
-.ob-now-t i{font-style:normal;font-size:12px;font-weight:700;color:var(--tx3);
-  margin-right:8px;font-variant-numeric:tabular-nums}
-.ob-now-w{font-size:12.5px;color:var(--tx2);margin-top:6px;line-height:1.6}
-.ob-now-a{display:flex;flex-wrap:wrap;gap:7px;margin-top:13px}
-.ob-now-a:empty{display:none}
-
-/* ── 단계 묶음 ──────────────────────────────────────────────── */
-.ob-sec{margin-bottom:10px;border:1px solid var(--br);border-radius:13px;background:var(--bg-c);overflow:hidden}
-.ob-sh{display:flex;align-items:center;gap:9px;width:100%;font:inherit;color:var(--tx);
-  text-align:left;cursor:pointer;padding:10px 14px;background:transparent;border:0}
-.ob-sh:hover{background:var(--bg-h)}
-.ob-sh:focus-visible{outline:2px solid var(--ac);outline-offset:-2px}
-.ob-sh-c{width:11px;color:var(--tx3);font-size:9px;transition:transform .18s ease;flex:0 0 11px}
-.ob-sec.open .ob-sh-c{transform:rotate(90deg)}
-.ob-sh-t{font-size:12.5px;font-weight:700;letter-spacing:.02em}
-.ob-sh-b{flex:1 1 60px;height:3px;border-radius:99px;background:var(--bg-h);overflow:hidden;max-width:120px}
-.ob-sh-b i{display:block;height:100%;background:var(--ac);border-radius:99px}
-.ob-sh-b i.fin{background:var(--gr)}
-.ob-sh-n{font-size:11px;font-weight:700;color:var(--tx3);font-variant-numeric:tabular-nums;margin-left:auto}
-.ob-sb{border-top:1px solid var(--br);padding:4px 6px}
-.ob-sec:not(.open) .ob-sb{display:none}
-
-/* ── 줄 ─────────────────────────────────────────────────────── */
-.ob-row{display:grid;grid-template-columns:24px minmax(0,1fr) auto;gap:11px;align-items:start;
-  padding:9px 8px;border-radius:9px}
-.ob-row + .ob-row{box-shadow:inset 0 1px 0 var(--br)}
-.ob-row.ok{opacity:.52}
-.ob-row.next{background:var(--ac-bg);box-shadow:none}
-.ob-row.next + .ob-row{box-shadow:none}
+.ob-load{padding:40px;text-align:center;color:var(--tx3);font-size:13px}
+.ob-bar{display:flex;align-items:center;gap:12px;margin-bottom:16px;flex-wrap:wrap}
+.ob-sel{font:inherit;font-size:13px;font-weight:600;padding:7px 11px;border-radius:9px;
+  background:var(--bg-c);color:var(--tx);border:1px solid var(--br);min-width:190px;cursor:pointer}
+.ob-prog{flex:1 1 120px;height:6px;border-radius:99px;background:var(--bg-h);overflow:hidden;min-width:100px}
+.ob-prog i{display:block;height:100%;background:var(--ac);border-radius:99px;transition:width .35s cubic-bezier(.2,.9,.3,1)}
+.ob-pct{font-size:13px;font-weight:700;color:var(--tx2);font-variant-numeric:tabular-nums;white-space:nowrap}
+.ob-g{font-size:10.5px;font-weight:700;letter-spacing:.1em;color:var(--tx3);
+  text-transform:uppercase;margin:16px 0 7px;padding-left:2px}
+.ob-g:first-child{margin-top:0}
+.ob-row{display:grid;grid-template-columns:26px 1fr auto;gap:11px;align-items:start;
+  padding:10px 12px;border:1px solid var(--br2);border-radius:10px;margin-bottom:6px;background:var(--bg-c)}
+.ob-row.ok{opacity:.58;border-color:transparent;background:transparent}
+.ob-row.live{border-color:var(--ac);box-shadow:0 0 0 3px var(--ac-bg)}
+.ob-row.live.ok{box-shadow:none}
 .ob-n{font-style:normal;font-size:11px;font-weight:700;color:var(--tx3);
-  width:24px;height:21px;display:flex;align-items:center;justify-content:center;
+  width:26px;height:22px;display:flex;align-items:center;justify-content:center;
   border-radius:6px;background:var(--bg-h);font-variant-numeric:tabular-nums}
-.ob-row.ok .ob-n,.ob-n.ok{background:var(--gr-bg);color:var(--gr)}
-.ob-row.next .ob-n,.ob-n.nx{background:var(--ac);color:var(--bg)}
-.ob-na{padding:9px 10px;font-size:11.5px;color:var(--tx3);line-height:1.6}
-.ob-lg{display:flex;flex-wrap:wrap;align-items:center;gap:5px;font-size:11.5px;color:var(--tx3);
-  margin:2px 0 14px;line-height:2.1}
-.ob-lg .ob-n{margin-left:9px}
-.ob-lg .ob-n:first-child{margin-left:0}
-.ob-tl{display:flex;align-items:center;gap:7px;flex-wrap:wrap}
-.ob-t{font-size:13px;font-weight:600;color:var(--tx);line-height:1.4}
-.ob-d{font-size:11.5px;color:var(--tx3);margin-top:2px}
-.ob-w{font-size:11.5px;color:var(--tx2);margin-top:4px;font-variant-numeric:tabular-nums;line-height:1.5}
+.ob-row.ok .ob-n{background:transparent}
+.ob-t{font-size:13.5px;font-weight:600;color:var(--tx);line-height:1.4}
+.ob-d{font-size:11.5px;color:var(--tx3);margin-top:1px}
+.ob-w{font-size:11.5px;color:var(--tx2);margin-top:4px;font-variant-numeric:tabular-nums}
 .ob-row.ok .ob-w{color:var(--tx3)}
-.ob-who{font-size:9.5px;font-weight:700;padding:2px 6px;border-radius:5px;white-space:nowrap;letter-spacing:.02em}
-.ob-who.op{background:var(--ac-bg);color:var(--ac-strong)}
-.ob-who.self{background:var(--bg-h);color:var(--tx2)}
-.ob-who.sys{color:var(--tx3);border:1px solid var(--br)}
-.ob-row.ok .ob-who{display:none}
-.ob-a{display:flex;align-items:center;gap:6px;padding-top:1px}
-
+.ob-a{display:flex;align-items:center;gap:6px;padding-top:2px}
+.ob-auto{font-size:14px;font-weight:700;color:var(--tx3);width:22px;text-align:center}
+.ob-row.ok .ob-auto{color:var(--gr,#3aa05a)}
 .ob-mk{font:inherit;font-size:11px;font-weight:600;padding:4px 10px;border-radius:99px;
   border:1px solid var(--br);background:transparent;color:var(--tx3);cursor:pointer;white-space:nowrap;
   transition:background .14s ease,color .14s ease,border-color .14s ease}
 .ob-mk:hover{border-color:var(--tx3);color:var(--tx2)}
 .ob-mk.on{background:var(--ac);border-color:var(--ac);color:var(--bg)}
 .ob-mk:focus-visible,.ob-go:focus-visible{outline:2px solid var(--ac);outline-offset:2px}
-.ob-go{font:inherit;font-size:11px;font-weight:700;padding:5px 11px;border-radius:99px;
+.ob-go{font:inherit;font-size:11px;font-weight:700;padding:4px 10px;border-radius:99px;
   border:0;background:var(--ac);color:var(--bg);cursor:pointer;white-space:nowrap}
-.ob-go.gh{background:transparent;color:var(--ac-strong);border:1px solid var(--ac-bord)}
-.ob-foot{margin-top:18px;padding:12px 14px;border-radius:11px;background:var(--bg-h);
+.ob-foot{margin-top:20px;padding:12px 14px;border-radius:10px;background:var(--bg-h);
   font-size:12px;color:var(--tx3);line-height:1.75}
 .ob-foot b{color:var(--tx2)}
-
-@media (max-width:900px){
-  .ob-wrap{grid-template-columns:minmax(0,1fr)}
-  .ob-rail{position:static;max-height:none;flex-direction:row;overflow-x:auto;gap:7px;padding-bottom:4px}
-  .ob-rh{display:none}
-  .ob-p{width:auto;min-width:178px;flex:0 0 auto}
-  .ob-bar{border-top:0;margin-top:0;padding-top:0}
-}
-@media (max-width:560px){
-  .ob-hero{grid-template-columns:auto minmax(0,1fr)}
-  .ob-ring{grid-column:2;justify-self:start;margin-top:4px}
-  .ob-row{grid-template-columns:24px minmax(0,1fr)}
-  .ob-a{grid-column:2;justify-content:flex-start;padding-top:6px}
-}
-.ob-main{min-width:0}
+@media (max-width:520px){.ob-row{grid-template-columns:26px 1fr}.ob-a{grid-column:2;justify-content:flex-start}}
 
 /* 온보딩 패널 */
 #onboard-panel{
@@ -48026,236 +47921,26 @@ window._obMakeBoard = async function(id){
   }catch(e){ toast('데일리보드 실패 — '+(e&&e.message), true); }
 };
 
-/* ═══ [v1483] 온보딩 — 사람 줄 · 지금 할 일 · 접히는 묶음 ═══════════════════
-   사장님 "온보딩 쪽 퀄리티 200%".
-
-   v1431 은 오른쪽 한 장뿐이었다. 사람을 바꾸려면 드롭다운을 열어야 했고,
-   열아홉 줄을 눈으로 훑어야 '지금 뭘 해야 하나' 를 알 수 있었다.
-   이제 상태를 세는 함수(_obState)를 밖으로 꺼내 왼쪽 사람 줄과 오른쪽 화면이 같이 쓴다.
-   같은 함수를 쓰므로 왼쪽 카드의 숫자와 오른쪽 고리의 숫자가 어긋날 수 없다.
-
-   살아 있는 확인(가입 여부 · 출퇴근 일수 · 초대 코드 사용)은 사람마다 따로 묻지 않고
-   한 번에 세 번만 묻는다(_obLoadLive). 옛 화면은 사람을 바꿀 때마다 네 번씩 물었다 —
-   [[변경 기록판 요청 폭주]] 와 같은 모양이라 60초 창고와 '이미 받는 중' 자물쇠를 같이 둔다. */
-/* [v1485] 구원 씨 "저 X 표시가 뭔지 모르겠다", 사장님 "오히려 더 복잡해진 것 같다".
-   둘 다 맞았다. 고친 것 셋.
-   ① ○ · ✗ 칸을 통째로 없앴다. 줄마다 X 가 세로로 늘어서면 눈이 그것만 본다.
-      상태는 왼쪽 번호가 말한다 — 초록이면 됨, 회색이면 아직, 금색이면 지금 할 차례.
-      X 는 "안 됐다"만 말하고 줄 안의 설명이 이미 이유를 말하고 있었다. 두 번 말할 필요가 없다.
-   ② '누구 차례' 딱지도 지금 할 줄에만. 열아홉 줄에 전부 붙으면 딱지가 배경이 된다.
-   ③ 시스템 전에 들어온 사람은 채용 1-8번이 영영 안 채워진다. 기록 자체가 없기 때문이다.
-      그걸 '안 된 일' 로 세면 재직자 서른세 명이 전부 "1번에서 막힘" 으로 보인다.
-      이제 그 여덟은 아예 세지 않는다 — Billy 는 6/19 가 아니라 온보딩 기준으로만 센다.
-   그리고 영어 화면에서 제목이 반만 번역돼 "디스Code Role Grant" 처럼 깨져 있었다.
-   자동 번역기는 사전에 없는 낱말을 그대로 두므로 새로 쓴 문장은 늘 이렇게 된다. 영어를 직접 적는다. */
-var OB_EN = {
-  1:['WhatsApp document screening','CV · PC spec · Wi-Fi speed · LAN cable'],
-  2:['First interview (chat)','Experience · available hours · gaming background'],
-  3:['Terms explained · agreed','Pay · 90% probation · shift · basic rules'],
-  4:['Second interview (Discord cam)','PC and Wi-Fi recheck · attitude'],
-  5:['Remote T · AnyDesk installed','Confirm it is actually installed'],
-  6:['Remote game test','Lag · delay · PC power · line stability'],
-  7:['Final interview · details','The work · company rules'],
-  8:['Mutual final agreement','Both sides agree, then hired'],
-  9:['Registered as staff','Are they in the staff pool'],
- 10:['Maple character · Discord profile','They pick it in My Shift, or pick it here for them'],
- 11:['Discord role given','The role that matches their shift and position'],
- 12:['Personal details · start date','Full name · bank · account · phone · start date'],
- 13:['Discord ID','Used to tag them and set their nickname (clock-in is on the web)'],
- 14:['Daily board created · tagged','Their own board link'],
- 15:['Signed up on the website','Send the link, they sign up themselves'],
- 16:['Invite code delivered','The code they need to sign up'],
- 17:['Staff list filled in','Board link · Discord ID'],
- 18:['Everything really works','Clock-in · reports · PC assignment'],
- 19:['Handbook given','How to use the thread · rules · terms']
-};
-function _obL(ko, en){ try{ return (_uiLang()==='ko' || !en) ? ko : en; }catch(_){ return ko; } }
-function _obT(s){ var e = OB_EN[s.n]; return _obL(s.t, e && e[0]); }
-function _obD(s){ var e = OB_EN[s.n]; return _obL(s.d, e && e[1]); }
-function _obBtnTxt(ok){ return ok ? _obL('✓ 확인함','✓ Marked') : _obL('확인 표시','Mark done'); }
-var OB_WHO = { 1:'op',2:'op',3:'op',4:'op',5:'self',6:'op',7:'op',8:'op',9:'op',10:'self',
-               11:'op',12:'op',13:'op',14:'op',15:'self',16:'self',17:'op',18:'sys',19:'op' };
-function _obWhoL(w){ return { op:'OP TEAM', self:_obL('본인','Staff'), sys:_obL('자동','Auto') }[w] || w; }
-window._obOpen = window._obOpen || {};
-window._obSec = function(g){ window._obOpen[g] = !_obSecOpen(g); renderOnboarding(); };
-var _obSecState = {};
-function _obSecOpen(g){ return window._obOpen[g] !== undefined ? !!window._obOpen[g] : !!_obSecState[g]; }
-
-/* 살아 있는 확인 — 목록에 있는 사람 전부를 한 번에. 60초 안에는 다시 안 묻는다. */
-window._obLive = window._obLive || {};
-var _obLiveAt = 0, _obLiveP = null;
-async function _obLoadLive(ids, force){
-  ids = (ids || []).map(String).filter(function(x){ return x && x.indexOf('app:') !== 0; });
-  if(!ids.length) return window._obLive;
-  if(!force && (Date.now() - _obLiveAt) < 60000) return window._obLive;
-  if(_obLiveP) return _obLiveP;                                  /* 이미 받는 중 — 눈덩이 방지 */
-  _obLiveP = (async function(){
-    try{
-      if(typeof sb === 'undefined' || !sb) return window._obLive;
-      var TO = function(p, ms){ return Promise.race([p, new Promise(function(r){ setTimeout(function(){ r(null); }, ms); })]); };
-      var q = await TO(Promise.all([
-        sb.from('user_profiles').select('id,email').in('id', ids),
-        sb.from('attendance').select('user_id,date').in('user_id', ids).order('date',{ascending:false}).limit(3000)
-      ]), 9000);
-      if(!q) return window._obLive;                              /* 느리면 옛 값 그대로 — 빈 화면보다 낫다 */
-      var out = {}, mail = {};
-      ids.forEach(function(i){ out[i] = { att:0, lastAtt:'', login:false, invite:false, email:'' }; });
-      ((q[0] && q[0].data) || []).forEach(function(u){
-        var o = out[String(u.id)]; if(!o) return;
-        o.login = true; o.email = u.email || ''; if(o.email) mail[o.email] = String(u.id); });
-      ((q[1] && q[1].data) || []).forEach(function(a){
-        var o = out[String(a.user_id)]; if(!o) return;
-        o.att++; var d = String(a.date || ''); if(d > o.lastAtt) o.lastAtt = d; });
-      var el = Object.keys(mail);
-      if(el.length){
-        var iv = await TO(sb.from('invite_codes').select('used_by').in('used_by', el), 6000);
-        ((iv && iv.data) || []).forEach(function(c){
-          var id = mail[String(c.used_by || '')]; if(id && out[id]) out[id].invite = true; });
-      }
-      window._obLive = out; _obLiveAt = Date.now();
-    }catch(e){ console.warn('[온보딩] 살아있는 확인 실패:', e && e.message); }
-    return window._obLive;
-  })();
-  try{ return await _obLiveP; } finally { _obLiveP = null; }
-}
-
-/* 한 사람의 바탕 자료. 리포트 건수와 PC 배정은 이미 브라우저에 있으므로 여기서 센다. */
-function _obCtx(me){
-  var isApp = !!(me && me.isApp);
-  var P = (!isApp && STAFF_PROFILE[me.id] && STAFF_PROFILE[me.id].personal) || {};
-  var marks = isApp ? {} : _obMarks(me.id);
-  var app = isApp ? me.app : null;
-  if(!isApp){
-    try{ var k1 = String(me.name || '').toLowerCase().split(' ')[0];
-         app = (typeof APPLICANTS !== 'undefined' ? APPLICANTS : []).find(function(a){
-           return a && String(a.name || '').toLowerCase().split(' ')[0] === k1; }) || null; }catch(_){}
-  }
-  var L = (!isApp && window._obLive[String(me.id)]) || { att:0, lastAtt:'', login:false, invite:false };
-  var live = { att:L.att, lastAtt:L.lastAtt, login:L.login, invite:L.invite, rep:0, lastRep:'', pc:0, pcId:'', shift:'' };
-  try{
-    var nm = String(me.name || '').toLowerCase().split(' ')[0];
-    var rr = (typeof _rcGetCache === 'function' ? (_rcGetCache() || {}).reports : null) || [];
-    for(var i=0;i<rr.length;i++){ var r = rr[i]; if(!r) continue;
-      if(String(r.booster || '').toLowerCase().split(' ')[0] !== nm) continue;
-      live.rep++; var dt = String(r.date || ''); if(dt > live.lastRep) live.lastRep = dt; }
-  }catch(_){}
-  if(!isApp){ try{ (typeof PCS !== 'undefined' ? PCS : []).forEach(function(p){ (p.assignments || []).forEach(function(a){
-        if(a && String(a.staff) === String(me.id)){ live.pc++;
-          if(!live.pcId){ live.pcId = p.id;
-            try{ live.shift = pad2(_tzH(a.start)) + ':00–' + pad2(_tzH((a.start + a.len) % 24)) + ':00'; }catch(_){} } } }); }); }catch(_){} }
-  var stageIdx = {}; try{ RECRUIT_STAGES.forEach(function(s,i){ stageIdx[s.id] = i; }); }catch(_){}
-  var cand = [];
-  if(isApp){ try{ cand = (window._obCandCache && window._obCandCache[app.id]) || []; }catch(_){} }
-  return { me:me, isApp:isApp, P:P, marks:marks, app:app, live:live, cand:cand,
-           stageIdx:stageIdx, appAt: app ? (stageIdx[app.stage] != null ? stageIdx[app.stage] : -1) : -1 };
-}
-
-function _obState(s, c){
-  var P = c.P, marks = c.marks, app = c.app, live = c.live, isApp = c.isApp;
-  var has = function(v){ return String(v == null ? '' : v).trim() !== ''; };
-  switch(s.k){
-    case 'mark':    return { ok:!!marks[s.n], human:true,
-                      why: marks[s.n] ? _obL('확인함','Confirmed') : _obL('사람이 확인해야 합니다','A person has to confirm this') };
-    /* [v1434] 지원자 PC 사양은 a.pc_spec 이다 (a.spec 이 아니다 — v1431 에서 잘못 봤다).
-       와이파이 속도는 pc_spec.wifi 안에 한 겹 더 들어 있다. */
-    case 'spec':    if(!app) return { ok:false, na:true };
-                    var sp = (app && app.pc_spec) || {}, wf = (sp && sp.wifi) || {};
-                    var n = ['processor','memory','gpu'].filter(function(x){ return has(sp[x]); }).length
-                          + ['ssd','lan'].filter(function(x){ return sp[x] != null; }).length
-                          + ['down','up'].filter(function(x){ return has(wf[x]); }).length;
-                    return { ok:n>=4, why: app ? (n + _obL('/7 칸 채움','/7 filled') + (app.spec_status==='pass' ? _obL(' · 통과',' · passed') : (app.spec_status==='fail' ? _obL(' · 탈락',' · rejected') : ''))) : _obL('지원자 기록 없음','No applicant record') };
-    /* [v1434] 구원씨 절차 3·5·6·8 — 지원자 카드에서 확인한 것을 그대로 읽는다 */
-    case 'app:agreed': case 'app:remote': case 'app:gametest': case 'app:final':
-                    if(!app) return { ok:false, na:true };
-                    var f = s.k.slice(4), ob = (app && app.onboard) || {};
-                    return { ok:!!ob[f], appMark:true,
-                      why: app ? (ob[f] ? _obL('지원자 카드에서 확인함','Confirmed on the applicant card') : _obL('채용 화면에서 확인해 주세요','Confirm it on the recruiting screen')) : _obL('지원자 기록 없음','No applicant record') };
-    case 'maple':   var _mc = P.maple_char; return { ok:!!(_mc && _mc.id), maple:true,
-                      why: (_mc && _mc.id) ? (_mc.name + _obL(' · 디스코드 프로필에 쓰는 캐릭터',' · the character used for the Discord profile')) : _obL('아직 안 골랐음 — 826개 중에서 하나','Not picked yet — one of 826') };
-    case 'staff':   if(isApp) return { ok:false, staffLink:true,
-                      why: c.cand.length ? (_obL('가입된 계정 후보: ','Possible accounts: ') + c.cand.map(function(x){ return x.name + ' (' + x.email + ')'; }).join(' · ') + _obL(' — 맞으면 연결',' — link it if it is them'))
-                         : (app.invite_code ? (_obL('초대 코드 ','Invite code ') + app.invite_code + _obL(' 발급함 — 가입하면 저절로 연결됩니다',' issued — it links itself once they sign up')) : _obL('직원 계정이 없습니다 — 초대 코드를 만들어 보내세요','No staff account — make an invite code and send it')) };
-                    return { ok:true, why: app ? _obL('직원 풀에 있음 · 지원자 기록과 이어짐','In the staff pool · linked to the applicant record') : _obL('직원 풀에 있음','In the staff pool') };
-    case 'personal':var need = ['full_name','bank','account','phone','start_work'];
-                    var got = need.filter(function(x){ return has(P[x]); });
-                    var _L = _uiLang()==='ko' ? {full_name:'실명',bank:'은행',account:'계좌',phone:'전화',start_work:'입사일'}
-                                               : {full_name:'full name',bank:'bank',account:'account',phone:'phone',start_work:'start date'};
-                    return { ok:got.length===need.length, why: got.length + _obL('/5 · 빈칸: ','/5 · missing: ') + (need.filter(function(x){ return !has(P[x]); }).map(function(x){
-                      return _L[x]; }).join(' · ') || _obL('없음','none')) };
-    case 'login':   return { ok:live.login, why: live.login ? _obL('웹 계정 있음','Has a web account') : (isApp ? _obL('9번에서 초대 코드를 만들어 보내면 본인이 가입합니다','Make an invite code in step 9 and send it — they sign up themselves') : _obL('아직 가입 안 함','Not signed up yet')) };
-    case 'invite':  return { ok:live.invite, why: live.invite ? _obL('코드로 가입함','Signed up with a code') : _obL('코드 사용 기록 없음','No record of a code being used') };
-    case 'both':    return { ok:has(P.discord_thread)&&has(P.discord_id),
-                      why:((has(P.discord_id)?'':_obL('디스코드 아이디 없음 ','No Discord ID ')) + (has(P.discord_thread)?'':_obL('보드 링크 없음','No board link'))) || _obL('둘 다 있음','Both present') };
-    case 'live':    var a = live.att>0, b = live.rep>0, d = live.pc>0;
-                    return { ok:a&&b&&d, live:true,
-                      why: _obL('출퇴근 ','Clock-in ') + (a?('✓ '+live.att+_obL('일',' days')):_obL('· 없음','· none'))
-                         + _obL(' · 리포트 ',' · reports ') + (b?('✓ '+live.rep+_obL('건','')):_obL('· 없음','· none'))
-                         + _obL(' · PC 배정 ',' · PC ') + (d?('✓ '+live.pc+_obL('개','')):_obL('· 없음','· none')) };
-    default:
-      if(s.k.indexOf('stage:')===0){ if(!app) return { ok:false, na:true };
-        var want = s.k.slice(6), wi = c.stageIdx[want];
-        return { ok: c.appAt>=0 && wi!=null && c.appAt>=wi, why: app ? (_obL('지원자 단계: ','Applicant stage: ') + (_rsName(RECRUIT_STAGES[c.appAt]) || '?')) : _obL('지원자 기록 없음','No applicant record') }; }
-      if(s.k.indexOf('p:')===0){ var ff = s.k.slice(2);
-        return { ok:has(P[ff]), why: has(P[ff]) ? String(P[ff]).slice(0,40) : _obL('비어 있음','Empty') }; }
-      return { ok:false, why:'' };
-  }
-}
-
-/* 왼쪽 카드와 오른쪽 고리가 같은 셈을 쓴다 */
-function _obScore(me){
-  var c = _obCtx(me), done = 0, total = 0, next = null, sts = [];
-  OB_STEPS.forEach(function(s){ var st = _obState(s, c); sts.push(st);
-    if(st.na) return;                                     /* 기록 자체가 없는 단계는 세지 않는다 */
-    total++;
-    if(st.ok) done++; else if(!next) next = { s:s, st:st }; });
-  return { c:c, done:done, total:total || OB_STEPS.length, next:next, sts:sts };
-}
-
-/* 지원자의 가입 계정 후보 찾기 — 고른 사람에 대해서만, 한 번만 */
-function _obCandKick(app){
-  if(!window._obCandCache) window._obCandCache = {};
-  if(window._obCandCache[app.id] !== undefined) return;
-  if(typeof sb === 'undefined' || !sb) return;
-  window._obCandCache[app.id] = [];
-  /* [v1466] 고원 씨 화면이 "불러오는 중…" 에서 멈췄다 — 여기서 DB 답을 기다리고 있었다.
-     먼저 그리고, 후보는 뒤에서 채운다(4초 안에 안 오면 없는 것으로). */
-  (async function(){
-    var TO = function(p, ms){ return Promise.race([p, new Promise(function(r){ setTimeout(function(){ r(null); }, ms); })]); };
-    try{
-      if(app.invite_code && window._obAutoLinked !== String(app.id)){
-        var ic = await TO(sb.from('invite_codes').select('used_by').eq('code', app.invite_code).maybeSingle(), 4000);
-        var em2 = ic && ic.data && ic.data.used_by;
-        if(em2){ var up = await TO(sb.from('user_profiles').select('id,name,resigned_at').eq('email', em2).maybeSingle(), 4000);
-          /* [v1478] 코드에는 이름이 붙어 있지 않다. 다른 사람이 그 코드로 가입하면(9/11 Ilmi 코드를 Phil 이 씀)
-             엉뚱한 계정이 이 지원자로 이어진다. 퇴사한 계정이면 절대 잇지 않는다. */
-          if(up && up.data && up.data.id && !up.data.resigned_at){ window._obAutoLinked = String(app.id); await _obLink(app.id, up.data.id); return; }
-          if(up && up.data && up.data.resigned_at){ window._obAutoLinked = String(app.id);
-            try{ toast('이 초대 코드는 이미 다른 사람(' + (up.data.name || '퇴사자') + ')이 썼습니다 — 코드를 새로 만들어 주세요', true); }catch(_){} } }
-      }
-      var fn = String(app.name || '').trim().split(' ')[0];
-      if(fn.length >= 2){ var cq = await TO(sb.from('user_profiles').select('id,name,email').ilike('name', fn+'%').is('resigned_at', null).limit(5), 4000);
-        var got = (cq && cq.data) || []; window._obCandCache[app.id] = got;
-        if(got.length && String(window._obCur) === 'app:' + app.id) renderOnboarding('app:' + app.id); }
-    }catch(_){}
-  })();
-}
-
+/* ═══ [v1495] 온보딩 화면을 v1483 이전으로 되돌렸다 ═══════════════════════
+   사장님 "온보딩 그냥 전 화면이 더 간단해 ㅇㅇ 롤백해".
+   v1483 에서 왼쪽 사람 줄 · '지금 할 일' 카드 · 접히는 묶음을 넣었는데,
+   쓰는 사람에게는 그게 더 복잡했다. 화면이 할 일을 대신 정리해 주는 것보다
+   열아홉 줄이 그냥 다 보이는 쪽이 낫다는 뜻이다. 통째로 되돌린다.
+   같이 사라지는 것: 영어 제목표 · 기록 없는 단계 안 세기 · 번호 색 상태 표시.
+   필요하면 그때 하나씩 다시 올린다 — 한꺼번에 얹은 것이 문제였다. */
 async function renderOnboarding(pickId){
+  /* [v1495] 사장님 "온보딩 그냥 기본값을 전체직원 보기로" — 채용을 거쳐 들어온 사람만
+     보여 주던 것(v1479)이 기본이었다. 옛 직원 개인정보를 채울 일이 더 잦다. */
+  if(window._obAll === undefined) window._obAll = true;
   var host = document.getElementById('ch-other'); if(!host) return;
-  var esc = (typeof _mtcEsc === 'function') ? _mtcEsc : function(s){ return String(s==null?'':s); };
-  var HEAD = '<div class="ob-head"><h2>🎓 온보딩</h2>'
-    + '<div class="ob-sub">' + _obL('구원씨 절차 19단계 · <b>알 수 있는 것은 시스템이 답하고, 사람만 아는 것만 묻습니다</b>',
-          '19 steps · <b>the system answers what it can know, and only asks what only a person knows</b>') + '</div>'
-    + '<div class="ob-lg"><i class="ob-n ok">3</i>' + _obL('됐습니다','done')
-    +   '<i class="ob-n">7</i>' + _obL('아직 — 자료를 채우면 저절로 바뀝니다','not yet — fill the data in and it changes by itself')
-    +   '<i class="ob-n nx">9</i>' + _obL('지금 할 차례','do this one now')
-    + '</div></div>';
-
+  var esc = (typeof _mtcEsc==='function') ? _mtcEsc : function(s){ return String(s==null?'':s); };
   /* 사람 목록 — 재직자를 새로 온 순서로. 온보딩은 늘 '최근에 온 사람' 을 본다. */
   var people = [];
   try{
-    /* [v1479] boss "패스나 배치 들어온 사람만 뜨게" — 재직자 서른 명을 다 늘어놓으면
-       정작 오늘 온 사람을 찾느라 목록을 뒤진다. 옛 직원은 '전체 직원' 버튼으로. */
+    /* [v1479] boss "패스나 배치 들어온 사람만 뜨게" — 온보딩은 새로 들어온 사람을 세우는 화면이다.
+       재직자 서른 명을 다 늘어놓으면 정작 오늘 온 사람을 찾느라 목록을 뒤진다.
+       채용을 거쳐 들어온 사람(지원자 카드가 그 계정을 가리키는 사람)만 기본으로 보여 주고,
+       옛 직원 개인정보를 채워야 할 때만 '전체' 를 누른다. */
     var _fromRec = {};
     try{ (typeof APPLICANTS!=='undefined'?APPLICANTS:[]).forEach(function(a){
       if(a && a.stage==='pass' && a.staff_id) _fromRec[String(a.staff_id)] = 1; }); }catch(_){}
@@ -48270,177 +47955,177 @@ async function renderOnboarding(pickId){
   }catch(_){}
   /* [v1456] 합격했지만 아직 직원 계정이 없는 사람도 목록 맨 위에 — 9번(공식 입사 등록)을 여기서 한다 */
   try{ (typeof APPLICANTS!=='undefined'?APPLICANTS:[]).forEach(function(a){
-    if(!a || a.stage!=='pass' || (a.business && a.business!=='buju' && a.business!=='backup')) return;
+    if(!a || a.stage!=='pass' || (a.business && a.business!=='buju' && a.business!=='backup')) return;   /* [v1465] business 없어도 합격이면 온보딩 */
     if(a.staff_id && people.some(function(x){ return String(x.id)===String(a.staff_id); })) return;
-    /* [v1464] 옛 합격자(코드도 없이 30일 넘게 묵은 사람)는 목록에서 뺀다 */
+    /* [v1464] 옛 합격자(코드도 없이 30일 넘게 묵은 사람)는 목록에서 뺀다 — 안 그러면 고원 씨가 이름 일곱을 뒤져야 한다.
+       초대 코드가 있으면 진행 중이니 남긴다. */
     try{ var _upd=String(a.updated||a.created||'').slice(0,10); if(!a.invite_code && _upd && (Date.now()-new Date(_upd+'T00:00:00+09:00').getTime()) > 30*86400000) return; }catch(_){}
     people.unshift({ id:'app:'+a.id, name:String(a.name||'?'), start:'', app:a, isApp:true });
   }); }catch(_){}
-
   var cur = pickId || window._obCur || (people[0] && people[0].id) || '';
-  if(!people.some(function(x){ return String(x.id)===String(cur); })) cur = (people[0] && people[0].id) || '';
   window._obCur = cur;
-  var me = people.find(function(x){ return String(x.id)===String(cur); }) || null;
+  var me = people.find(function(x){ return String(x.id)===String(cur); }) || people[0] || null;
+  var isApp = !!(me && me.isApp);
 
-  if(!people.length){
-    host.innerHTML = '<div class="ob-wrap">' + HEAD
-      + '<div class="ob-load">채용을 거쳐 들어온 사람이 없습니다.<br><br>'
-      + '<button class="ob-mk" onclick="_obToggleAll()">전체 직원 보기</button></div></div>';
-    return;
-  }
+  host.innerHTML = '<div class="ob-wrap"><div class="ob-head"><h2>🎓 온보딩</h2>'
+    + '<div class="ob-sub">구원씨 절차 19단계 · <b>알 수 있는 것은 시스템이 답하고, 사람만 아는 것만 묻습니다</b></div></div>'
+    + '<div class="ob-load">불러오는 중…</div></div>';
+  if(!me){ host.querySelector('.ob-load').textContent = '직원이 없습니다.'; return; }
 
-  /* 첫 그림은 기다리지 않고 — 살아 있는 확인은 뒤에서 채우고 다시 그린다 */
-  var fresh = (Date.now() - _obLiveAt) < 60000;
-  if(!fresh){
-    host.innerHTML = '<div class="ob-wrap">' + HEAD + '<div class="ob-load">불러오는 중…</div></div>';
-    await _obLoadLive(people.map(function(x){ return x.id; }));
-  }
-  if(String(window._obCur) !== String(cur)) return;                /* 기다리는 사이 사람이 바뀌었다 */
-  if(me && me.isApp) _obCandKick(me.app);
-
-  /* ── 왼쪽 사람 줄 ── */
-  var railRows = people.map(function(x){
-    var sc = _obScore(x);
-    var ph = null; try{ ph = (typeof photoFor === 'function') ? photoFor(x.id) : null; }catch(_){}
-    var ini = String(x.name||'?').trim().charAt(0).toUpperCase();
-    var nx = sc.next ? (sc.next.s.n + '. ' + _obT(sc.next.s)) : _obL('전부 끝남','All done');
-    var meta = x.isApp ? _obL('지원자 · 계정 없음','Applicant · no account')
-             : (x.start ? (_obL('입사 ','Joined ') + esc(x.start.slice(5)) + ' · D+' + _obDays(x.start)) : _obL('입사일 없음','No start date'));
-    return '<button class="ob-p' + (String(x.id)===String(cur)?' on':'') + (sc.next?'':' fin') + '"'
-      + ' onclick="_obPick(\'' + esc(String(x.id)) + '\')" title="' + esc(nx) + '">'
-      + '<span class="ob-av">' + (ph ? ('<img src="' + esc(ph) + '" alt="">') : esc(ini)) + '</span>'
-      + '<span><span class="ob-pn">' + esc(x.name) + '</span>'
-      +   '<span class="ob-pm">' + esc(sc.next ? nx : (_obL('완료 · ','Done · ') + meta)) + '</span>'
-      +   '<span class="ob-pb"><i style="width:' + Math.round(sc.done/sc.total*100) + '%"></i></span></span></button>';
-  }).join('');
-  var inProg = people.filter(function(x){ return !!_obScore(x).next; }).length;
-  var rail = '<div class="ob-rail">'
-    + '<div class="ob-rh"><span class="ob-rh-t">' + _obL('사람','People') + '</span><span class="ob-rh-n">' + inProg + ' / ' + people.length + _obL(' 진행 중',' in progress') + '</span></div>'
-    + railRows
-    + '<div class="ob-bar">'
-    +   '<button class="ob-mk' + (window._obAll?' on':'') + '" onclick="_obToggleAll()" title="' + (window._obAll?'채용에서 들어온 사람만 보기':'재직자 전체 보기 — 옛 직원 개인정보를 채울 때') + '">' + (window._obAll?'채용만':'전체 직원') + '</button>'
-    +   (_obCanEdit() ? '<button class="ob-mk" onclick="_obPurge()" title="보드 주소가 없던 시절 리포트마다 하나씩 생긴 옛 스레드를 지웁니다 · 데일리보드는 안 건드립니다">🧹 옛 스레드</button>' : '')
-    + '</div></div>';
-
-  if(!me){ host.innerHTML = '<div class="ob-wrap">' + HEAD + rail + '<div class="ob-load">사람을 고르세요.</div></div>'; return; }
-
-  /* ── 오른쪽 ── */
-  var sc = _obScore(me), c = sc.c, P = c.P, live = c.live, isApp = c.isApp, app = c.app, cand = c.cand;
-  var ph = null; try{ ph = (typeof photoFor === 'function') ? photoFor(me.id) : null; }catch(_){}
-  var ini = String(me.name||'?').trim().charAt(0).toUpperCase();
-
-  var chips = [];
-  if(isApp) chips.push('<span class="ob-chip ac">지원자 · 계정 없음</span>');
-  if(live.pcId) chips.push('<span class="ob-chip">' + esc(live.pcId) + '</span>');
-  if(live.shift || P.shift_pattern) chips.push('<span class="ob-chip">' + esc(live.shift || P.shift_pattern) + '</span>');
-  if(P.start_work){
-    var dd = _obDays(P.start_work);
-    chips.push('<span class="ob-chip">입사 ' + esc(String(P.start_work).slice(0,10)) + ' · D+' + dd + '</span>');
-    chips.push(dd <= 30 ? ('<span class="ob-chip ac">수습 ' + dd + '/30일 · 급여 90%</span>')
-                        : '<span class="ob-chip gr">정규</span>');
-  }
-  if(P.maple_char && P.maple_char.id) chips.push('<span class="ob-chip">' + esc(P.maple_char.name) + '</span>');
-  if(live.lastAtt) chips.push('<span class="ob-chip">마지막 출근 ' + esc(live.lastAtt.slice(5)) + '</span>');
-
-  var RR = 26, CC = 2 * Math.PI * RR;
-  var hero = '<div class="ob-hero">'
-    + '<div class="ob-hav">' + (ph ? ('<img src="' + esc(ph) + '" alt="">') : esc(ini)) + '</div>'
-    + '<div><div class="ob-hn">' + esc(me.name) + '</div><div class="ob-chips">' + (chips.join('') || '<span class="ob-chip">아직 아무 정보가 없습니다</span>') + '</div></div>'
-    + '<div class="ob-ring"><svg width="62" height="62" viewBox="0 0 62 62" aria-hidden="true">'
-    +   '<circle cx="31" cy="31" r="' + RR + '" fill="none" stroke="var(--br)" stroke-width="5"></circle>'
-    +   '<circle cx="31" cy="31" r="' + RR + '" fill="none" stroke="' + (sc.next ? 'var(--ac)' : 'var(--gr)') + '" stroke-width="5" stroke-linecap="round"'
-    +     ' stroke-dasharray="' + CC.toFixed(1) + '" stroke-dashoffset="' + (CC * (1 - sc.done/sc.total)).toFixed(1) + '"></circle>'
-    +   '</svg><b>' + sc.done + '/' + sc.total + '</b></div>'
-    + '</div>';
-
-  /* 줄의 버튼 — '지금 할 일' 카드와 줄이 똑같은 버튼을 쓴다 */
-  function acts(s, st, big){
-    var g = 'ob-go', id = esc(String(me.id)), h = '';
-    if((s.k==='personal'||s.k==='p:discord_id'||s.k==='p:discord_thread'||s.k==='both'||s.k==='p:anydesk') && !st.ok && _obCanEdit() && !isApp)
-      h += '<button class="' + g + '" onclick="openStaffInfoEditor(\'' + id + '\')">채우기</button>';
-    if(st.maple && _obCanEdit() && !isApp)   /* [v1466] 10번 — 대신 고르기 */
-      h += '<button class="' + g + (st.ok?' gh':'') + '" onclick="_mapleCharOpen(\'' + id + '\', function(){ renderOnboarding(\'' + id + '\'); })">' + (st.ok?'캐릭터 바꾸기':'캐릭터 고르기') + '</button>';
-    if(s.k==='p:discord_thread' && !st.ok && _obCanEdit() && !isApp)   /* [v1456] 14번 — 봇이 만들고 고정한다 */
-      h += '<button class="' + g + '" onclick="_obMakeBoard(\'' + id + '\')">데일리보드 만들기</button>';
-    if(st.staffLink && _obCanEdit()){                                 /* [v1456] 9번 — 계정 잇기 · 초대 코드 */
-      h += cand.map(function(x){ return '<button class="' + g + '" onclick="_obLink(\'' + esc(String(app.id)) + '\',\'' + esc(String(x.id)) + '\')">연결: ' + esc(x.name) + '</button>'; }).join('');
-      h += app.invite_code
-        ? ('<button class="' + g + '" onclick="_obInviteCopy(\'' + esc(String(app.id)) + '\')">안내문 복사</button>'
-           + '<button class="' + g + ' gh" onclick="copyText(\'' + esc(String(app.invite_code)) + '\')">코드만</button>')
-        : ('<button class="' + g + '" onclick="_obInvite(\'' + esc(String(app.id)) + '\')">초대 코드 만들기</button>');
+  /* 살아 있는 확인 — 이 사람에 대해서만, 한 번에 */
+  var live = { att:0, lastAtt:'', rep:0, lastRep:'', login:false, invite:false, pc:0 };
+  try{
+    if(!isApp && typeof sb !== 'undefined' && sb){
+      var q = await Promise.race([ Promise.all([
+        sb.from('attendance').select('date').eq('user_id', me.id).order('date',{ascending:false}).limit(1),
+        sb.from('attendance').select('id', {count:'exact', head:true}).eq('user_id', me.id),
+        sb.from('user_profiles').select('id,email').eq('id', me.id).maybeSingle()
+      ]), new Promise(function(r){ setTimeout(function(){ r([]); }, 8000); }) ]);   /* [v1466] 8초 안에 안 오면 빈 채로 그린다 */
+      q = Array.isArray(q) ? q : [];
+      live.lastAtt = (q[0] && q[0].data && q[0].data[0] && q[0].data[0].date) || '';
+      live.att = (q[1] && q[1].count) || 0;
+      live.login = !!(q[2] && q[2].data && q[2].data.id);
+      var em = (q[2] && q[2].data && q[2].data.email) || '';
+      if(em){ var iv = await sb.from('invite_codes').select('id').eq('used_by', em).limit(1);
+              live.invite = !!(iv && iv.data && iv.data.length); }
     }
-    if(st.appMark && !st.ok && app)                                   /* [v1434] 채용 쪽에서 확인하는 것 */
-      h += '<button class="' + g + ' gh" onclick="setActiveChannel(\'op-recruit\')">채용 화면</button>';
-    /* [v1483] '지금 할 일' 이 눌 곳 없이 끝나면 안 된다. 1·2·4·7번은 지원자 카드에서 채우는 것이라
-       그 화면으로 보낸다. 큰 카드에서만 — 줄마다 같은 버튼이 붙으면 시끄럽다. */
-    if(big && !h && !st.ok && (s.k==='spec' || s.k.indexOf('stage:')===0))
-      h += '<button class="' + g + ' gh" onclick="setActiveChannel(\'op-recruit\')">채용 화면에서 채우기</button>';
-    if(st.human && big)
-      h += '<button class="ob-mk' + (st.ok?' on':'') + '" onclick="_obMark(\'' + id + '\',' + s.n + ')">' + _obBtnTxt(st.ok) + '</button>';
-    return h;
-  }
+  }catch(_){}
+  try{
+    var nm = String(me.name||'').toLowerCase().split(' ')[0];
+    var rr = (typeof _rcGetCache==='function' ? (_rcGetCache()||{}).reports : null) || [];
+    for(var i=0;i<rr.length;i++){ var r=rr[i]; if(!r) continue;
+      if(String(r.booster||'').toLowerCase().split(' ')[0] !== nm) continue;
+      live.rep++; var dt=String(r.date||''); if(dt > live.lastRep) live.lastRep = dt; }
+  }catch(_){}
+  try{ (typeof PCS!=='undefined'?PCS:[]).forEach(function(p){ (p.assignments||[]).forEach(function(a){
+        if(a && String(a.staff)===String(me.id)) live.pc++; }); }); }catch(_){}
 
-  /* ── 지금 할 일 ── */
-  var now;
-  if(sc.next){
-    var ns = sc.next.s, nst = sc.next.st, w = OB_WHO[ns.n] || 'op';
-    now = '<div class="ob-now"><div class="ob-now-k">' + _obL('지금 할 일 · ' + esc(_obWhoL(w)) + ' 차례', 'Next up · ' + esc(_obWhoL(w))) + '</div>'
-      + '<div class="ob-now-t"><i>' + ns.n + '</i>' + esc(_obT(ns)) + '</div>'
-      + '<div class="ob-now-w">' + esc(_obD(ns)) + (nst.why ? (' — ' + esc(nst.why)) : '') + '</div>'
-      + '<div class="ob-now-a">' + acts(ns, nst, true) + '</div></div>';
+  var P = (STAFF_PROFILE[me.id] && STAFF_PROFILE[me.id].personal) || {};
+  var marks = _obMarks(me.id);
+  var app = isApp ? me.app : null, cand = [];
+  if(!isApp){
+    try{ var k1 = String(me.name||'').toLowerCase().split(' ')[0];
+         app = (typeof APPLICANTS!=='undefined'?APPLICANTS:[]).find(function(a){
+           return a && String(a.name||'').toLowerCase().split(' ')[0] === k1; }) || null; }catch(_){}
   } else {
-    now = '<div class="ob-now fin"><div class="ob-now-k">끝</div>'
-      + '<div class="ob-now-t">' + esc(me.name) + ' 은(는) 열아홉 단계를 다 지났습니다</div>'
-      + '<div class="ob-now-w">출퇴근이 찍히고 리포트가 들어오고 PC 가 배정돼 있습니다 — 진짜로 돌아가고 있다는 뜻입니다.</div></div>';
+    /* [v1466] 고원 씨 화면이 "불러오는 중…" 에서 멈췄다 — 여기서 DB 답을 기다리고 있었다. 먼저 그리고, 후보는 뒤에서
+       채운다(4초 안에 안 오면 없는 것으로). 코드로 가입한 사람은 뒤에서 확인돼 저절로 이어진다. */
+    if(!window._obCandCache) window._obCandCache = {};
+    cand = window._obCandCache[app.id] || [];
+    if(window._obCandCache[app.id] === undefined && typeof sb !== 'undefined' && sb){
+      window._obCandCache[app.id] = [];
+      (async function(){
+        var TO = function(p, ms){ return Promise.race([p, new Promise(function(r){ setTimeout(function(){ r(null); }, ms); })]); };
+        try{
+          if(app.invite_code && window._obAutoLinked !== String(app.id)){
+            var ic = await TO(sb.from('invite_codes').select('used_by').eq('code', app.invite_code).maybeSingle(), 4000);
+            var em2 = ic && ic.data && ic.data.used_by;
+            if(em2){ var up = await TO(sb.from('user_profiles').select('id,name,resigned_at').eq('email', em2).maybeSingle(), 4000);
+              /* [v1478] 코드에는 이름이 붙어 있지 않다. 다른 사람이 그 코드로 가입하면(9/11 Ilmi 코드를 Phil 이 씀)
+                 엉뚱한 계정이 이 지원자로 이어진다. 퇴사한 계정이면 절대 잇지 않는다. */
+              if(up && up.data && up.data.id && !up.data.resigned_at){ window._obAutoLinked = String(app.id); await _obLink(app.id, up.data.id); return; }
+              if(up && up.data && up.data.resigned_at){ window._obAutoLinked = String(app.id);
+                try{ toast('이 초대 코드는 이미 다른 사람('+(up.data.name||'퇴사자')+')이 썼습니다 — 코드를 새로 만들어 주세요', true); }catch(_){} } }
+          }
+          var fn = String(app.name||'').trim().split(' ')[0];
+          if(fn.length >= 2){ var cq = await TO(sb.from('user_profiles').select('id,name,email').ilike('name', fn+'%').is('resigned_at', null).limit(5), 4000);
+            var got = (cq && cq.data) || []; window._obCandCache[app.id] = got;
+            if(got.length && String(window._obCur) === 'app:' + app.id) renderOnboarding('app:' + app.id); }
+        }catch(_){}
+      })();
+    }
   }
+  var stageIdx = {}; try{ RECRUIT_STAGES.forEach(function(s,i){ stageIdx[s.id]=i; }); }catch(_){}
+  var appAt = app ? (stageIdx[app.stage]!=null ? stageIdx[app.stage] : -1) : -1;
+  var has = function(v){ return String(v==null?'':v).trim() !== ''; };
 
-  /* ── 묶음별 줄 ── */
-  var groups = [];
-  OB_STEPS.forEach(function(s, i){
-    var g = groups.find(function(x){ return x.g === s.g; });
-    if(!g){ g = { g:s.g, items:[], done:0 }; groups.push(g); }
-    g.items.push({ s:s, st:sc.sts[i] }); if(sc.sts[i].ok) g.done++;
+  function state(s){
+    switch(s.k){
+      case 'mark':    return { ok:!!marks[s.n], human:true, why: marks[s.n] ? '확인함' : '사람이 확인해야 합니다' };
+      /* [v1434] 지원자 PC 사양은 a.pc_spec 이다 (a.spec 이 아니다 — v1431 에서 잘못 봤다).
+         와이파이 속도는 pc_spec.wifi 안에 한 겹 더 들어 있다. */
+      case 'spec':    var sp=(app&&app.pc_spec)||{}, wf=(sp&&sp.wifi)||{};
+                      var n=['processor','memory','gpu'].filter(function(x){ return has(sp[x]); }).length
+                          + ['ssd','lan'].filter(function(x){ return sp[x]!=null; }).length
+                          + ['down','up'].filter(function(x){ return has(wf[x]); }).length;
+                      return { ok:n>=4, why: app ? (n+'/7 칸 채움'+(app.spec_status==='pass'?' · 통과':(app.spec_status==='fail'?' · 탈락':''))) : '지원자 기록 없음' };
+      /* [v1434] 구원씨 절차 3·5·6·8 — 지원자 카드에서 확인한 것을 그대로 읽는다 */
+      case 'app:agreed': case 'app:remote': case 'app:gametest': case 'app:final':
+                      var f=s.k.slice(4), ob=(app&&app.onboard)||{};
+                      return { ok:!!ob[f], appMark:true,
+                        why: app ? (ob[f] ? '지원자 카드에서 확인함' : '채용 화면에서 확인해 주세요') : '지원자 기록 없음' };
+      case 'maple':   var _mc = P.maple_char; return { ok:!!(_mc && _mc.id), maple:true,
+                        why: (_mc && _mc.id) ? (_mc.name + ' · 디스코드 프로필에 쓰는 캐릭터') : '아직 안 골랐음 — 826개 중에서 하나' };   /* [v1466] */
+      case 'staff':   if(isApp) return { ok:false, staffLink:true,
+                        why: cand.length ? ('가입된 계정 후보: '+cand.map(function(c){ return c.name+' ('+c.email+')'; }).join(' · ')+' — 맞으면 연결')
+                           : (app.invite_code ? ('초대 코드 '+app.invite_code+' 발급함 — 가입하면 저절로 연결됩니다') : '직원 계정이 없습니다 — 초대 코드를 만들어 보내세요') };
+                      return { ok:true, why: app ? '직원 풀에 있음 · 지원자 기록과 이어짐' : '직원 풀에 있음' };
+      case 'personal':var need=['full_name','bank','account','phone','start_work'];
+                      var got=need.filter(function(x){ return has(P[x]); });
+                      return { ok:got.length===need.length, why: got.length+'/5 · 빈칸: '+(need.filter(function(x){ return !has(P[x]); }).map(function(x){
+                        return {full_name:'실명',bank:'은행',account:'계좌',phone:'전화',start_work:'입사일'}[x]; }).join(' · ')||'없음') };
+      case 'login':   return { ok:live.login, why: live.login ? '웹 계정 있음' : (isApp ? '9번에서 초대 코드를 만들어 보내면 본인이 가입합니다' : '아직 가입 안 함') };
+      case 'invite':  return { ok:live.invite, why: live.invite ? '코드로 가입함' : '코드 사용 기록 없음' };
+      case 'both':    return { ok:has(P.discord_thread)&&has(P.discord_id), why:(has(P.discord_id)?'':'디스코드 아이디 없음 ')+(has(P.discord_thread)?'':'보드 링크 없음')||'둘 다 있음' };
+      case 'live':    var a=live.att>0, b=live.rep>0, c=live.pc>0;
+                      return { ok:a&&b&&c, live:true,
+                        why:'출퇴근 '+(a?('○ '+live.att+'일'):'✗ 없음')+' · 리포트 '+(b?('○ '+live.rep+'건'):'✗ 없음')+' · PC 배정 '+(c?('○ '+live.pc+'개'):'✗ 없음') };
+      default:
+        if(s.k.indexOf('stage:')===0){ var want=s.k.slice(6); var wi=stageIdx[want];
+          return { ok: appAt>=0 && wi!=null && appAt>=wi, why: app ? ('지원자 단계: '+(_rsName(RECRUIT_STAGES[appAt])||'?')) : '지원자 기록 없음' }; }
+        if(s.k.indexOf('p:')===0){ var f=s.k.slice(2);
+          return { ok:has(P[f]), why: has(P[f]) ? String(P[f]).slice(0,40) : '비어 있음' }; }
+        return { ok:false, why:'' };
+    }
+  }
+  var rows='', doneN=0, lastG='';
+  OB_STEPS.forEach(function(s){
+    var st = state(s); if(st.ok) doneN++;
+    if(s.g !== lastG){ lastG = s.g; rows += '<div class="ob-g">'+s.g+'</div>'; }
+    rows += '<div class="ob-row'+(st.ok?' ok':'')+(st.live?' live':'')+'">'
+      + '<i class="ob-n">'+s.n+'</i>'
+      + '<div class="ob-b"><div class="ob-t">'+esc(s.t)+'</div>'
+      +   '<div class="ob-d">'+esc(s.d)+'</div>'
+      +   '<div class="ob-w">'+esc(st.why)+'</div></div>'
+      + '<div class="ob-a">'
+      +   (st.human
+            ? ('<button class="ob-mk'+(st.ok?' on':'')+'" onclick="_obMark(\''+esc(String(me.id))+'\','+s.n+')">'+(st.ok?'확인함':'확인')+'</button>')
+            : ('<span class="ob-auto">'+(st.ok?'○':'✗')+'</span>'))
+      +   ((s.k==='personal'||s.k==='p:discord_id'||s.k==='p:discord_thread'||s.k==='both'||s.k==='p:anydesk')&&!st.ok&&_obCanEdit()&&!isApp
+            ? ('<button class="ob-go" onclick="openStaffInfoEditor(\''+esc(String(me.id))+'\')">채우기</button>') : '')
+      /* [v1466] 10번 — 캐릭터 고르기(대신 고르기) */
+      +   (st.maple && _obCanEdit() && !isApp
+            ? ('<button class="ob-go" onclick="_mapleCharOpen(\''+esc(String(me.id))+'\', function(){ renderOnboarding(\''+esc(String(me.id))+'\'); })">'+(st.ok?'바꾸기':'캐릭터 고르기')+'</button>') : '')
+      /* [v1456] 14번 — 봇이 스레드를 만들고 소개 카드를 고정한다 */
+      +   (s.k==='p:discord_thread'&&!st.ok&&_obCanEdit()&&!isApp
+            ? ('<button class="ob-go" onclick="_obMakeBoard(\''+esc(String(me.id))+'\')">데일리보드 만들기</button>') : '')
+      /* [v1456] 9번 — 계정 잇기 · 초대 코드 */
+      +   (st.staffLink && _obCanEdit()
+            ? (cand.map(function(c){ return '<button class="ob-go" onclick="_obLink(\''+esc(String(app.id))+'\',\''+esc(String(c.id))+'\')">연결: '+esc(c.name)+'</button>'; }).join('')
+               + (app.invite_code
+                    ? ('<button class="ob-go" onclick="_obInviteCopy(\''+esc(String(app.id))+'\')">안내문 복사</button>'
+                       + '<button class="ob-go" onclick="copyText(\''+esc(String(app.invite_code))+'\')">코드만</button>')
+                    : ('<button class="ob-go" onclick="_obInvite(\''+esc(String(app.id))+'\')">초대 코드 만들기</button>')))
+            : '')
+      /* [v1434] 채용 쪽에서 확인하는 것들 — 그 화면으로 바로 보낸다 */
+      +   (st.appMark && !st.ok && app
+            ? ('<button class="ob-go" onclick="setActiveChannel(\'op-recruit\')">채용 화면</button>') : '')
+      + '</div></div>';
   });
-  var secs = groups.map(function(g){
-    g.live = g.items.filter(function(it){ return !it.st.na; }).length;
-    _obSecState[g.g] = g.live > 0 && g.done < g.live;                 /* 남은 게 있으면 기본으로 펼침 */
-    var open = _obSecOpen(g.g);
-    var live = g.items.filter(function(it){ return !it.st.na; });
-    var rows = live.map(function(it){
-      var s = it.s, st = it.st, w = OB_WHO[s.n] || 'op';
-      var isNext = !!(sc.next && sc.next.s.n === s.n);
-      var a = (st.human ? ('<button class="ob-mk' + (st.ok?' on':'') + '" onclick="_obMark(\'' + esc(String(me.id)) + '\',' + s.n + ')">' + _obBtnTxt(st.ok) + '</button>') : '')
-            + acts(s, st, false);
-      return '<div class="ob-row' + (st.ok?' ok':'') + (isNext?' next':'') + '">'
-        + '<i class="ob-n">' + s.n + '</i>'
-        + '<div><div class="ob-tl"><span class="ob-t">' + esc(_obT(s)) + '</span>'
-        +   (isNext ? ('<span class="ob-who ' + w + '">' + esc(_obWhoL(w)) + '</span>') : '') + '</div>'
-        +   '<div class="ob-d">' + esc(_obD(s)) + '</div>'
-        +   '<div class="ob-w">' + esc(st.why) + '</div></div>'
-        + (a ? ('<div class="ob-a">' + a + '</div>') : '<div></div>')
-        + '</div>';
-    }).join('');
-    if(!live.length) rows = '<div class="ob-na">' + _obL('이 사람은 채용 화면이 생기기 전에 들어왔습니다 — 이 여덟 단계는 기록이 없어서 세지 않습니다',
-                                                        'They joined before the recruiting screen existed — these eight steps have no record, so they are not counted') + '</div>';
-    else if(live.length < g.items.length) rows += '<div class="ob-na">' + _obL((g.items.length - live.length) + '단계는 기록이 없어서 세지 않습니다',
-                                                        (g.items.length - live.length) + ' steps have no record and are not counted') + '</div>';
-    return '<div class="ob-sec' + (open?' open':'') + '">'
-      + '<button class="ob-sh" onclick="_obSec(\'' + esc(g.g) + '\')">'
-      +   '<span class="ob-sh-c">▶</span><span class="ob-sh-t">' + esc(g.g) + '</span>'
-      +   '<span class="ob-sh-b"><i class="' + (g.live && g.done===g.live?'fin':'') + '" style="width:' + (g.live ? Math.round(g.done/g.live*100) : 0) + '%"></i></span>'
-      +   '<span class="ob-sh-n">' + (g.live ? (g.done + ' / ' + g.live) : _obL('기록 없음','no record')) + '</span></button>'
-      + '<div class="ob-sb">' + rows + '</div></div>';
-  }).join('');
-
-  host.innerHTML = '<div class="ob-wrap">' + HEAD + rail
-    + '<div class="ob-main">' + hero + now + secs
-    + '<div class="ob-foot">' + _obL('<b>18번</b>이 이 화면의 심장입니다. 앞의 열여덟 개가 진짜로 됐는지는 <b>출퇴근이 찍히고 리포트가 들어오는 것</b>으로만 증명됩니다.',
-          '<b>Step 18</b> is the heart of this screen. The only proof that the first eighteen really happened is <b>clock-ins landing and reports coming in</b>.') + '</div>'
-    + '</div></div>';
-}
-function _obDays(d){
-  try{ var t = new Date(String(d).slice(0,10) + 'T00:00:00+09:00').getTime();
-       if(!t) return 0; return Math.max(0, Math.floor((Date.now() - t) / 86400000)); }catch(_){ return 0; }
+  var pct = Math.round(doneN/OB_STEPS.length*100);
+  var opts = people.map(function(x){ return '<option value="'+esc(String(x.id))+'"'+(String(x.id)===String(cur)?' selected':'')+'>'+esc(x.name)+(x.isApp?' · 지원자(계정 없음)':'')+(x.start?(' · '+esc(x.start)):'')+'</option>'; }).join('');
+  host.innerHTML = '<div class="ob-wrap">'
+    + '<div class="ob-head"><h2>🎓 온보딩</h2>'
+    +   '<div class="ob-sub">구원씨 절차 19단계 · <b>알 수 있는 것은 시스템이 답하고, 사람만 아는 것만 묻습니다</b></div></div>'
+    + '<div class="ob-bar"><select class="ob-sel" onchange="_obPick(this.value)">'+opts+'</select>'
+    +   '<button class="ob-mk'+(window._obAll?' on':'')+'" onclick="_obToggleAll()" title="'+(window._obAll?'채용에서 들어온 사람만 보기':'재직자 전체 보기 — 옛 직원 개인정보를 채울 때')+'">'+(window._obAll?'채용만':'전체 직원')+'</button>'
+    +   (_obCanEdit() ? '<button class="ob-mk" onclick="_obPurge()" title="보드 주소가 없던 시절 리포트마다 하나씩 생긴 옛 스레드를 지웁니다 · 데일리보드는 안 건드립니다">🧹 옛 스레드</button>' : '')   /* [v1482] */
+    +   '<div class="ob-prog"><i style="width:'+pct+'%"></i></div>'
+    +   '<b class="ob-pct">'+doneN+' / '+OB_STEPS.length+'</b></div>'
+    + '<div class="ob-list">'+rows+'</div>'
+    + '<div class="ob-foot">○ 는 시스템이 자료를 보고 스스로 답한 것입니다 — 눌러도 안 바뀝니다. 자료를 채우면 바뀝니다.<br>'
+    +   '<b>18번</b>이 이 화면의 심장입니다. 앞의 열여덟 개가 진짜로 됐는지는 <b>출퇴근이 찍히고 리포트가 들어오는 것</b>으로만 증명됩니다.</div>'
+    + '</div>';
 }
 async function renderStaff(){
   try{
