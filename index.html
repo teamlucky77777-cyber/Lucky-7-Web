@@ -4,7 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
 <title>ARASAKA Corp</title>
-<!-- BUILD: v1478 | 남이 쓴 초대 코드로 엉뚱한 계정이 이어지던 것 (퇴사 계정은 안 잇는다) -->
+<!-- BUILD: v1479 | 온보딩 목록은 채용에서 들어온 사람만 (전체 직원은 버튼으로) -->
 <!-- v745 기록은 git 이력(v1302 이전 커밋)에 있다 — 100KB 변경사 주석을 배포에서 제거 -->
 <!-- [v677] a <link href> cannot read a CSS variable, so the favicon carries its own copy.
      64px: a browser tab draws it at 16-32px, so this is 2x-DPR sharp at 11KB. -->
@@ -47246,6 +47246,7 @@ window._obMark = function(id, n){
   }catch(e){ console.warn('ob mark:', e); }
 };
 window._obPick = function(id){ renderOnboarding(id); };
+window._obToggleAll = function(){ window._obAll = !window._obAll; window._obCur = null; renderOnboarding(); };   /* [v1479] */
 /* ═══ [v1456] 9번 공식 입사 등록 · 14번 데일리보드 — 사람이 손으로 하던 세 가지 ═══
    ① 합격한 지원자에게 초대 코드를 만들어 준다(왓츠앱으로 보내면 본인이 가입).
    ② 가입한 계정을 지원자 기록과 잇는다 — 코드로 가입했으면 저절로, 아니면 이름으로 찾아 한 번 누른다.
@@ -47344,7 +47345,16 @@ async function renderOnboarding(pickId){
   /* 사람 목록 — 재직자를 새로 온 순서로. 온보딩은 늘 '최근에 온 사람' 을 본다. */
   var people = [];
   try{
-    people = (typeof STAFF!=='undefined' && Array.isArray(STAFF) ? STAFF : []).filter(function(s){ return s && s.id && !s.virtual; })   /* [v1476] ATS 자리표는 사람이 아니다 */
+    /* [v1479] boss "패스나 배치 들어온 사람만 뜨게" — 온보딩은 새로 들어온 사람을 세우는 화면이다.
+       재직자 서른 명을 다 늘어놓으면 정작 오늘 온 사람을 찾느라 목록을 뒤진다.
+       채용을 거쳐 들어온 사람(지원자 카드가 그 계정을 가리키는 사람)만 기본으로 보여 주고,
+       옛 직원 개인정보를 채워야 할 때만 '전체' 를 누른다. */
+    var _fromRec = {};
+    try{ (typeof APPLICANTS!=='undefined'?APPLICANTS:[]).forEach(function(a){
+      if(a && a.stage==='pass' && a.staff_id) _fromRec[String(a.staff_id)] = 1; }); }catch(_){}
+    var _all = !!window._obAll;
+    people = (typeof STAFF!=='undefined' && Array.isArray(STAFF) ? STAFF : []).filter(function(s){
+      return s && s.id && !s.virtual && (_all || _fromRec[String(s.id)]); })
       .map(function(s){
         var p = (STAFF_PROFILE[s.id] && STAFF_PROFILE[s.id].personal) || {};
         return { id:s.id, name:s.name || p.full_name || '?', start:String(p.start_work||'') };
@@ -47516,6 +47526,7 @@ async function renderOnboarding(pickId){
     + '<div class="ob-head"><h2>🎓 온보딩</h2>'
     +   '<div class="ob-sub">구원씨 절차 19단계 · <b>알 수 있는 것은 시스템이 답하고, 사람만 아는 것만 묻습니다</b></div></div>'
     + '<div class="ob-bar"><select class="ob-sel" onchange="_obPick(this.value)">'+opts+'</select>'
+    +   '<button class="ob-mk'+(window._obAll?' on':'')+'" onclick="_obToggleAll()" title="'+(window._obAll?'채용에서 들어온 사람만 보기':'재직자 전체 보기 — 옛 직원 개인정보를 채울 때')+'">'+(window._obAll?'채용만':'전체 직원')+'</button>'
     +   '<div class="ob-prog"><i style="width:'+pct+'%"></i></div>'
     +   '<b class="ob-pct">'+doneN+' / '+OB_STEPS.length+'</b></div>'
     + '<div class="ob-list">'+rows+'</div>'
