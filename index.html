@@ -4,7 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
 <title>ARASAKA Corp</title>
-<!-- BUILD: v1484 | 저금통 — 정산 탭에서 굳은 일급을 달·날짜별로 보고 조정 줄을 단다 -->
+<!-- BUILD: v1485 | 캔버스 — 더블클릭으로 만들고 적는 동안 카드가 사라지던 것 -->
 <!-- v745 기록은 git 이력(v1302 이전 커밋)에 있다 — 100KB 변경사 주석을 배포에서 제거 -->
 <!-- [v677] a <link href> cannot read a CSS variable, so the favicon carries its own copy.
      64px: a browser tab draws it at 16-32px, so this is 2x-DPR sharp at 11KB. -->
@@ -24267,6 +24267,51 @@ const _MT_TAB_ID = Date.now().toString(36) + Math.random().toString(36).slice(2,
 let _mtDirty = false;
 let _mtDirtyAt = 0;
 function _mtMarkDirty(){ _mtDirty = true; _mtDirtyAt = Date.now(); }
+/* ═══ [v1485] 글자를 치는 것도 '내 변경'이다 ═══════════════════════════════════
+   boss "더블클릭으로 업무카드 만들고 적기 시작하면 사라져버려"
+
+   타이핑은 _mtMarkDirty() 만 부르고 _mtRev 는 안 올렸다. 그런데 깃발을 끄는
+   _mtClearDirty(revAtWrite) 는 **rev 가 그대로면 꺼 버린다.**
+   그래서 이런 일이 났다:
+     ① 더블클릭 → 빈 카드(text:"")가 만들어지고 곧바로 저장이 날아간다(rev=5)
+     ② 사람이 글을 친다 — dirty 는 켜지지만 rev 는 5 그대로
+     ③ ①의 저장이 "받았다"고 돌아온다 → rev 가 5 그대로라 **dirty 가 꺼진다**
+     ④ 그 뒤로 1분을 쳐도 서버에는 빈 카드뿐이고, 화면을 옮겼다 오면
+        syncMTFromCloud 가 서버 것으로 갈아끼운다 → 적은 글도 카드도 사라진다
+   엔터를 먼저 치면 안 사라지던 이유가 이것이다 — 엔터가 saveMTSystem 을 불러
+   rev 를 올리고 글이 실제로 서버에 올라가기 때문이다.
+   글자 하나도 '내 변경' 으로 세면 ③이 막힌다. */
+function _mtTypedDirty(){ _mtRev++; _mtMarkDirty(); }
+/* ═══ [v1485] 서버 것으로 갈아끼운 직후 — 적고 있던 카드를 지킨다 ═══════════════
+   ① 새 배열에 그 카드가 있으면 치고 있던 글을 다시 얹는다
+   ② 아예 없으면(= 아직 서버에 안 오른 새 카드) 갈아끼우기 전에 들고 있던 사본을
+      도로 넣는다. 없어진 카드를 되살리는 유일한 길이다. */
+function _mtcKeepEditingSnap(){ return { inbox: MT_INBOX, active: MT_ACTIVE, passive: MT_PASSIVE }; }
+function _mtcKeepEditing(prev){
+  try{
+    if(typeof _mtcEditingUid === 'undefined' || !_mtcEditingUid) return;
+    const uid = String(_mtcEditingUid);
+    const f = _mtcFindByUid(uid);
+    if(f && f.item){                                   /* ① 있으면 내 글만 다시 얹는다 */
+      if(f.arr === MT_INBOX) f.item.text = _mtcEditingText; else f.item.title = _mtcEditingText;
+      try{ _mtTouched(uid); }catch(_){}
+      return;
+    }
+    if(!prev) return;
+    /* ② 아예 없다 — 갈아끼우기 전 목록에서 찾아 제자리(원래 있던 칸)로 되돌린다 */
+    const where = [['inbox', prev.inbox, MT_INBOX], ['active', prev.active, MT_ACTIVE], ['passive', prev.passive, MT_PASSIVE]];
+    for(const [kind, before, now] of where){
+      const back = (before || []).find(x => x && String(x.uid||'') === uid);
+      if(!back) continue;
+      if(kind === 'inbox') back.text = _mtcEditingText; else back.title = _mtcEditingText;
+      now.push(back);
+      try{ _mtTouched(uid); }catch(_){}
+      _mtMarkDirty();
+      console.warn('[keepEditing] 적고 있던 카드가 서버 것에 없어 되돌림 | ' + kind + ' | "' + String(_mtcEditingText||'').slice(0,30) + '"');
+      return;
+    }
+  }catch(_){}
+}
 /* 성공 응답을 받았을 때만 끈다. 그 사이 또 바뀌었으면(rev 변동) 계속 켜 둔다. */
 function _mtClearDirty(revAtWrite){ if(_mtRev === revAtWrite){ _mtDirty = false; } }
 /* 안전판 — 저장이 끝내 실패해 깃발이 남으면 그 세션은 남의 변경을 영영 못 받는다.
@@ -24479,6 +24524,7 @@ function _mtMergeOnto(srv, mineIn, baseIn){
 function _mtAdoptMerged(m){
   if(!m) return;
   const _prevZC = MT_CZONES;   /* [v1019] 박스 경호 — 받아 적기 전 목록 */
+  const _prevIn = _mtcKeepEditingSnap();    /* [v1485] 적고 있던 카드가 병합 결과에 없을 때 되돌릴 원본 */
   MT_INBOX = m.inbox||[]; MT_PASSIVE = m.passive||[]; MT_ACTIVE = m.active||[]; MT_TRASH = m.trash||[];
   MT_CLAYOUT = m.clayout||{}; MT_LINKS = m.links||[]; MT_CMEMBERS = Array.isArray(m.cmembers)?m.cmembers:null;
   MT_CZONES = Array.isArray(m.czones)?m.czones:[]; MT_CDIVS = Array.isArray(m.cdivs)?m.cdivs:[];
@@ -24491,6 +24537,7 @@ function _mtAdoptMerged(m){
      가드를 지나지 않는다. 그래서 글을 치는 동안 저장이 한 번 돌면 방금 친 글자가 서버의 옛
      글로 되돌아갔다 — "적었는데 사라진다"의 한 갈래다.
      받아 적은 직후, 지금 적고 있는 카드에만 그 글을 다시 얹는다. */
+  try{ _mtcKeepEditing(_prevIn); }catch(_){}   /* [v1485] 카드가 통째로 없어진 경우까지 */
   try{
     if(_mtcEditingUid){
       const f = _mtcFindByUid(_mtcEditingUid);
@@ -24742,6 +24789,12 @@ async function syncMTFromCloud(){
         return;
       }
       const _prevZC = MT_CZONES;   /* [v1019] 박스 경호 */
+      /* ═══ [v1485] 여기가 카드를 통째로 날리던 자리다 ═══════════════════════════
+         poll 에는 '타이핑 중이면 적용하지 않는다' 는 가드가 있는데 이 길에는 없었다.
+         이 길은 화면을 옮겼다 돌아올 때 열린다 — 카드를 만들어 놓고 한참 적다가
+         다른 탭을 한 번 보고 오면, 서버의 옛 상태(빈 카드 또는 아예 없음)로
+         통째로 갈아끼워졌다. 갈아끼우기 전 목록을 들고 있다가 아래에서 되돌린다. */
+      const _prevIn = _mtcKeepEditingSnap();
       MT_INBOX   = Array.isArray(d.inbox)   ? d.inbox   : [];
       MT_PASSIVE = Array.isArray(d.passive) ? d.passive : [];
       MT_ACTIVE  = Array.isArray(d.active)  ? d.active  : [];
@@ -24755,6 +24808,7 @@ async function syncMTFromCloud(){
       MT_TPLS    = Array.isArray(d.tpls) ? d.tpls : [];
       MT_HIDDEN  = Array.isArray(d.hidden) ? d.hidden : [];
       MT_PAGES   = Array.isArray(d.pages) ? d.pages : [];
+      try{ _mtcKeepEditing(_prevIn); }catch(_){}                  /* [v1485] 적고 있던 카드 지키기 */
       _mtPurgeOldTrash();                                        // [v670] 14일 지난 항목 자동 소멸
       _mtcEnsureUids();                                          // [v828] uid를 로드 시점에 확정 — 렌더 중 임시 부여가 poll에 쓸려 링크가 고아되던 것
       _mtSetBase(d);   /* [v950] 처음 받아온 서버 상태가 기준이 된다 */
@@ -24806,7 +24860,9 @@ async function pollMTSystem(){
        복원한다. 사라진 카드의 선택은 자연스럽게 정리된다. */
     const _keepSel = (typeof MTC_SEL !== 'undefined' && MTC_SEL.size) ? Array.from(MTC_SEL) : null;
     const _prevZC = MT_CZONES;   /* [v1019] 박스 경호 */
+    const _prevIn = _mtcKeepEditingSnap();    /* [v1485] 적고 있던 카드 경호 — 포커스가 잠깐 빠져도 */
     MT_INBOX = d.inbox||[]; MT_PASSIVE = d.passive||[]; MT_ACTIVE = d.active||[]; MT_TRASH = d.trash||[]; MT_CLAYOUT = d.clayout||{}; MT_LINKS = d.links||[]; MT_CMEMBERS = Array.isArray(d.cmembers)?d.cmembers:null; MT_CZONES = Array.isArray(d.czones)?d.czones:[]; MT_CDIVS = Array.isArray(d.cdivs)?d.cdivs:[]; MT_OPEN = !!d.open; MT_TPLS = Array.isArray(d.tpls)?d.tpls:[]; MT_HIDDEN = Array.isArray(d.hidden)?d.hidden:[]; MT_PAGES = Array.isArray(d.pages)?d.pages:[];
+    try{ _mtcKeepEditing(_prevIn); }catch(_){}
     _mtSig = sig; _mtcEnsureUids(); saveMTLocal();
     _mtSetBase(d);   /* [v950] 방금 서버 것을 받았다 — 여기가 새 기준 */
     /* [v1019] 방금 만진 박스가 서버 상태에 없으면 되살리고 곧장 다시 올린다 — 기준은 서버 것
@@ -25886,7 +25942,11 @@ function mtcPenCommit(){
     const parts = [card&&`카드 ${card}`, box&&`박스 ${box}`, link&&`연결 ${link}`, div&&`구분선 ${div}`].filter(Boolean).join(' · ');
     toast(`✏ ${parts}${skipped?` (인식 안 된 획 ${skipped}개는 버림)`:''}`);
     // 카드를 딱 하나 그렸으면 바로 글을 쓸 수 있게 커서를 넣어준다
-    if(card === 1 && firstCard) setTimeout(()=>_mtcEditNote(firstCard.id), 60);
+    if(card === 1 && firstCard){
+      /* [v1485] 펜으로 그려 만든 카드도 만든 순간부터 경호 — 더블클릭 길과 같은 구멍이었다 */
+      try{ const _f = _mtcFind(firstCard.kind, firstCard.id); if(_f && _f.item) _mtcGuardNew(_mtcUid(_f.item), _f.item); }catch(_){}
+      setTimeout(()=>_mtcEditNote(firstCard.id), 60);
+    }
   }, 220);
 }
 function _mtcPenBar(){
@@ -30166,6 +30226,9 @@ function mtcNewNoteAt(x, y){
   const it = { id, text:"", created_at:isoDate(new Date()), owner: ctx.viewingMember || currentUser?.name || "MT", pos:{x,y}, pg: MTC_PAGE };
   MT_INBOX.push(it);
   window._mtcPopUid = _mtcUid(it);          // 애니 2: 톡 나타나는 효과
+  /* [v1485] 경호는 '엔터를 친 뒤'가 아니라 '만든 순간'부터. 더블클릭으로 만들고
+     바로 적기 시작하는 길이 정확히 이 보호를 못 받고 있었다. */
+  try{ _mtcGuardNew(_mtcUid(it), it); }catch(_){}
   saveMTSystem(); renderMTSystem();
   setTimeout(()=>{ window._mtcPopUid = null; }, 400);
   setTimeout(()=>_mtcEditNote(id), 60);
@@ -30213,11 +30276,25 @@ function _mtcEditNote(id){
     const cur = _find(); if(!cur) return;
     if(kind === 'inbox') cur.text = v; else cur.title = v;
     try{ _mtTouched(_uid); }catch(_){}          // 병합에서 내 글이 이기게
-    try{ _mtMarkDirty(); }catch(_){}            // 서버 응답이 이 순간을 덮지 못하게
+    try{ _mtTypedDirty(); }catch(_){}           // [v1485] rev 까지 올린다 — 진행 중인 저장이 이 깃발을 못 끄게
     try{ _mtcRTTyping(_uid, true); }catch(_){}   // [v901] 타이핑이 이어지는 동안 신호 유지(1.2s 스로틀)
+    /* ═══ [v1485] 적는 동안에도 올린다 ═══════════════════════════════════════════
+       여태 sync 는 화면의 모델만 고쳤다. 서버로는 아무것도 안 갔다. 그래서 엔터를
+       치기 전까지는 몇 분을 적어도 서버에는 빈 카드뿐이었다 — 그 사이 무슨 일이
+       나면 통째로 사라진다. 2.5초에 한 번씩 조용히 올린다(렌더는 안 한다, 커서가
+       튀면 안 되므로). 이제 최악이어도 2.5초어치만 잃는다. */
+    try{
+      if(!window._mtcTypeSaveT){
+        window._mtcTypeSaveT = setTimeout(function(){
+          window._mtcTypeSaveT = null;
+          try{ if(_mtcEditingUid) saveMTSystem(); }catch(_){}
+        }, 2500);
+      }
+    }catch(_){}
   };
   const commit = () => {
     tx.removeEventListener('blur', commit); tx.removeEventListener('keydown', key); tx.removeEventListener('input', sync);
+    try{ clearTimeout(window._mtcTypeSaveT); window._mtcTypeSaveT = null; }catch(_){}   /* [v1485] 예약된 중간 저장 정리 — 아래에서 어차피 저장한다 */
     try{ _mtcRTTyping(_uid, false); }catch(_){}   // [v901] 다 썼다 — 배지 즉시 제거
     sync();
     /* [v1006] 적기를 마쳤다 — 보호를 풀기 전에 글이 실제로 모델에 들어갔는지 확인한다.
@@ -31425,17 +31502,24 @@ function _mtcGuardNew(uid, snap){
 function _mtcNewGuardCheck(){
   const g = _mtcNewGuard; if(!g) return;
   try{
-    if(Date.now() - g.at > 6000){ _mtcNewGuard = null; return; }
+    /* [v1485] 아직 그 카드를 적고 있으면 6초가 지나도 경호를 안 푼다 — 1분을 적는
+       동안이 가장 위험한 구간인데 여태 6초만 지키고 손을 놨다. */
+    const _editingThis = (typeof _mtcEditingUid !== 'undefined') && _mtcEditingUid && String(_mtcEditingUid) === g.uid;
+    if(Date.now() - g.at > 6000 && !_editingThis){ _mtcNewGuard = null; return; }
     if(window._mtcDragging){ window._mtcNewGuardT = setTimeout(_mtcNewGuardCheck, 600); return; }
     const f = _mtcFindByUid(g.uid);
     if(f && f.item){ window._mtcNewGuardT = setTimeout(_mtcNewGuardCheck, 1000); return; }   // 살아 있다 — 계속 지켜본다
     const inTrash = (MT_TRASH||[]).some(t => t && (String(t.uid||'') === g.uid || _mtcUid(t) === g.uid));
     if(inTrash){ _mtcNewGuard = null; return; }   // 내가 버린 것 — 부활 금지
     if(g.fixed >= 2){ console.warn('[newGuard] 두 번 되살려도 또 사라짐 — 포기 | ' + g.uid); _mtcNewGuard = null; return; }
-    MT_INBOX.push(JSON.parse(JSON.stringify(g.snap)));
+    const _back = JSON.parse(JSON.stringify(g.snap));
+    /* [v1485] 되살릴 때 빈 사본이 아니라 **지금 치고 있던 글**로 되살린다.
+       만든 순간의 사본은 text:"" 라서, 그대로 되살리면 카드는 돌아와도 글은 날아갔다. */
+    if(_editingThis && String(_mtcEditingText||'').trim()) _back.text = _mtcEditingText;
+    MT_INBOX.push(_back);
     g.fixed++;
     try{ _mtTouched(g.uid); }catch(_){}
-    console.warn('[newGuard] 방금 만든 카드가 사라져 되살림 | "' + String(g.snap.text||g.snap.title||'').slice(0,30) + '" | ' + (Date.now()-g.at) + 'ms | 되살린횟수 ' + g.fixed);
+    console.warn('[newGuard] 방금 만든 카드가 사라져 되살림 | "' + String(_back.text||_back.title||'').slice(0,30) + '" | ' + (Date.now()-g.at) + 'ms | 되살린횟수 ' + g.fixed);
     saveMTSystem(); renderMTSystem();
     window._mtcNewGuardT = setTimeout(_mtcNewGuardCheck, 1200);
   }catch(_){ _mtcNewGuard = null; }
@@ -39742,7 +39826,7 @@ function _srRecCardHTML(data){
           +'<div class="sr-focus-av" style="background:#3a6ea5">🎮</div>'
           +'<div style="min-width:0"><div class="sr-focus-nm">'+esc(co.client||curC)+((co.pc!=null&&String(co.pc)!=='')?'<span class="sr-focus-gb">PC'+esc(String(co.pc))+'</span>':'')+'</div>'
             +'<div class="sr-focus-chips">'+chipC(_L?'평균 EXP%':'Average EXP%',(cst.avg!=null?cst.avg.toFixed(2)+'%':'—'))+chipC(_L?'기준 대비':'vs Standard',(cst.perf!=null?Math.round(cst.perf)+'%':'—'))+(function(){ /* [v1407] boss "카드에 적지 말고 자세히 눌렀을 때" — 작업량(쌀)은 여기서만 */ try{ if(typeof clientSsal!=='function' || !(currentUserRole==='admin'||currentUserRole==='op')) return '';
-                   /* [v1460] boss "몇 쌀인지 어떻게 합쳐진 거임" — 리포트 이름(남강쌤)과 계정 이름이 다르면 0쌀이 나와 칩이 사라졌다.
+                   /* [v1485] boss "몇 쌀인지 어떻게 합쳐진 거임" — 리포트 이름(남강쌤)과 계정 이름이 다르면 0쌀이 나와 칩이 사라졌다.
                       계정을 먼저 찾아 그 이름으로 센다. 계정이 없거나 0이면 '—' 로라도 보인다. */
                    var _nmC=co.client||curC, _accC=null; try{ _accC=(typeof _srClAcctFor==='function')?_srClAcctFor(_srClNorm(_nmC)):null; }catch(_){}
                    var _s=clientSsal(_accC&&_accC.name?_accC.name:_nmC); if(!_s && _accC && _accC.name!==_nmC) _s=clientSsal(_nmC);
@@ -40574,7 +40658,7 @@ function _srRecCardHTML(data){
   var body = (mode==='clock')
     ? _clockBoardHTML(sessions)
     : (mode==='client')
-    ? ((function(){ /* [v1460] 옛 클라이언트 탭의 "총 작업량" — boss "총 작업량 위에 뜨는 건 괜찮다". 카드 겉엔 안 적고 판 위에 한 줄. */
+    ? ((function(){ /* [v1485] 옛 클라이언트 탭의 "총 작업량" — boss "총 작업량 위에 뜨는 건 괜찮다". 카드 겉엔 안 적고 판 위에 한 줄. */
           try{ if(!(currentUserRole==='admin'||currentUserRole==='op') || typeof clientSsal!=='function' || typeof CLIENT_ACCOUNTS==='undefined') return '';
                var _tot=0,_n=0; (CLIENT_ACCOUNTS||[]).forEach(function(a){ if(!a||a.active===false) return; var v=clientSsal(a.name); if(v>0){ _tot+=v; _n++; } });
                if(!_tot) return '';
