@@ -4,7 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
 <title>ARASAKA Corp</title>
-<!-- BUILD: v1493 | 빠른 경고 단추 연타 차단 — 손가락 한 번에 수십만이 움직였다 -->
+<!-- BUILD: v1494 | 경고 잠금 되돌림 — 그 점수는 사장님이 진짜로 넣은 것이었다 -->
 <!-- v745 기록은 git 이력(v1302 이전 커밋)에 있다 — 100KB 변경사 주석을 배포에서 제거 -->
 <!-- [v677] a <link href> cannot read a CSS variable, so the favicon carries its own copy.
      64px: a browser tab draws it at 16-32px, so this is 2x-DPR sharp at 11KB. -->
@@ -51026,43 +51026,6 @@ async function quickGrantWarn(memberId, pts){
   if(!_trustCanEdit()){ toast('점수 조작 권한이 없습니다', true); return; }   // [v898] 보기 전용 직원 차단
   // [v653] A closed month may already have paid out — never let a stray click change it.
   if(_trLocked()){ try{ toast(_trT('지난 달은 수정할 수 없습니다 — 이번 달로 전환하세요.','Past months are read-only — switch to the current month.'), true); }catch(_){} return; }
-
-  /* ═══ [v1493] 빠른 경고 단추에 제동 ═══════════════════════════════════════
-     9.1-9.10 열흘 사이에 한 사람 한 날짜로 10 · 20 · 20 · 20 · 20 · 24 · 30 점이 찍혔다.
-     전부 'Quick warn' 1점짜리다. 사람이 하루에 서른 번 잘못하지는 않는다 — 단추가 눌린 것이다.
-     Icarus 30 · Bin 24 · Ditt 20 두 번 · Puchi 20 · Romeo 20 · Reef 10 — 합 154점.
-     경고는 달마다 몇 점까지 무료이고 그 위로는 1점에 만 단위로 급여에서 빠진다.
-     그래서 손가락 한 번에 수십만이 움직인다.
-     막는 길은 둘이다. ① 너무 빠른 연타는 아예 안 받는다 ② 하루 무료분을 넘기면 사람에게 묻는다.
-     깎는 쪽(pts<0)은 건드리지 않는다 — 잘못 붙은 점수를 되돌리는 길까지 좁히면 안 된다. */
-  if(pts > 0){
-    const _now = Date.now();
-    if(!window._qwLast) window._qwLast = {};
-    if(_now - (window._qwLast[memberId] || 0) < 1500){
-      try{ toast(_trT('너무 빠릅니다 — 한 건씩 눌러 주세요','Too fast — one at a time'), true); }catch(_){}
-      return;
-    }
-    const _t0 = TRUST_DATA[memberId] || {};
-    const _today = _trToday();
-    let _dayPts = 0;
-    try{ (_t0.incidents || []).forEach(function(i){
-      if(i && String(i.date || '').slice(0,10) === _today && (+i.pts || 0) > 0) _dayPts += (+i.pts || 0); }); }catch(_){}
-    let _free = Number((window.__KB_SETTINGS || {}).trust_warn_free); if(!isFinite(_free)) _free = 3;
-    if(_dayPts + pts > _free){
-      let _rp = Number((window.__KB_SETTINGS || {}).trust_warn_rp); if(!isFinite(_rp)) _rp = 10000;
-      const _nm0 = trustName(memberId);
-      const _ko = (typeof _uiLang === 'function' && _uiLang() === 'ko');
-      const _msg = _ko
-        ? (_nm0 + ' — 오늘 이미 ' + _dayPts + '점입니다.\n이번이 ' + (_dayPts + pts) + '점째입니다.\n\n'
-           + '경고는 달마다 ' + _free + '점까지 무료이고, 그 위로는 1점에 ' + _rp.toLocaleString() + ' 씩 급여에서 빠집니다.\n'
-           + '정말 한 점 더 주시겠습니까?')
-        : (_nm0 + ' — already ' + _dayPts + ' today, this makes ' + (_dayPts + pts) + '.\n\n'
-           + 'Warnings are free up to ' + _free + '/month; above that each point cuts ' + _rp.toLocaleString() + ' from pay.\n'
-           + 'Add one more point?');
-      if(!await _askC(_msg)) return;
-    }
-    window._qwLast[memberId] = _now;
-  }
 
   let t = TRUST_DATA[memberId];
   if(!t){ t = TRUST_DATA[memberId] = { warn_pts:0, trust_pts:0, protected_until:null, incidents:[], trust_earned:[], rank:'unranked' }; }
