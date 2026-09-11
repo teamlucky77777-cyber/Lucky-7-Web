@@ -4,7 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
 <title>ARASAKA Corp</title>
-<!-- BUILD: v1488 | 메이플 PC 를 한눈에 — 타일에 주황 기운과 잎 하나 · 세 화면의 게임 색을 하나로 -->
+<!-- BUILD: v1489 | 클라별 카드도 메이플만 주황 — PC 보드와 같은 색 -->
 <!-- v745 기록은 git 이력(v1302 이전 커밋)에 있다 — 100KB 변경사 주석을 배포에서 제거 -->
 <!-- [v677] a <link href> cannot read a CSS variable, so the favicon carries its own copy.
      64px: a browser tab draws it at 16-32px, so this is 2x-DPR sharp at 11KB. -->
@@ -37440,6 +37440,11 @@ function _srInjectCSS(){
 "#sr-app .sr-cltrain-cnt{font-size:11px;font-weight:700;color:var(--tx3,#5f5e5a);background:var(--bg-i,#1a1a1a);border:1px solid var(--br2,#2f2f2d);padding:1px 8px;border-radius:7px;}",
 "#sr-app .sr-clcard{display:flex;flex-direction:column;align-items:stretch;text-align:left;background:var(--bg-c,#161616);border:1px solid var(--br,#232322);border-radius:14px;padding:14px;cursor:pointer;font:inherit;color:var(--tx,#e6e5e2);transition:border-color .14s ease,transform .14s ease;overflow:hidden;}",
 "#sr-app .sr-clcard:hover{border-color:var(--ac-bord,rgba(194,160,74,.4));transform:translateY(-1px);}",
+/* [v1489] 메이플 클라 카드 — PC 보드(v1488)와 같은 주황. 리니지 카드는 손대지 않는다. */
+"#sr-app .sr-clcard-mp{border-color:rgba(217,122,58,.70);background:linear-gradient(180deg,var(--g-maple-bg,rgba(229,142,81,.13)),transparent 62%),var(--bg-c,#161616);}",
+"#sr-app .sr-clcard-mp:hover{border-color:var(--g-maple,#d97a3a);}",
+"#sr-app .sr-clcard-mp .sr-clcard-nm{color:var(--g-maple,#d97a3a);}",
+"#sr-app .sr-cl-mp{font-size:11px;line-height:1;flex:none;}",
 "#sr-app .sr-clcard-top{display:flex;align-items:center;gap:8px;margin-bottom:9px;}",
 "#sr-app .sr-clcard-nm{font-size:14px;font-weight:800;letter-spacing:-.01em;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}",
 "#sr-app .sr-clcard-pc{font-size:10px;font-weight:700;color:var(--tx2,#989792);background:var(--bg-i,#1a1a1a);border:1px solid var(--br2,#2f2f2d);padding:1px 7px;border-radius:6px;margin-left:auto;flex:none;}",
@@ -40117,7 +40122,10 @@ function _srRecCardHTML(data){
        키보드 접근은 그대로 준다. */
     var _pcNo = (o.pc!=null && String(o.pc)!=='') ? Number(o.pc) : null;
     var _emptyCard = (st.actualH==null && !(o.statuses>0));   /* [v1364] boss "오늘 눌렀을 때 —/0명 카드 왜 이래" — 기간 내 기록이 없는 카드 */
-    return '<div class="sr-clcard'+(o._noData?' sr-clcard-nodata':'')+(_emptyCard?' sr-clcard-empty':'')+(_newDays!=null?' sr-clcard-new':'')+(_care?' sr-clcard-care':'')+(_stickNow?' sr-clcard-stick':'')+((typeof _mcIdleKey==='function'&&_mcIdleKey()===c)?' sr-clcard-idle':'')+((o._quiet!=null&&o._quiet>=7)?' sr-clcard-sunk':((o._quiet!=null&&o._quiet>=3)?' sr-clcard-quiet':''))+'" role="button" tabindex="0"'+' data-heat="'+(_care?_heat.toFixed(2):'0')+'" data-days="'+_wdAll+'" data-ck="'+esc(c)+'"'
+    /* [v1489] 사장님 "클라별 쪽도 마찬가지지" — PC 보드처럼 메이플 카드만 물들인다.
+       판별은 이미 있는 _srIsMapleClient 로 (클라 풀의 game:'maple' 이 먼저, 없으면 이름). */
+    var _isMp = false; try{ _isMp = (typeof _srIsMapleClient==='function') && _srIsMapleClient(o.client||c); }catch(_){}
+    return '<div class="sr-clcard'+(_isMp?' sr-clcard-mp':'')+(o._noData?' sr-clcard-nodata':'')+(_emptyCard?' sr-clcard-empty':'')+(_newDays!=null?' sr-clcard-new':'')+(_care?' sr-clcard-care':'')+(_stickNow?' sr-clcard-stick':'')+((typeof _mcIdleKey==='function'&&_mcIdleKey()===c)?' sr-clcard-idle':'')+((o._quiet!=null&&o._quiet>=7)?' sr-clcard-sunk':((o._quiet!=null&&o._quiet>=3)?' sr-clcard-quiet':''))+'" role="button" tabindex="0"'+' data-heat="'+(_care?_heat.toFixed(2):'0')+'" data-days="'+_wdAll+'" data-ck="'+esc(c)+'"'
       +(_wdAll>=45?(' data-age="'+Math.min(1,_wdAll/180).toFixed(2)+'"'):'')
       +((_newDays!=null||_care)?(' style="'+(_newDays!=null?('--newness:'+(1-_newDays/30).toFixed(3)+';'):'')+(_care?('--heat:'+_heat.toFixed(2)+';'):'')+'"'):'')
       +(_care?(' title="'+esc((_kl?'케어 필요 — ':'Needs care — ')+_careWhy.join(' · '))+'"'):(_newDays!=null?(' title="'+esc(_kl?('함께한 지 '+_newDays+'일'+(_newDays===29?' — 내일부터 다른 카드처럼 봅니다':'')):('day '+_newDays+' together'))+'"'):''))+(_pcNo!=null?' draggable="true"':'')+(_emptyCard?(' data-empty="'+(_kl?'이 기간 기록 없음':'No records in this period')+'"'):'')
@@ -40137,7 +40145,7 @@ function _srRecCardHTML(data){
 
       +'<div class="sr-clflip">'
       +'<div class="sr-clface sr-clfront">'
-      +'<div class="sr-clcard-top"><span class="sr-clcard-nm">'+esc(o.client||c)+'</span>'+((o.pc!=null&&String(o.pc)!=='')?'<span class="sr-clcard-pc">PC'+esc(String(o.pc))+'</span>':'')
+      +'<div class="sr-clcard-top"><span class="sr-clcard-nm">'+esc(o.client||c)+'</span>'+(_isMp?'<span class="sr-cl-mp" title="메이플 플래닛 / Maple Planet">🍁</span>':'')+((o.pc!=null&&String(o.pc)!=='')?'<span class="sr-clcard-pc">PC'+esc(String(o.pc))+'</span>':'')
       +((typeof _mcHolderChip==='function')?_mcHolderChip(o.client||c,o.pc):'')   /* [v1401] 지금 이 카드를 들고 있는 사람 */
       +((typeof _srClAliasChip==='function')?_srClAliasChip(c):'')   /* [v1405] 겹친 이름 */
       /* [v1406→v1407] 작업량(쌀)은 카드 겉이 아니라 카드를 눌러 연 상세 머리에 — boss "카드에 적지 말고" */
