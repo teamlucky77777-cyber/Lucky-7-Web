@@ -4,7 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
 <title>ARASAKA Corp</title>
-<!-- BUILD: v1495 | 온보딩 화면 롤백 (전 화면이 더 간단) · 기본값 전체 직원 보기 -->
+<!-- BUILD: v1496 | 실시간 직원 현황을 직원도 본다 (보기만 · 남을 못 옮김) -->
 <!-- v745 기록은 git 이력(v1302 이전 커밋)에 있다 — 100KB 변경사 주석을 배포에서 제거 -->
 <!-- [v677] a <link href> cannot read a CSS variable, so the favicon carries its own copy.
      64px: a browser tab draws it at 16-32px, so this is 2x-DPR sharp at 11KB. -->
@@ -334,6 +334,8 @@ body{font-family:'Inter',-apple-system,sans-serif;font-size:var(--t-body);line-h
   .att-tz{align-items:flex-start}
 }
 
+.att-sb-card.att-sb-ro{cursor:default}
+.att-sb-card.att-sb-ro:hover{transform:none}
 /* 실시간 직원 현황 보드 (채용 칸반 미니) */
 .att-sb-section{margin:20px 0 16px}
 .att-sb-title{font-size:12px;font-weight:700;color:var(--tx);margin-bottom:9px}
@@ -19660,14 +19662,36 @@ async function renderAttendance(){
   </table></div>`;
 
   // ── 직원 현황 보드 (오늘 실제 출퇴근 기반) ──
+  /* ═══ [v1496] 실시간 직원 현황을 직원도 본다 ════════════════════════════════
+     사장님 "이거 직원들도 볼수있게 해줘 그냥 · 대신 마음대로 다른사람을 옮길수는 없게".
+     지금까지 이 보드는 OP TEAM 만 봤다. 직원이 보면 좋은 이유는 단순하다 —
+     지금 누가 돌고 있고 누가 멈춰 있는지 알면 교대와 대타를 스스로 맞출 수 있다.
+
+     다만 두 가지를 갈라야 한다.
+     ① 자료 — 출퇴근 표는 자기 것만 불러온다(위 historyData 의 eq(user_id)).
+        보드에는 전원이 필요하므로 오늘치만 따로 한 번 더 가져온다.
+        기록 표는 그대로 '내 기록' 이다. 넓히지 않는다.
+     ② 손 — 끌어서 상태를 바꾸는 것은 OP TEAM 만. 직원 카드는 draggable 도 아니고
+        칸에 놓을 수도 없다. 남의 상태를 건드릴 길 자체를 안 만든다.
+     카드를 눌러 사람 상세를 여는 것도 OP TEAM 만 둔다 — 거기에는 계좌가 있다. */
+  const _sbEdit = isManager;
   let statusBoard = '';
-  if(isManager){
+  {
     const team = await loadTeamMembers();
+    let _sbRows = historyData;
+    if(!isManager && sb){
+      /* 오늘 + 어제 열린 것만. 자정을 넘는 야간조가 보드에서 사라지지 않게 어제도 같이 본다. */
+      try{
+        const _y = new Date(Date.now()-86400000+7*3600*1000).toISOString().slice(0,10);
+        const { data:_sbData } = await sb.from('attendance').select('*').gte('date', _y).limit(400);
+        if(Array.isArray(_sbData)) _sbRows = _sbData;
+      }catch(e){ console.warn('[현황 보드] 오늘치 불러오기 실패:', e && e.message); }
+    }
     const _ydayIso = new Date(Date.now()-86400000+7*3600*1000).toISOString().slice(0,10);   /* [v1298] WIB */
     // [v256] Include yesterday's STILL-OPEN sessions (night shifts crossing midnight, e.g. shift2 17:00-01:00)
     // so workers stay on the board at 00:00 instead of resetting to absent. Matches loadMyAttendance (v229).
     // A forgotten open session lingers at most ~1 day before it ages out of the yesterday window.
-    const todayRows = historyData.filter(a => a.date === todayIso || (a.date === _ydayIso && a.clock_in && !a.clock_out));
+    const todayRows = _sbRows.filter(a => a.date === todayIso || (a.date === _ydayIso && a.clock_in && !a.clock_out));
     const byUser = {};                          // unlimited clock-in → keep the open session
     todayRows.forEach(r => {
       const cur = byUser[r.user_id];
@@ -19702,9 +19726,9 @@ async function renderAttendance(){
     const miniCard = (m, accent) => {
       const meta = m.meta || (m.pc && m.pc !== '—' ? m.pc : (m.shift||'').split('(')[0].trim());
       const dotCls = m.status === 'down' ? 'down' : m.status === 'break' ? 'break' : (m.status==='offline'||m.status==='off') ? 'off' : 'on';
-      return `<div class="att-sb-card att-sb-${dotCls}" draggable="true"
+      return `<div class="att-sb-card att-sb-${dotCls}${_sbEdit?'':' att-sb-ro'}"${_sbEdit ? ` draggable="true"
           ondragstart="attSbDragStart(event,'${m.id}')" ondragend="attSbDragEnd(event)"
-          onclick="openStaffDetail('${m.id}')" style="border-left:3px solid ${accent}">
+          onclick="openStaffDetail('${m.id}')"` : ''} style="border-left:3px solid ${accent}">
         <span class="att-sb-av-wrap">
           <span class="att-sb-av" style="${avatarBg(m.id || m.name, m.short)}">${m.short}</span>
           <span class="att-sb-dot att-sb-dot-${dotCls}"></span>
@@ -19714,8 +19738,8 @@ async function renderAttendance(){
       </div>`;
     };
 
-    const col = (title, icon, list, accent, statusKey) => `<div class="att-sb-col${statusKey==='down' ? ' att-sb-col-down' : ''}"
-        ondragover="attSbOver(event)" ondragleave="attSbLeave(event)" ondrop="attSbDrop(event,'${statusKey}')">
+    const col = (title, icon, list, accent, statusKey) => `<div class="att-sb-col${statusKey==='down' ? ' att-sb-col-down' : ''}"${_sbEdit ? `
+        ondragover="attSbOver(event)" ondragleave="attSbLeave(event)" ondrop="attSbDrop(event,'${statusKey}')"` : ''}>
       <div class="att-sb-col-head" style="--col-c:${accent}">
         <span class="att-sb-col-name">${icon} ${title}</span>
         <span class="att-sb-col-cnt">${list.length}</span>
@@ -19726,7 +19750,7 @@ async function renderAttendance(){
     </div>`;
 
     statusBoard = `<div class="att-sb-section">
-      <div class="att-sb-title">실시간 직원 현황 <span class="att-sb-hint">드래그로 상태 변경</span></div>
+      <div class="att-sb-title">실시간 직원 현황 <span class="att-sb-hint">${_sbEdit ? '드래그로 상태 변경' : '보기 전용'}</span></div>
       <div class="att-sb-board">
         ${col('근무 중', '🟢', working, '#3aa05a', 'online')}
         ${col('중단됨', '⚠', downed, '#d4633a', 'down')}
