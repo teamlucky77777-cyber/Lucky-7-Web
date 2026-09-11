@@ -4,7 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
 <title>ARASAKA Corp</title>
-<!-- BUILD: v1480 | 채용에서 탈락시키면 저장까지 하고, 웹 계정이 있으면 퇴사도 같이 묻는다 -->
+<!-- BUILD: v1481 | 리포트에 부주 이름을 실어 보낸다 (디스코드 사본 이름이 날짜로 박히던 것) -->
 <!-- v745 기록은 git 이력(v1302 이전 커밋)에 있다 — 100KB 변경사 주석을 배포에서 제거 -->
 <!-- [v677] a <link href> cannot read a CSS variable, so the favicon carries its own copy.
      64px: a browser tab draws it at 16-32px, so this is 2x-DPR sharp at 11KB. -->
@@ -36236,7 +36236,11 @@ function _srFields(name,pc,gear,ps,pe,map,prevLv,prevExp,lv,exp,prevAde,ade,note
   // [v304] nickname = in-game character name (gear.charName, from the character's 캐릭/label field) so the
   // KakaoTalk bot matches the right character; falls back to the client name when no character name is set.
   var charName=(gear.charName!=null && String(gear.charName).trim()!=='') ? String(gear.charName).trim() : (name||'');
-  return { clientNo:no, nickname:charName, clientName:(name||''), clientNoLabel:(no!=null?no+' ':'')+(name||''),
+  /* [v1481] 누가 쓴 리포트인지 같이 보낸다. 여태는 안 보냈고, 서버는 디스코드 스레드 이름에서
+     되짚었다 — 데일리보드가 없어 새 글로 올라가면 제목의 날짜(09-11)를 이름으로 읽어
+     "11 04:00" 같은 조각이 박혔다(6/14 이후 32건). 이름을 직접 주면 되짚을 일이 없다. */
+  var _bst=''; try{ _bst = String((typeof currentUser!=='undefined' && currentUser && currentUser.name) || '').trim(); }catch(_){}
+  return { booster:_bst, clientNo:no, nickname:charName, clientName:(name||''), clientNoLabel:(no!=null?no+' ':'')+(name||''),
     pc:pc, lv:lv, class:gear.classJob||'', threadId:((_srSession&&_srSession.threadId)?_srSession.threadId:_srThread()),
     weapon:(gear.weapon!=null&&gear.weapon!=='')?('+'+gear.weapon):'', armor:(gear.armor!=null&&gear.armor!=='')?('+'+gear.armor):'', ac:(gear.ac!=null&&gear.ac!=='')?gear.ac:'',
     playStart:ps, playEnd:pe, map:map, exp:exp, prevExp:prevExp, prevLv:prevLv,
