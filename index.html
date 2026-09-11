@@ -4,7 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
 <title>ARASAKA Corp</title>
-<!-- BUILD: v1481 | 리포트에 부주 이름을 실어 보낸다 (디스코드 사본 이름이 날짜로 박히던 것) -->
+<!-- BUILD: v1482 | 온보딩에 옛 리포트 스레드 청소 버튼 (데일리보드는 안 건드린다) -->
 <!-- v745 기록은 git 이력(v1302 이전 커밋)에 있다 — 100KB 변경사 주석을 배포에서 제거 -->
 <!-- [v677] a <link href> cannot read a CSS variable, so the favicon carries its own copy.
      64px: a browser tab draws it at 16-32px, so this is 2x-DPR sharp at 11KB. -->
@@ -47278,6 +47278,38 @@ window._obMark = function(id, n){
 };
 window._obPick = function(id){ renderOnboarding(id); };
 window._obToggleAll = function(){ window._obAll = !window._obAll; window._obCur = null; renderOnboarding(); };   /* [v1479] */
+/* [v1482] 옛 일회용 리포트 스레드 청소. 보드 주소가 없던 시절, 리포트 한 건마다 디스코드에
+   스레드가 하나씩 생겼다("[체크아웃] PC17 유니온 09-11 04:00"). srv-0911b 부터는 안 생기지만
+   이미 쌓인 것이 남아 있다. 사장님 "지워".
+   서버가 이름이 [체크인]·[1시간]·[체크아웃]·[웹훅 테스트] 로 시작하는 것만 지운다 —
+   데일리보드는 어떤 경우에도 건드리지 않는다. 디스코드 제한 때문에 40개씩 나눠 돈다. */
+window._obPurge = async function(){
+  if(!_obCanEdit()){ toast('권한이 없습니다', true); return; }
+  var j;
+  try{
+    toast('디스코드 포럼을 세는 중…');
+    var r = await _srFetchRetry(_SR_SERVER+'/api/boards/purge', { method:'POST', headers:{ 'Content-Type':'application/json' }, body:'{}' });
+    j = await r.json().catch(function(){ return {}; });
+    if(!r.ok || !j.ok){ toast('세기 실패 — '+(j.error||('HTTP '+r.status)), true); return; }
+  }catch(e){ toast('세기 실패 — '+(e&&e.message), true); return; }
+  if(!j.orphans){ toast('지울 것이 없습니다 · 데일리보드 '+j.boards+'개는 그대로'); return; }
+  var ex = (j.sample||[]).slice(0,5).map(function(x){ return '· '+x; }).join('\n');
+  if(!await _askC('옛 리포트 스레드 '+j.orphans+'개를 지웁니다.\n\n'+ex+(j.orphans>5?('\n… 그 밖에 '+(j.orphans-5)+'개'):'')
+    +'\n\n데일리보드 '+j.boards+'개는 건드리지 않습니다.\n되돌릴 수 없습니다.')) return;
+  var total=0, fail=0, guard=0;
+  while(guard++ < 30){
+    try{
+      toast('지우는 중… '+total+' / '+j.orphans);
+      var r2 = await _srFetchRetry(_SR_SERVER+'/api/boards/purge', { method:'POST', headers:{ 'Content-Type':'application/json' }, body:JSON.stringify({ apply:true }) });
+      var k = await r2.json().catch(function(){ return {}; });
+      if(!r2.ok || !k.ok){ toast('정리 실패 — '+(k.error||('HTTP '+r2.status)), true); break; }
+      total += (k.deleted||0); fail += (k.failed||0);
+      if(!k.remaining || !k.deleted) break;
+    }catch(e){ toast('정리 중단 — '+(e&&e.message), true); break; }
+  }
+  try{ logAction('delete', '옛 리포트 스레드 정리 · '+total+'개', ''); }catch(_){}
+  toast('🧹 '+total+'개 지움'+(fail?(' · 실패 '+fail):'')+' · 데일리보드는 그대로');
+};
 /* ═══ [v1456] 9번 공식 입사 등록 · 14번 데일리보드 — 사람이 손으로 하던 세 가지 ═══
    ① 합격한 지원자에게 초대 코드를 만들어 준다(왓츠앱으로 보내면 본인이 가입).
    ② 가입한 계정을 지원자 기록과 잇는다 — 코드로 가입했으면 저절로, 아니면 이름으로 찾아 한 번 누른다.
@@ -47558,6 +47590,7 @@ async function renderOnboarding(pickId){
     +   '<div class="ob-sub">구원씨 절차 19단계 · <b>알 수 있는 것은 시스템이 답하고, 사람만 아는 것만 묻습니다</b></div></div>'
     + '<div class="ob-bar"><select class="ob-sel" onchange="_obPick(this.value)">'+opts+'</select>'
     +   '<button class="ob-mk'+(window._obAll?' on':'')+'" onclick="_obToggleAll()" title="'+(window._obAll?'채용에서 들어온 사람만 보기':'재직자 전체 보기 — 옛 직원 개인정보를 채울 때')+'">'+(window._obAll?'채용만':'전체 직원')+'</button>'
+    +   (_obCanEdit() ? '<button class="ob-mk" onclick="_obPurge()" title="보드 주소가 없던 시절 리포트마다 하나씩 생긴 옛 스레드를 지웁니다 · 데일리보드는 안 건드립니다">🧹 옛 스레드</button>' : '')   /* [v1482] */
     +   '<div class="ob-prog"><i style="width:'+pct+'%"></i></div>'
     +   '<b class="ob-pct">'+doneN+' / '+OB_STEPS.length+'</b></div>'
     + '<div class="ob-list">'+rows+'</div>'
