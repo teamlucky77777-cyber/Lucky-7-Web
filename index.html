@@ -4,7 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
 <title>ARASAKA Corp</title>
-<!-- BUILD: v1490 | 게임 색을 한 줄로 — 리니지 보라 · 메이플 주황 (앱 안에 규칙이 둘이었다) -->
+<!-- BUILD: v1491 | 리더 수당이 저금통 안으로 — 월급 밖에서 따로 나가던 것 -->
 <!-- v745 기록은 git 이력(v1302 이전 커밋)에 있다 — 100KB 변경사 주석을 배포에서 제거 -->
 <!-- [v677] a <link href> cannot read a CSS variable, so the favicon carries its own copy.
      64px: a browser tab draws it at 16-32px, so this is 2x-DPR sharp at 11KB. -->
@@ -35015,7 +35015,11 @@ function staffTitleOf(name, role){
 /* [v1021] 9/1부터 정산 시트에 '리더 수당'을 한 번만 자동 등재 — 시트가 이미 있는 사람에게만.
    (정산은 수기 원칙이라 금액만 앉혀 두고, 수정·삭제는 여느 항목처럼 자유) */
 /* [v1118] 9/1 이 지났나 — 따로 뺐다. 검증에서 날짜를 바꿔 볼 수 있어야 한다. */
-function _leaderAllowDue(){ return Date.now() >= new Date('2026-09-01T00:00:00+09:00').getTime(); }
+/* [v1491] 리더 수당은 이제 저금통(pay_allowance)이 하루치로 센다.
+   여기서 옛 손 시트에 또 한 줄 얹으면 같은 돈을 두 번 주게 된다. 그래서 멈춘다.
+   이미 얹힌 줄은 지우지 않는다 — 9월 손 시트의 기록이고, 지우면 왜 그 숫자였는지
+   되짚을 수 없다. 손 시트를 보고 지급할 때는 그 줄을 빼야 한다(저금통에 이미 있다). */
+function _leaderAllowDue(){ return false; }
 function _leaderAllowBackfill(){
   try{
     if(!_leaderAllowDue()) return;
@@ -47085,15 +47089,15 @@ window._bnkAdd = async function(uid){
 window._bnkCsv = function(){
   try{
     var d = _bnkMonth; if(!d || !d.rows.length){ toast('뽑을 것이 없습니다', true); return; }
-    var H = ['이름','일수','일한분','기본급','미달차감','상금','벌금','경고차감','트러스트','조정','합계'];
+    var H = ['이름','일수','일한분','기본급','미달차감','상금','벌금','경고차감','트러스트','수당','조정','합계'];
     var L = [H.join(',')];
     d.rows.forEach(function(r){ L.push([
       '"' + String(r.name||'').replace(/"/g,'""') + '"',
       r.days||0, r.work_min||0, r.base_pay||0, r.goal_cut||0, r.race_pay||0,
-      r.race_penalty||0, r.warn_cut||0, r.trust_bonus||0, r.adjust||0, r.total||0 ].join(',')); });
+      r.race_penalty||0, r.warn_cut||0, r.trust_bonus||0, r.allow_pay||0, r.adjust||0, r.total||0 ].join(',')); });
     var sum = function(k){ return d.rows.reduce(function(s,r){ return s + (Number(r[k])||0); }, 0); };
     L.push(['"합계"', sum('days'), sum('work_min'), sum('base_pay'), sum('goal_cut'), sum('race_pay'),
-            sum('race_penalty'), sum('warn_cut'), sum('trust_bonus'), sum('adjust'), sum('total')].join(','));
+            sum('race_penalty'), sum('warn_cut'), sum('trust_bonus'), sum('allow_pay'), sum('adjust'), sum('total')].join(','));
     /* 엑셀이 한글을 깨뜨리지 않게 BOM 을 앞에 둔다 */
     var blob = new Blob(['﻿' + L.join('\n')], { type:'text/csv;charset=utf-8' });
     var a = document.createElement('a');
@@ -47145,7 +47149,7 @@ async function _bnkRender(host){
     + '<div class="bnk-tile"><s>합계</s><b>' + _bnkM(sum('total')) + ' Rp</b></div>'
     + '<div class="bnk-tile"><s>기본급</s><b>' + _bnkM(sum('base_pay')) + '</b></div>'
     + '<div class="bnk-tile dn"><s>깎인 것</s><b>−' + _bnkM(sum('goal_cut') + sum('warn_cut') + sum('race_penalty')) + '</b></div>'
-    + '<div class="bnk-tile up"><s>더한 것</s><b>+' + _bnkM(sum('race_pay') + sum('trust_bonus')) + '</b></div>'
+    + '<div class="bnk-tile up"><s>더한 것</s><b>+' + _bnkM(sum('race_pay') + sum('trust_bonus') + sum('allow_pay')) + '</b></div>'
     + '</div>';
 
   var rows = d.rows.map(function(r){
@@ -47164,9 +47168,10 @@ async function _bnkRender(host){
       + '<td>' + _bnkC(r.race_penalty, '-') + '</td>'
       + '<td>' + _bnkC(r.warn_cut, '-') + '</td>'
       + '<td>' + _bnkC(r.trust_bonus, '+') + '</td>'
+      + '<td>' + _bnkC(r.allow_pay, '+') + '</td>'
       + '<td>' + _bnkA(r.adjust) + '</td>'
       + '<td class="bnk-tot">' + _bnkM(r.total) + '</td></tr>';
-    if(on) tr += '<tr><td class="bnk-day" colspan="11">' + _bnkDayHtml(uid, esc, canEdit) + '</td></tr>';
+    if(on) tr += '<tr><td class="bnk-day" colspan="12">' + _bnkDayHtml(uid, esc, canEdit) + '</td></tr>';
     return tr;
   }).join('');
 
@@ -47175,16 +47180,18 @@ async function _bnkRender(host){
     + '<td>' + _bnkM(sum('base_pay')) + '</td><td>−' + _bnkM(sum('goal_cut')) + '</td>'
     + '<td>+' + _bnkM(sum('race_pay')) + '</td><td>−' + _bnkM(sum('race_penalty')) + '</td>'
     + '<td>−' + _bnkM(sum('warn_cut')) + '</td><td>+' + _bnkM(sum('trust_bonus')) + '</td>'
+    + '<td>+' + _bnkM(sum('allow_pay')) + '</td>'
     + '<td>' + _bnkM(sum('adjust')) + '</td><td>' + _bnkM(sum('total')) + '</td></tr>';
 
   host.innerHTML = head + nav + tiles
     + '<div class="bnk-scroll"><table class="bnk-tbl"><thead><tr>'
     +   '<th>사람</th><th>일수</th><th>시간</th><th>기본</th><th>미달</th><th>상금</th>'
-    +   '<th>벌금</th><th>경고</th><th>트러스트</th><th>조정</th><th>합계</th>'
+    +   '<th>벌금</th><th>경고</th><th>트러스트</th><th>수당</th><th>조정</th><th>합계</th>'
     + '</tr></thead><tbody>' + rows + foot + '</tbody></table></div>'
     + '<div class="bnk-note" style="margin-top:10px;line-height:1.8">'
     +   '사람을 누르면 날짜별 줄이 펼쳐집니다. 숫자는 전부 장부가 센 것이고 이 화면은 더하지 않습니다.<br>'
-    +   '시급 = 시프트 월급 ÷ 30일 ÷ 시프트 시간 (주말 포함) · 수습은 첫 30일 90%'
+    +   '시급 = 시프트 월급 ÷ 30일 ÷ 시프트 시간 (주말 포함) · 수습은 첫 30일 90%<br>'
+    +   '<b>수당</b>은 리더 수당처럼 달마다 정해진 돈입니다 — 하루치(월 금액 ÷ 30)가 매일 붙습니다. 쉰 날에도 붙습니다.'
     + '</div></div>';
 }
 
@@ -47203,12 +47210,13 @@ function _bnkDayHtml(uid, esc, canEdit){
       + '<td>' + _bnkC(r.race_penalty, '-') + '</td>'
       + '<td>' + _bnkC(r.warn_cut, '-') + '</td>'
       + '<td>' + _bnkC(r.trust_bonus, '+') + '</td>'
+      + '<td' + (r.allow_note ? (' title="' + esc(r.allow_note) + '"') : '') + '>' + _bnkC(r.allow_pay, '+') + '</td>'
       + '<td>' + _bnkA(r.adjust) + '</td>'
       + '<td class="bnk-tot">' + _bnkM(r.grand_total) + '</td></tr>';
   }).join('');
   var h = '<div class="bnk-daywrap" onclick="event.stopPropagation()">'
     + '<table class="bnk-dtbl"><thead><tr><th>날짜</th><th>시프트</th><th>시간</th><th>시급</th>'
-    +   '<th>기본</th><th>미달</th><th>상금</th><th>벌금</th><th>경고</th><th>트러스트</th><th>조정</th><th>하루 합계</th>'
+    +   '<th>기본</th><th>미달</th><th>상금</th><th>벌금</th><th>경고</th><th>트러스트</th><th>수당</th><th>조정</th><th>하루 합계</th>'
     + '</tr></thead><tbody>' + rows + '</tbody></table>';
   if(adj.length){
     h += '<div class="bnk-alist">' + adj.map(function(a){
