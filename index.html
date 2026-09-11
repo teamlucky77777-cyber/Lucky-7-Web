@@ -4,7 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
 <title>ARASAKA Corp</title>
-<!-- BUILD: v1496 | 실시간 직원 현황을 직원도 본다 (보기만 · 남을 못 옮김) -->
+<!-- BUILD: v1497 | 손 시트에서 저금통과 겹치는 줄을 화면이 말한다 (두 번 주지 않게) -->
 <!-- v745 기록은 git 이력(v1302 이전 커밋)에 있다 — 100KB 변경사 주석을 배포에서 제거 -->
 <!-- [v677] a <link href> cannot read a CSS variable, so the favicon carries its own copy.
      64px: a browser tab draws it at 16-32px, so this is 2x-DPR sharp at 11KB. -->
@@ -2568,6 +2568,11 @@ html[data-theme=light] #dt-pop{background:rgba(255,255,255,.99);border-color:#d8
 .pcb-mg-hd{font-size:11px;color:var(--tx3)}
 .pcb-mg-full{flex:1;background:var(--bg-h);border:1px solid var(--br2);border-radius:9px;color:var(--tx);font:inherit;font-size:12.5px;padding:9px 10px;outline:none;min-width:0}
 .pcb-mg-full:focus{border-color:var(--ac-bord)}
+/* [v1497] 저금통이 이미 세는 줄 — 지우지 않고 흐리게 + 붉은 딱지 */
+.set-emp-item.set-emp-dup{opacity:.55}
+.set-emp-item.set-emp-dup .set-emp-amt{text-decoration:line-through;text-decoration-color:var(--re,#e0504a)}
+.set-emp-dupchip{font-size:9.5px;font-weight:700;white-space:nowrap;padding:2px 7px;border-radius:6px;
+  color:var(--re,#e0504a);background:var(--re-bg,rgba(224,80,74,.13));border:1px solid rgba(224,80,74,.32)}
 .pcb-mg-short{width:84px;background:var(--bg);border:1px solid var(--ac-bord);border-radius:9px;color:var(--ac-strong);font:inherit;font-size:12.5px;font-weight:700;padding:9px 10px;outline:none;text-align:center}
 .pcb-mg-del{background:none;border:none;color:var(--tx3);font-size:14px;cursor:pointer;padding:4px;font-family:inherit}
 .pcb-mg-del:hover{color:var(--re)}
@@ -35200,11 +35205,21 @@ function payrollEmpBox(m, s, idx){
     ? `<span class="set-rate-badge" style="background:color-mix(in srgb,${rateColor} 16%,transparent);color:${rateColor}">${s.rate}%</span>`
     : `<span class="set-rate-badge set-rate-fixed">고정</span>`;
   const short = m.short || m.name.slice(0,2).toUpperCase();
+  /* ═══ [v1497] 저금통이 이미 세는 항목은 손 시트에서 빼야 한다 ══════════════
+     v1491 에서 리더 수당을 저금통(pay_allowance)으로 옮기면서 하루치로 매일 붙게 했다.
+     그런데 손 시트에 v1021 이 얹어 둔 '리더 수당' 줄은 지우지 않았다 — 9월 기록이라
+     지우면 왜 그 숫자였는지 되짚을 수 없기 때문이다.
+     문제는 그대로 두면 **같은 돈이 두 번 나간다**는 것이다. Mapo 50만, Shuri·Kaiji 각 30만.
+     지난번엔 그걸 말로만 알렸다. 말은 내일이면 사라진다 — 화면이 말하게 한다.
+     지우지 않고, 흐리게 하고 붉은 딱지를 붙인다. 사람이 보고 빼면 된다. */
+  const _inBank = (lbl) => /리더\s*수당|Leader allowance/i.test(String(lbl||''));
   const items = sheet.items.map((it,i)=>{
     const neg = (it.negative!==undefined) ? it.negative : (it.amount<0);
     const abs = Math.abs(it.amount||0);
-    return `<div class="set-emp-item">
+    const dup = _inBank(it.label);
+    return `<div class="set-emp-item${dup?' set-emp-dup':''}"${dup?` title="${_uiLang()==='ko'?'저금통이 이미 하루치로 세고 있습니다 — 여기서 또 주면 두 번 나갑니다':'The daily ledger already pays this — paying here too pays twice'}"`:''}>
       <span class="set-emp-tw">└</span>
+      ${dup?`<span class="set-emp-dupchip">${_uiLang()==='ko'?'저금통에 있음':'in ledger'}</span>`:''}
       <input class="set-emp-lbl" data-sid="${m.id}" value="${(_sLbl(it.label)||'').replace(/"/g,'&quot;')}" placeholder="사유 입력" onchange="setPayrollItem('${m.id}',${i},'label',this.value)">
       <button class="set-emp-sgn ${neg?'neg':'pos'}" title="부호 전환 (＋ 더하기 / − 차감)" onclick="payrollToggleSign('${m.id}',${i},this)">${neg?'−':'＋'}</button>
       <input class="set-emp-amt ${neg?'neg':''}" value="${abs?abs.toLocaleString():''}" placeholder="0" inputmode="numeric" oninput="fmtAmtInput(this);payrollAmtInput('${m.id}',${i},this)">
@@ -35218,6 +35233,8 @@ function payrollEmpBox(m, s, idx){
       <span class="set-emp-idx">${idx}</span>
       <span class="set-av" style="${avatarBg(m.name, short)}">${short}</span>
       <span class="set-emp-name">${m.name}</span>
+      ${sheet.items.some(it=>_inBank(it.label))
+        ? `<span class="set-emp-dupchip" title="${_uiLang()==='ko'?'이 사람 시트에 저금통과 겹치는 줄이 있습니다':'This sheet has a line the ledger already pays'}">⚠ ${_uiLang()==='ko'?'저금통과 겹침':'duplicated'}</span>` : ''}
       ${isManualEntry(m.id)
         ? `<span class="set-rate-badge" style="cursor:pointer;background:rgba(120,140,200,.18);color:#aab3c4" onclick="setManualRole('${m.id}')" title="${_uiLang()==='ko'?'역할 변경':'Change role'}">${(MANUAL_ROLE_LABELS[m.role]||m.role)} ▾</span>`
         : rateBadge}
