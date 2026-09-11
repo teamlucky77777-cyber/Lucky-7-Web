@@ -4,7 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
 <title>ARASAKA Corp</title>
-<!-- BUILD: v1483 | 온보딩 화면 다시 지음 — 왼쪽 사람 줄 · 지금 할 일 한 장 · 접히는 묶음 -->
+<!-- BUILD: v1484 | 저금통 — 정산 탭에서 굳은 일급을 달·날짜별로 보고 조정 줄을 단다 -->
 <!-- v745 기록은 git 이력(v1302 이전 커밋)에 있다 — 100KB 변경사 주석을 배포에서 제거 -->
 <!-- [v677] a <link href> cannot read a CSS variable, so the favicon carries its own copy.
      64px: a browser tab draws it at 16-32px, so this is 2x-DPR sharp at 11KB. -->
@@ -3914,6 +3914,90 @@ html[data-theme=light] .sfx-cut::after{background:linear-gradient(90deg,rgba(0,0
 .ap-pill-reg-done{
   font-size:12px;flex-shrink:0;margin-left:auto;
 }
+
+/* ═══ [v1484] 저금통 문 — 정산 화면 ═══════════════════════════════════════════
+   로드맵 1번의 마지막 조각. 매일 밤 13:40 에 어제 일급 한 줄이 굳는데(pay_ledger),
+   그동안 볼 창이 없어서 구원 씨는 옆에서 손으로 다시 계산하고 있었다.
+
+   화면은 두 겹뿐이다.
+     ① 달 — 사람마다 한 줄. 기본 · 미달 · 상금 · 벌금 · 경고 · 트러스트 · 조정 · 합계.
+     ② 사람을 누르면 그 자리에서 날짜별 줄이 펼쳐진다. 며칠에 얼마가 왜 나갔는지.
+   고칠 것이 있으면 지우지 않고 '조정 줄' 을 단다 — 굳은 줄은 영영 안 건드린다.
+   [[7월 기록 삭제됨]] 같은 일을 다시 만들지 않으려면 이 규칙이 먼저다.
+
+   숫자는 전부 DB 가 센 것이다. 이 화면은 아무것도 계산하지 않는다 — 더하기조차
+   pay_month_v 가 한다. 화면이 따로 계산하면 화면과 장부가 갈라지고, 갈라지면
+   어느 쪽이 맞는지 아무도 모른다. */
+.bnk-bar{display:flex;align-items:center;gap:10px;flex-wrap:wrap;margin:14px 0 4px}
+.bnk-nav{display:flex;align-items:center;gap:2px;background:var(--bg-c);border:1px solid var(--br);border-radius:10px;padding:2px}
+.bnk-nav button{font:inherit;font-size:13px;font-weight:700;color:var(--tx2);background:transparent;border:0;
+  cursor:pointer;padding:5px 9px;border-radius:8px;line-height:1}
+.bnk-nav button:hover:not(:disabled){background:var(--bg-h);color:var(--tx)}
+.bnk-nav button:disabled{opacity:.3;cursor:default}
+.bnk-nav b{font-size:13px;font-weight:700;color:var(--tx);padding:0 8px;font-variant-numeric:tabular-nums;white-space:nowrap}
+.bnk-note{font-size:11.5px;color:var(--tx3)}
+.bnk-sp{flex:1 1 auto}
+.bnk-btn{font:inherit;font-size:11.5px;font-weight:700;padding:6px 12px;border-radius:99px;
+  border:1px solid var(--br);background:var(--bg-c);color:var(--tx2);cursor:pointer;white-space:nowrap}
+.bnk-btn:hover{border-color:var(--tx3);color:var(--tx)}
+.bnk-btn.ac{background:var(--ac);border-color:var(--ac);color:var(--bg)}
+.bnk-warn{margin:10px 0 0;padding:10px 13px;border-radius:10px;background:var(--ac-bg);
+  border:1px solid var(--ac-bord);font-size:12px;color:var(--tx2);line-height:1.6}
+.bnk-warn b{color:var(--ac-strong)}
+
+.bnk-tiles{display:grid;grid-template-columns:repeat(auto-fit,minmax(140px,1fr));gap:9px;margin:14px 0 16px}
+.bnk-tile{padding:12px 14px;border:1px solid var(--br);border-radius:12px;background:var(--bg-c)}
+.bnk-tile s{display:block;font-size:10px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;
+  color:var(--tx3);text-decoration:none;margin-bottom:5px}
+.bnk-tile b{display:block;font-size:18px;font-weight:700;color:var(--tx);font-variant-numeric:tabular-nums;letter-spacing:-.02em}
+.bnk-tile.up b{color:var(--gr)}
+.bnk-tile.dn b{color:var(--re,#e0504a)}
+
+.bnk-scroll{overflow-x:auto;border:1px solid var(--br);border-radius:13px;background:var(--bg-c)}
+.bnk-tbl{width:100%;min-width:860px;border-collapse:collapse;font-variant-numeric:tabular-nums}
+.bnk-tbl th{font-size:10px;font-weight:700;letter-spacing:.06em;color:var(--tx3);text-transform:uppercase;
+  text-align:right;padding:10px 10px 9px;border-bottom:1px solid var(--br);white-space:nowrap;background:var(--bg-c)}
+.bnk-tbl th:first-child,.bnk-tbl td:first-child{text-align:left;padding-left:14px;position:sticky;left:0;background:var(--bg-c)}
+.bnk-tbl th:last-child,.bnk-tbl td:last-child{padding-right:14px}
+.bnk-tbl td{font-size:12.5px;color:var(--tx2);text-align:right;padding:9px 10px;white-space:nowrap}
+.bnk-tbl tr + tr td{border-top:1px solid var(--br)}
+.bnk-tbl tr.bnk-p{cursor:pointer}
+.bnk-tbl tr.bnk-p:hover td{background:var(--bg-h)}
+.bnk-tbl tr.bnk-p.on td{background:var(--ac-bg)}
+.bnk-nm{display:flex;align-items:center;gap:8px;font-size:13px;font-weight:650;color:var(--tx)}
+.bnk-av{width:26px;height:26px;border-radius:7px;background:var(--bg-h);overflow:hidden;flex:0 0 26px;
+  display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:700;color:var(--tx2)}
+.bnk-av img{width:100%;height:100%;object-fit:contain;image-rendering:pixelated}
+.bnk-cx{color:var(--tx3);font-size:9px;width:10px;display:inline-block;transition:transform .16s ease}
+.bnk-p.on .bnk-cx{transform:rotate(90deg)}
+.bnk-tot{font-weight:700;color:var(--tx)}
+.bnk-z{color:var(--tx4);opacity:.55}
+.bnk-mi{color:var(--re,#e0504a)}
+.bnk-pl{color:var(--gr)}
+.bnk-foot td{border-top:2px solid var(--br2)!important;font-weight:700;color:var(--tx);font-size:13px;background:var(--bg-h)}
+
+.bnk-day{padding:0!important}
+.bnk-daywrap{padding:12px 14px 14px;background:var(--bg-h);border-top:1px solid var(--br);overflow-x:auto}
+.bnk-dtbl{width:100%;border-collapse:collapse;font-variant-numeric:tabular-nums}
+.bnk-dtbl th{font-size:9.5px;font-weight:700;letter-spacing:.05em;color:var(--tx3);text-transform:uppercase;
+  text-align:right;padding:5px 8px;white-space:nowrap}
+.bnk-dtbl th:first-child,.bnk-dtbl td:first-child{text-align:left;position:static}
+.bnk-dtbl td{font-size:12px;color:var(--tx2);text-align:right;padding:6px 8px;white-space:nowrap}
+.bnk-dtbl tr + tr td{border-top:1px solid var(--br)}
+.bnk-adj{display:flex;flex-wrap:wrap;gap:6px;align-items:center;margin-top:12px;padding-top:12px;border-top:1px dashed var(--br2)}
+.bnk-adj input{font:inherit;font-size:12px;padding:6px 9px;border-radius:8px;border:1px solid var(--br);
+  background:var(--bg-i);color:var(--tx)}
+.bnk-adj input[type=date]{width:140px}
+.bnk-adj input.amt{width:120px;text-align:right;font-variant-numeric:tabular-nums}
+.bnk-adj input.rsn{flex:1 1 180px;min-width:140px}
+.bnk-adj-h{flex:1 1 100%;font-size:11px;color:var(--tx3);margin-bottom:2px}
+.bnk-alist{margin-top:10px;display:flex;flex-direction:column;gap:4px}
+.bnk-a{display:flex;align-items:center;gap:8px;font-size:11.5px;color:var(--tx2);
+  padding:5px 9px;border-radius:8px;background:var(--bg-c)}
+.bnk-a b{font-variant-numeric:tabular-nums;color:var(--tx)}
+.bnk-a s{text-decoration:none;color:var(--tx3);margin-left:auto;font-size:10.5px}
+.bnk-empty{padding:34px 20px;text-align:center;color:var(--tx3);font-size:13px;line-height:1.8}
+@media (max-width:560px){ .bnk-tiles{grid-template-columns:repeat(2,1fr)} }
 
 /* ═══ [v1483] 온보딩 화면 — 다시 지음 ═══════════════════════════════════════
    사장님 "온보딩 쪽 퀄리티 200%". v1431 화면은 이름 드롭다운 하나에 열아홉 줄이
@@ -46737,6 +46821,257 @@ function expShiftUpdate(i, hrs){
   const rt=document.getElementById('sh-target-rate'); if(rt) rt.textContent=(r.target||0);
 }
 
+/* ═══ [v1484] 저금통 — 굳은 일급을 읽는 화면 ═════════════════════════════════
+   pay_ledger 는 매일 13:40 에 어제 줄을 굳힌다. 이 화면은 그것을 읽기만 한다.
+   합계조차 pay_month_v 가 낸다 — 화면이 따로 더하면 화면과 장부가 갈라지고,
+   갈라지면 어느 쪽이 맞는지 아무도 모른다.
+
+   고칠 일이 생기면 굳은 줄을 건드리지 않고 pay_adjust 에 줄을 하나 단다.
+   그래서 "왜 이 금액이냐" 를 언제든 되짚을 수 있다. 지우는 길은 두지 않았다. */
+window._payView = (window._payView === undefined) ? 'bank' : window._payView;
+window._paySetView = function(v){ window._payView = v; renderSettlement(); };
+function _payTabs(){
+  var b = window._payView === 'bank';
+  return '<div class="bnk-bar" style="margin:0 0 6px">'
+    + '<button class="bnk-btn' + (b?' ac':'') + '" onclick="_paySetView(\'bank\')">🏦 저금통 · 자동</button>'
+    + '<button class="bnk-btn' + (b?'':' ac') + '" onclick="_paySetView(\'sheet\')">📋 손 시트 · 옛것</button>'
+    + '</div>';
+}
+
+var _bnkYM = null, _bnkOpen = null, _bnkMonth = null, _bnkAt = 0, _bnkP = null;
+var _bnkDays = {}, _bnkAdj = {};
+function _bnkNowYM(){
+  try{ var k = new Date(Date.now() + 9*3600000).toISOString(); return k.slice(0,7); }catch(_){ return '2026-09'; }
+}
+function _bnkShift(ym, n){
+  var y = +ym.slice(0,4), m = +ym.slice(5,7) + n;
+  while(m < 1){ m += 12; y--; } while(m > 12){ m -= 12; y++; }
+  return y + '-' + String(m).padStart(2,'0');
+}
+function _bnkM(n){ return (Number(n)||0).toLocaleString('ko-KR'); }
+function _bnkC(n, sign){                                   /* 0 은 흐리게 — 눈이 숫자 있는 칸만 보게 */
+  n = Number(n)||0;
+  if(!n) return '<span class="bnk-z">·</span>';
+  if(sign === '-') return '<span class="bnk-mi">−' + _bnkM(n) + '</span>';
+  if(sign === '+') return '<span class="bnk-pl">+' + _bnkM(n) + '</span>';
+  return _bnkM(n);
+}
+function _bnkA(n){                                         /* 조정은 부호가 둘 다 온다 */
+  n = Number(n)||0;
+  if(!n) return '<span class="bnk-z">·</span>';
+  return n < 0 ? ('<span class="bnk-mi">−' + _bnkM(-n) + '</span>')
+               : ('<span class="bnk-pl">+' + _bnkM(n) + '</span>');
+}
+function _bnkH(min){ min = Number(min)||0; return (min/60).toFixed(1) + 'h'; }
+
+async function _bnkLoad(force){
+  var ym = _bnkYM || (_bnkYM = _bnkNowYM());
+  if(!force && _bnkMonth && _bnkMonth.ym === ym && (Date.now() - _bnkAt) < 30000) return _bnkMonth;
+  if(_bnkP) return _bnkP;                                  /* 이미 받는 중 */
+  _bnkP = (async function(){
+    var out = { ym:ym, rows:[], err:'' };
+    try{
+      if(typeof sb === 'undefined' || !sb){ out.err = '로그인이 필요합니다'; return out; }
+      var r = await sb.from('pay_month_v').select('*').eq('ym', ym);
+      if(r && r.error){ out.err = r.error.message; return out; }
+      out.rows = ((r && r.data) || []).slice().sort(function(a,b){ return (b.total||0) - (a.total||0); });
+    }catch(e){ out.err = (e && e.message) || '불러오지 못했습니다'; }
+    return out;
+  })();
+  try{ _bnkMonth = await _bnkP; _bnkAt = Date.now(); return _bnkMonth; }
+  finally{ _bnkP = null; }
+}
+async function _bnkLoadDays(uid){
+  var ym = _bnkYM, k = uid + '|' + ym;
+  if(_bnkDays[k]) return _bnkDays[k];
+  var d0 = ym + '-01', d1 = _bnkShift(ym, 1) + '-01';
+  try{
+    var r = await sb.from('pay_ledger_v').select('*').eq('user_id', uid).gte('day', d0).lt('day', d1).order('day');
+    _bnkDays[k] = ((r && r.data) || []);
+    var a = await sb.from('pay_adjust').select('*').eq('user_id', uid).gte('day', d0).lt('day', d1).order('day');
+    _bnkAdj[k] = ((a && a.data) || []);
+  }catch(e){ _bnkDays[k] = []; _bnkAdj[k] = []; }
+  return _bnkDays[k];
+}
+
+window._bnkGo = function(n){ _bnkYM = _bnkShift(_bnkYM || _bnkNowYM(), n); _bnkOpen = null; _bnkMonth = null; renderSettlement(); };
+window._bnkPick = async function(uid){
+  _bnkOpen = (String(_bnkOpen) === String(uid)) ? null : String(uid);
+  if(_bnkOpen) await _bnkLoadDays(_bnkOpen);
+  renderSettlement();
+};
+window._bnkReload = function(){ _bnkMonth = null; _bnkDays = {}; _bnkAdj = {}; renderSettlement(); };
+
+/* 조정 줄 — 굳은 줄이 있는 날에만 단다. 없는 날에 달면 달 합계에 안 잡혀서 영영 안 보인다. */
+window._bnkAdd = async function(uid){
+  try{
+    var day = (document.getElementById('bnk-a-day')||{}).value || '';
+    var amt = parseInt(String((document.getElementById('bnk-a-amt')||{}).value || '').replace(/[^\-0-9]/g,''), 10);
+    var rsn = String((document.getElementById('bnk-a-rsn')||{}).value || '').trim();
+    if(!day){ toast('날짜를 고르세요', true); return; }
+    if(!amt){ toast('금액을 적으세요 (깎으려면 앞에 −)', true); return; }
+    if(!rsn){ toast('이유를 적으세요 — 나중에 왜 그랬는지 되짚을 수 있어야 합니다', true); return; }
+    var who = '';
+    try{ who = String((currentUser && (currentUser.name || currentUser.email)) || ''); }catch(_){}
+    if(!await _askC(day + ' · ' + (amt>0?'+':'') + _bnkM(amt) + ' Rp\n' + rsn + '\n\n이 줄을 답니다. 굳은 줄은 그대로 두고 옆에 붙습니다.')) return;
+    var r = await sb.from('pay_adjust').insert({ day:day, user_id:uid, amount:amt, reason:rsn, created_by:who });
+    if(r && r.error){ toast('못 달았습니다 — ' + r.error.message, true); return; }
+    try{ logAction('create', '급여 조정 · ' + day + ' · ' + _bnkM(amt) + ' · ' + rsn, uid); }catch(_){}
+    toast('✓ 조정 줄을 달았습니다');
+    _bnkMonth = null; _bnkDays = {}; _bnkAdj = {};
+    await _bnkLoadDays(uid);
+    renderSettlement();
+  }catch(e){ toast('못 달았습니다 — ' + (e && e.message), true); }
+};
+
+window._bnkCsv = function(){
+  try{
+    var d = _bnkMonth; if(!d || !d.rows.length){ toast('뽑을 것이 없습니다', true); return; }
+    var H = ['이름','일수','일한분','기본급','미달차감','상금','벌금','경고차감','트러스트','조정','합계'];
+    var L = [H.join(',')];
+    d.rows.forEach(function(r){ L.push([
+      '"' + String(r.name||'').replace(/"/g,'""') + '"',
+      r.days||0, r.work_min||0, r.base_pay||0, r.goal_cut||0, r.race_pay||0,
+      r.race_penalty||0, r.warn_cut||0, r.trust_bonus||0, r.adjust||0, r.total||0 ].join(',')); });
+    var sum = function(k){ return d.rows.reduce(function(s,r){ return s + (Number(r[k])||0); }, 0); };
+    L.push(['"합계"', sum('days'), sum('work_min'), sum('base_pay'), sum('goal_cut'), sum('race_pay'),
+            sum('race_penalty'), sum('warn_cut'), sum('trust_bonus'), sum('adjust'), sum('total')].join(','));
+    /* 엑셀이 한글을 깨뜨리지 않게 BOM 을 앞에 둔다 */
+    var blob = new Blob(['﻿' + L.join('\n')], { type:'text/csv;charset=utf-8' });
+    var a = document.createElement('a');
+    a.href = URL.createObjectURL(blob); a.download = 'lucky7-급여-' + d.ym + '.csv';
+    document.body.appendChild(a); a.click();
+    setTimeout(function(){ URL.revokeObjectURL(a.href); a.remove(); }, 1000);
+    toast('📄 ' + d.ym + ' 급여표를 뽑았습니다');
+  }catch(e){ toast('못 뽑았습니다 — ' + (e && e.message), true); }
+};
+
+async function _bnkRender(host){
+  var ym = _bnkYM || (_bnkYM = _bnkNowYM());
+  var esc = (typeof _mtcEsc === 'function') ? _mtcEsc : function(s){ return String(s==null?'':s); };
+  var head = '<div class="set-page-wrap"><div class="att-eyebrow">운영 · 정산</div>'
+    + '<div class="ph">🏦 저금통</div>'
+    + '<div class="psub">매일 밤 굳는 일급을 그대로 읽습니다 · 고칠 것은 지우지 않고 조정 줄을 답니다</div>'
+    + _payTabs();
+
+  if(!_bnkMonth || _bnkMonth.ym !== ym){
+    host.innerHTML = head + '<div class="bnk-empty">불러오는 중…</div></div>';
+    await _bnkLoad();
+    if(_bnkYM !== ym) return;                              /* 기다리는 사이 달이 바뀌었다 */
+  }
+  var d = _bnkMonth || { ym:ym, rows:[], err:'' };
+  var sum = function(k){ return d.rows.reduce(function(s,r){ return s + (Number(r[k])||0); }, 0); };
+  var canEdit = false;
+  try{ var rr = String((currentUser && currentUser.role) || '').toLowerCase();
+       canEdit = ['ceo','admin','manager','hr','settlement'].indexOf(rr) >= 0; }catch(_){}
+
+  var nav = '<div class="bnk-bar">'
+    + '<div class="bnk-nav"><button onclick="_bnkGo(-1)" title="지난달">◀</button>'
+    +   '<b>' + ym.slice(0,4) + '년 ' + (+ym.slice(5,7)) + '월</b>'
+    +   '<button onclick="_bnkGo(1)"' + (ym >= _bnkNowYM() ? ' disabled' : '') + ' title="다음달">▶</button></div>'
+    + '<span class="bnk-note">' + (d.rows.length ? (d.rows.length + '명 · 굳은 날 ' + sum('days') + '줄') : '굳은 줄 없음') + '</span>'
+    + '<span class="bnk-sp"></span>'
+    + '<button class="bnk-btn" onclick="_bnkReload()">↻ 다시 읽기</button>'
+    + (d.rows.length ? '<button class="bnk-btn" onclick="_bnkCsv()">📄 엑셀로 뽑기</button>' : '')
+    + '</div>';
+
+  if(d.err){ host.innerHTML = head + nav + '<div class="bnk-empty">못 읽었습니다.<br>' + esc(d.err) + '</div></div>'; return; }
+  if(!d.rows.length){
+    host.innerHTML = head + nav
+      + '<div class="bnk-empty">이 달에는 굳은 줄이 없습니다.<br>'
+      + '일급은 매일 밤 한국시간 13:40 에 <b>어제 것</b>이 굳습니다.</div></div>';
+    return;
+  }
+
+  var tiles = '<div class="bnk-tiles">'
+    + '<div class="bnk-tile"><s>합계</s><b>' + _bnkM(sum('total')) + ' Rp</b></div>'
+    + '<div class="bnk-tile"><s>기본급</s><b>' + _bnkM(sum('base_pay')) + '</b></div>'
+    + '<div class="bnk-tile dn"><s>깎인 것</s><b>−' + _bnkM(sum('goal_cut') + sum('warn_cut') + sum('race_penalty')) + '</b></div>'
+    + '<div class="bnk-tile up"><s>더한 것</s><b>+' + _bnkM(sum('race_pay') + sum('trust_bonus')) + '</b></div>'
+    + '</div>';
+
+  var rows = d.rows.map(function(r){
+    var uid = String(r.user_id), on = String(_bnkOpen) === uid;
+    var ph = null; try{ ph = (typeof photoFor === 'function') ? photoFor(uid) : null; }catch(_){}
+    var ini = String(r.name||'?').trim().charAt(0).toUpperCase();
+    var tr = '<tr class="bnk-p' + (on?' on':'') + '" onclick="_bnkPick(\'' + esc(uid) + '\')">'
+      + '<td><span class="bnk-nm"><span class="bnk-cx">▶</span>'
+      +   '<span class="bnk-av">' + (ph ? ('<img src="' + esc(ph) + '" alt="">') : esc(ini)) + '</span>'
+      +   esc(r.name || '?') + '</span></td>'
+      + '<td>' + (r.days||0) + '</td>'
+      + '<td>' + _bnkH(r.work_min) + '</td>'
+      + '<td>' + _bnkC(r.base_pay) + '</td>'
+      + '<td>' + _bnkC(r.goal_cut, '-') + '</td>'
+      + '<td>' + _bnkC(r.race_pay, '+') + '</td>'
+      + '<td>' + _bnkC(r.race_penalty, '-') + '</td>'
+      + '<td>' + _bnkC(r.warn_cut, '-') + '</td>'
+      + '<td>' + _bnkC(r.trust_bonus, '+') + '</td>'
+      + '<td>' + _bnkA(r.adjust) + '</td>'
+      + '<td class="bnk-tot">' + _bnkM(r.total) + '</td></tr>';
+    if(on) tr += '<tr><td class="bnk-day" colspan="11">' + _bnkDayHtml(uid, esc, canEdit) + '</td></tr>';
+    return tr;
+  }).join('');
+
+  var foot = '<tr class="bnk-foot"><td>합계 · ' + d.rows.length + '명</td>'
+    + '<td>' + sum('days') + '</td><td>' + _bnkH(sum('work_min')) + '</td>'
+    + '<td>' + _bnkM(sum('base_pay')) + '</td><td>−' + _bnkM(sum('goal_cut')) + '</td>'
+    + '<td>+' + _bnkM(sum('race_pay')) + '</td><td>−' + _bnkM(sum('race_penalty')) + '</td>'
+    + '<td>−' + _bnkM(sum('warn_cut')) + '</td><td>+' + _bnkM(sum('trust_bonus')) + '</td>'
+    + '<td>' + _bnkM(sum('adjust')) + '</td><td>' + _bnkM(sum('total')) + '</td></tr>';
+
+  host.innerHTML = head + nav + tiles
+    + '<div class="bnk-scroll"><table class="bnk-tbl"><thead><tr>'
+    +   '<th>사람</th><th>일수</th><th>시간</th><th>기본</th><th>미달</th><th>상금</th>'
+    +   '<th>벌금</th><th>경고</th><th>트러스트</th><th>조정</th><th>합계</th>'
+    + '</tr></thead><tbody>' + rows + foot + '</tbody></table></div>'
+    + '<div class="bnk-note" style="margin-top:10px;line-height:1.8">'
+    +   '사람을 누르면 날짜별 줄이 펼쳐집니다. 숫자는 전부 장부가 센 것이고 이 화면은 더하지 않습니다.<br>'
+    +   '시급 = 시프트 월급 ÷ 30일 ÷ 시프트 시간 (주말 포함) · 수습은 첫 30일 90%'
+    + '</div></div>';
+}
+
+function _bnkDayHtml(uid, esc, canEdit){
+  var k = uid + '|' + _bnkYM, days = _bnkDays[k], adj = _bnkAdj[k] || [];
+  if(!days) return '<div class="bnk-daywrap"><div class="bnk-note">불러오는 중…</div></div>';
+  if(!days.length) return '<div class="bnk-daywrap"><div class="bnk-note">이 달에 굳은 줄이 없습니다.</div></div>';
+  var rows = days.map(function(r){
+    return '<tr><td>' + String(r.day).slice(5) + (r.probation ? ' <span class="bnk-z">수습</span>' : '') + '</td>'
+      + '<td>' + esc(r.shift_key || '-') + '</td>'
+      + '<td>' + _bnkH(r.work_min) + '</td>'
+      + '<td>' + _bnkM(r.hour_rate) + '</td>'
+      + '<td>' + _bnkC(r.base_pay) + '</td>'
+      + '<td>' + _bnkC(r.goal_cut, '-') + '</td>'
+      + '<td>' + _bnkC(r.race_pay, '+') + '</td>'
+      + '<td>' + _bnkC(r.race_penalty, '-') + '</td>'
+      + '<td>' + _bnkC(r.warn_cut, '-') + '</td>'
+      + '<td>' + _bnkC(r.trust_bonus, '+') + '</td>'
+      + '<td>' + _bnkA(r.adjust) + '</td>'
+      + '<td class="bnk-tot">' + _bnkM(r.grand_total) + '</td></tr>';
+  }).join('');
+  var h = '<div class="bnk-daywrap" onclick="event.stopPropagation()">'
+    + '<table class="bnk-dtbl"><thead><tr><th>날짜</th><th>시프트</th><th>시간</th><th>시급</th>'
+    +   '<th>기본</th><th>미달</th><th>상금</th><th>벌금</th><th>경고</th><th>트러스트</th><th>조정</th><th>하루 합계</th>'
+    + '</tr></thead><tbody>' + rows + '</tbody></table>';
+  if(adj.length){
+    h += '<div class="bnk-alist">' + adj.map(function(a){
+      return '<div class="bnk-a"><b>' + String(a.day).slice(5) + '</b>'
+        + '<b class="' + ((a.amount||0) < 0 ? 'bnk-mi' : 'bnk-pl') + '">' + ((a.amount||0)>0?'+':'') + _bnkM(a.amount) + '</b>'
+        + esc(a.reason || '') + '<s>' + esc(a.created_by || '') + '</s></div>'; }).join('') + '</div>';
+  }
+  if(canEdit){
+    /* 굳은 줄이 있는 날만 고를 수 있게 — 없는 날에 달면 달 합계에 안 잡혀 영영 안 보인다 */
+    var opts = days.map(function(r){ return '<option value="' + r.day + '">' + String(r.day).slice(5) + '</option>'; }).join('');
+    h += '<div class="bnk-adj">'
+      + '<div class="bnk-adj-h">조정 줄 달기 — 굳은 줄은 그대로 두고 옆에 붙습니다. 깎으려면 금액 앞에 <b>−</b></div>'
+      + '<select id="bnk-a-day" class="bnk-btn" style="padding:6px 9px">' + opts + '</select>'
+      + '<input id="bnk-a-amt" class="amt" type="text" inputmode="numeric" placeholder="예: -50000">'
+      + '<input id="bnk-a-rsn" class="rsn" type="text" maxlength="120" placeholder="이유 — 예: 정전으로 2시간 못 함, 보전">'
+      + '<button class="bnk-btn ac" onclick="_bnkAdd(\'' + esc(uid) + '\')">달기</button>'
+      + '</div>';
+  }
+  return h + '</div>';
+}
+
 async function renderSettlement(){
   const otherView = document.getElementById('ch-other');
   if(!otherView) return;
@@ -46751,6 +47086,9 @@ async function renderSettlement(){
     otherView.innerHTML = `<div class="set-page-wrap"><div class="att-eyebrow">운영 · 정산</div><div class="ph">${settlementTitle}</div><div class="cl-noaccess">🔒 정산은 운영진 전용입니다.</div></div>`;
     return;
   }
+  /* [v1484] 저금통 — 굳은 일급(pay_ledger)을 읽는 새 화면.
+     옛 손 시트는 지우지 않고 탭으로 남겨 둔다. 둘을 나란히 보며 옮겨야 안심하고 버릴 수 있다. */
+  if(!isMaster && window._payView === 'bank') return _bnkRender(otherView);
   // [v186] pull saved settlement (manual staff + per-item edits) once per session
   if(sb && !_settlementSynced){ _settlementSynced = true; await loadSettlementState(); }
   // 정산은 전체 팀(13명 mock) 기준 — 급여 계산/시연용 (실제 가입자와 무관)
@@ -46836,6 +47174,7 @@ async function renderSettlement(){
     <div class="att-eyebrow">운영 · 정산</div>
     <div class="ph">${settlementTitle}</div>
     <div class="psub">${isMaster ? monthLabel+' · 매출 · 인건비 · 순익' : monthLabel+' · 직원 급여'}</div>
+    ${isMaster ? '' : _payTabs()}
 
     ${summaryHTML}
 
