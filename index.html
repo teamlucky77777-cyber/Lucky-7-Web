@@ -4,7 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
 <title>ARASAKA Corp</title>
-<!-- BUILD: v1487 | 메이플은 마릿수로 채점한다 — 목표 6,500 · 적응 기간 4,500(7일) -->
+<!-- BUILD: v1488 | 메이플 PC 를 한눈에 — 타일에 주황 기운과 잎 하나 · 세 화면의 게임 색을 하나로 -->
 <!-- v745 기록은 git 이력(v1302 이전 커밋)에 있다 — 100KB 변경사 주석을 배포에서 제거 -->
 <!-- [v677] a <link href> cannot read a CSS variable, so the favicon carries its own copy.
      64px: a browser tab draws it at 16-32px, so this is 2x-DPR sharp at 11KB. -->
@@ -9768,7 +9768,16 @@ button:active,.btn:active{transform:scale(.97)}
 .pc:hover{transform:translateY(-2px);border-color:var(--br2);box-shadow:var(--e2)}
 .pc.selected{border-color:var(--ac);box-shadow:var(--glow-ac),var(--e2)}
 .pc.g-lineage{border-color:rgba(74,143,217,.48)}   /* [v859] 게임 구분색 시인성 업 */
-.pc.g-maple{border-color:rgba(217,122,58,.48)}
+/* ═══ [v1488] 메이플 PC 는 한눈에 달라야 한다 ═══════════════════════════════
+   사장님 "PC 23번이 메이플 플래닛이잖아 · 리니지 클래식이랑 색이 달라야지".
+   g-maple 색은 v859 부터 있었지만 1px 테두리 하나뿐이라, 타일 스물다섯 개가
+   깔린 보드에서는 찾아야 보였다. 스물넷은 그대로 두고 메이플 한 장만 물들인다 —
+   바탕에 주황 기운, 테두리 진하게, 번호 옆에 잎 하나. 리니지 쪽은 손대지 않는다. */
+.pc.g-maple{border-color:rgba(217,122,58,.70);
+  background:linear-gradient(180deg,var(--g-maple-bg),transparent 62%),var(--bg-c)}
+.pc.g-maple:hover{border-color:var(--g-maple)}
+.pc.g-maple .pc-head{border-bottom-color:rgba(217,122,58,.30)}
+.pc-gtag{font-size:11px;line-height:1;flex-shrink:0;filter:saturate(1.15)}
 .pc.g-mix{border-color:rgba(176,116,236,.52)}       /* MIX = 퍼플 */
 .pc.g-empty{border-color:var(--br)}                  /* 빈 PC = 기본 보더 */
 .pc.g-lineage.selected{border-color:var(--g-lineage);box-shadow:0 0 0 4px rgba(74,143,217,.15),var(--e2)}
@@ -10441,6 +10450,9 @@ html #sr-app .sr-fchip .v{font-size:14px}
   border:1px solid var(--br);
   text-transform:uppercase;
 }
+.ppc-game-lineage{background:var(--g-lineage-bg)}
+.ppc-game-maple{background:var(--g-maple-bg)}
+.ppc-game-empty{background:var(--bg-h)}
 .game-tag-lineage{color:var(--g-lineage);background:var(--g-lineage-bg);border-color:rgba(74,143,217,.4)}
 .game-tag-maple{color:var(--g-maple);background:var(--g-maple-bg);border-color:rgba(217,122,58,.4)}
 .game-tag-mix{
@@ -52656,7 +52668,10 @@ function renderPlayerPCView(){
     const statusBg = { online:'var(--gr-bg)', warning:'var(--ye-bg)', offline:'var(--bg-h)' }[p.status] || 'var(--bg-h)';
     const statusLabel = { online:'Online', warning:'Warning', offline:'Offline' }[p.status] || p.status;
     const gameLabel = { lineage:'리니지 클래식', maple:'메이플 플래닛', empty:'대기' }[p.game] || p.game;
-    const gameColor = { lineage:'#b074ec', maple:'#5fa3d9', empty:'#9a9a9a' }[p.game] || '#9a9a9a';
+    /* [v1488] 세 화면이 메이플을 서로 다른 색으로 칠하고 있었다 — 보드는 주황,
+       타임라인과 여기는 파랑. 색이 뜻을 가지려면 어디서나 같아야 한다.
+       보드가 쓰던 값(--g-lineage 파랑 · --g-maple 주황)으로 맞춘다. */
+    const gameColor = { lineage:'var(--g-lineage)', maple:'var(--g-maple)', empty:'#9a9a9a' }[p.game] || '#9a9a9a';
 
     const leader = p.leader ? (typeof staffById === 'function' ? staffById(p.leader) : null) : null;
 
@@ -52689,7 +52704,7 @@ function renderPlayerPCView(){
       </div>
 
       <div class="ppc-meta">
-        <span class="ppc-game" style="color:${gameColor};background:color-mix(in srgb, ${gameColor} 14%, transparent)">${gameLabel}</span>
+        <span class="ppc-game ppc-game-${p.game||'empty'}" style="color:${gameColor}">${p.game==='maple'?'🍁 ':''}${gameLabel}</span>
         ${leader ? `<span class="ppc-leader">👑 ${leader.full_name||leader.name}</span>` : ''}
       </div>
 
@@ -63211,7 +63226,7 @@ function pcCardHTML(p){
   })();
   return `<div class="pc ${gc} ${sel}${isPcOff?' pc-off':''}${_pcPaused?' pc-paused':''}${p.hidden?' pc-is-hidden':''}" data-st="${p.status}" data-id="${p.id}" onclick="selectPC(${p.id})"${canEdit?` ondragover="pcCardOver(event,${p.id})" ondragleave="pcCardLeave(event)" ondrop="pcCardDrop(event,${p.id})"`:''}>
     <div class="pc-head">
-      <span class="pc-num">PC-${pad2(p.id)}</span>
+      <span class="pc-num">PC-${pad2(p.id)}</span>${dispG==='maple'?`<span class="pc-gtag" title="메이플 플래닛 / Maple Planet">🍁</span>`:''}
       <div class="pc-head-r">
         ${/* [v765] 푸터에 있던 게임 태그와 'Nh scheduled' 를 헤더로 올려 카드에서 한 줄을 통째로 뺐다 */''}
         <span class="pc-hours">${isPcOff?'OFF':(p.assignments.reduce((s,a)=>s+a.len,0)||0)+'h'}</span>
@@ -64551,8 +64566,9 @@ function buildPCRows(){
     const totalH = p.assignments.reduce((s,a)=>s+a.len,0);
     const leader = p.leader ? staffById(p.leader) : null;
     const gameInfo = {
-      lineage: { name:'Lineage', color:'#b074ec', bg:'rgba(176,116,236,.16)' },
-      maple:   { name:'Maple',   color:'#5fa3d9', bg:'rgba(95,163,217,.16)' },
+      /* [v1488] 보드와 같은 색으로 — 여기만 리니지가 보라, 메이플이 파랑이었다 */
+      lineage: { name:'Lineage', color:'var(--g-lineage)', bg:'var(--g-lineage-bg)' },
+      maple:   { name:'Maple',   color:'var(--g-maple)',   bg:'var(--g-maple-bg)' },
       empty:   { name:'대기',     color:'#9a9a9a', bg:'rgba(154,154,154,.14)' }
     }[p.game] || { name:p.game, color:'#9a9a9a', bg:'rgba(154,154,154,.14)' };
     return {
