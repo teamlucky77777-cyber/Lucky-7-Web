@@ -4,7 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
 <title>ARASAKA Corp</title>
-<!-- BUILD: v1546 | 잠금을 한 번 풀면 그 드래그 동안 다시 안 잠근다 -->
+<!-- BUILD: v1548 | 클라 시간을 270도 시계로 - 바깥은 맡긴 시간, 안쪽은 앉은 사람 -->
 <!-- v745 기록은 git 이력(v1302 이전 커밋)에 있다 — 100KB 변경사 주석을 배포에서 제거 -->
 <!-- [v677] a <link href> cannot read a CSS variable, so the favicon carries its own copy.
      64px: a browser tab draws it at 16-32px, so this is 2x-DPR sharp at 11KB. -->
@@ -2917,6 +2917,30 @@ html[data-theme=light] #dt-pop{background:rgba(255,255,255,.99);border-color:#d8
 /* ═══ [v1541] 클라 패널의 하루 한 줄 — 격자와 같은 문법 ══════════════════════
    격자 트랙과 같은 바닥·같은 눈금·같은 막대. 다른 것은 크기와, 여기에만 있는
    것(이름·빈 시간·며칠째)뿐이다. 배울 것이 없어야 한다. */
+/* ═══ [v1547] 클라 시계 — 270도만 도는 계량기 ════════════════════════════════
+   바깥 고리 = 고객이 맡긴 시간(유리) · 안쪽 고리 = 실제로 앉은 사람(그 사람 색).
+   나란히 두니 '바깥은 있는데 안쪽이 없는 자리' 가 그대로 구멍으로 보인다. */
+.ckk{display:block;margin:0 auto 4px;overflow:visible}
+.ckk path,.ckk line{fill:none;stroke-linecap:round}
+.ckk .ckk-tr{stroke:rgba(255,255,255,.07);stroke-width:13}
+.ckk .ckk-tr.in{stroke:rgba(255,255,255,.05);stroke-width:9}
+.ckk .ckk-need{stroke-width:13;
+  filter:drop-shadow(0 2px 5px rgba(0,0,0,.45))}
+.ckk .ckk-bar{stroke-width:9;filter:drop-shadow(0 1px 3px rgba(0,0,0,.5))}
+.ckk .ckk-tk{stroke:rgba(255,255,255,.3);stroke-width:1.5}
+.ckk .ckk-hr{fill:var(--tx3,#8a8a86);font:700 9.5px ui-monospace,monospace;
+  text-anchor:middle;dominant-baseline:middle}
+.ckk .ckk-now{stroke:#e2b45c;stroke-width:1.5;opacity:.85}
+.ckk .ckk-nowd{fill:#e2b45c;stroke:none;filter:drop-shadow(0 0 4px rgba(226,180,92,.7))}
+.ckk .ckk-big{fill:var(--tx,#e6e5e2);font-weight:800;font-size:25px;letter-spacing:-.02em;
+  text-anchor:middle;font-variant-numeric:tabular-nums}
+.ckk .ckk-sub{fill:var(--tx3,#8a8a86);font-weight:700;font-size:11px;text-anchor:middle;
+  letter-spacing:.04em}
+.ckk.off{filter:grayscale(1) brightness(.62);opacity:.72}
+html[data-theme=light] .ckk .ckk-tr{stroke:rgba(0,0,0,.09)}
+html[data-theme=light] .ckk .ckk-tr.in{stroke:rgba(0,0,0,.06)}
+html[data-theme=light] .ckk .ckk-tk{stroke:rgba(0,0,0,.25)}
+
 .cldb{position:relative;height:44px;border-radius:10px;overflow:hidden;margin:2px 0 5px;
   background:var(--bg-i,#151517);
   background-image:repeating-linear-gradient(90deg,transparent 0,transparent calc(100%/24 - 1px),rgba(255,255,255,.055) calc(100%/24 - 1px),rgba(255,255,255,.055) calc(100%/24));
@@ -57073,16 +57097,15 @@ function openClientDetail(cid){
       <div class="cld-block">
         <div class="cld-block-h">🕐 작업 시간대</div>
         ${(function(){
-          var B = _cldBandHTML(c), ko = _isKo;
+          var B = _cldClockHTML(c), ko = _isKo;
           var w = B.win, n = B.need;
           var wib = function(x){ return ((Number(x) - 2) % 24 + 24) % 24; };
           var s = (c.work && c.work.start != null) ? c.work.start : (w ? w.s : 9);
           var e = (c.work && c.work.end   != null) ? c.work.end   : (w ? w.e : 19);
-          return B.band
-          + '<div class="cldb-sum">'
-          +   (w ? ('<span class="k">' + (ko?'맡긴 시간':'Booked') + '</span><span class="v">' + n + (ko?'시간':'h') + '</span>')
-                 : ('<span class="v dim">' + (ko?'시간 미정':'No hours set') + '</span>'))
+          return B.svg
+          + '<div class="cldb-sum" style="justify-content:center">'
           +   (B.gap > 0 ? ('<span class="k">' + (ko?'사람 없는 시간':'Uncovered') + '</span><span class="v warn">' + B.gap + (ko?'시간':'h') + '</span>') : '')
+          +   (B.who.length ? ('<span class="k">' + (ko?'맡은 사람':'On it') + '</span><span class="v dim">' + B.who.map(function(x){ return String(x).replace(/[<>&"]/g,''); }).join(' · ') + '</span>') : '')
           +   (B.off ? ('<span class="v dim">' + (ko?'오늘은 쉬는 날':'Off today') + '</span>') : '')
           +   (canSeeSsal && w ? ('<span class="k">🌾</span><span class="v">' + fmtSsal(clientSsal(c.name)) + '</span><span class="hint">' + (ko?'10시간 = 1쌀':'10h = 1') + '</span>') : '')
           + '</div>'
@@ -57097,7 +57120,7 @@ function openClientDetail(cid){
             +     '<b id="cld-end-' + c.id + '">' + pad2(e) + ':00</b>'
             +     '<button onclick="adjClientWork(\'' + c.id + '\',\'end\',1)">+</button></div>'
             + '</div>'
-            + '<div class="cldb-ax" style="height:auto;margin:6px 0 0"><s style="position:static;transform:none">'
+            + '<div class="cldb-ax" style="height:auto;margin:6px 0 0;text-align:center"><s style="position:static;transform:none">'
             +   (ko?'자카르타 ':'Jakarta ') + pad2(wib(s)) + ':00 – ' + pad2(wib(e)) + ':00</s></div>') : '');
         })()}
       </div>
@@ -58041,7 +58064,92 @@ function _cldOffToday(c){
     return c.days.indexOf(d) < 0;
   }catch(_){ return false; }
 }
-/* 이 클라의 하루 한 줄 — 격자와 같은 문법 */
+/* ═══ [v1547] 시계 — 다만 완전히 돌지는 않는다 ════════════════════════════════
+   사장님 "클라이언트 풀 저거 시간 설정하는거 갈아엎은거 그냥 시계 모양으로 바꿔봐
+          전처럼 완전 돌아가지는 말고 퀄리티 이빠이 올려"
+
+   옛 도넛은 **완전한 원**이었다. 원은 시작도 끝도 없어서 '몇 시부터 몇 시까지' 를
+   말하려면 눈이 한 바퀴를 돌아야 했다. 그래서 격자(가로 띠)와 말이 안 맞았다.
+
+   **270도만 돈다.** 아래 90도를 비워 두면 그 틈이 곧 '여기가 시작이고 여기가 끝' 이
+   된다 — 계량기·속도계가 다 그 모양인 이유다. 시계처럼 읽히면서 시작과 끝이 있다.
+
+   고리를 둘로 나눈다. 이게 이 화면의 핵심이다.
+     · **바깥 고리 = 고객이 맡긴 시간** (유리)
+     · **안쪽 고리 = 실제로 앉은 사람** (그 사람 색)
+   겹쳐 그리면 하나가 다른 하나를 가린다. 나란히 두면 **바깥은 있는데 안쪽이 없는
+   자리**가 그대로 구멍으로 보인다 — 그게 '사람 없는 시간' 이다. 숫자를 안 읽어도 보인다. */
+function _cldPt(cx, cy, r, deg){ var a = deg * Math.PI / 180; return [cx + r*Math.cos(a), cy + r*Math.sin(a)]; }
+function _cldArcD(cx, cy, r, h0, len){
+  var a0 = 135 + (h0/24)*270, a1 = 135 + ((h0+len)/24)*270;
+  var p0 = _cldPt(cx,cy,r,a0), p1 = _cldPt(cx,cy,r,a1);
+  var large = ((a1-a0) > 180) ? 1 : 0;
+  return 'M' + p0[0].toFixed(2) + ' ' + p0[1].toFixed(2)
+       + 'A' + r + ' ' + r + ' 0 ' + large + ' 1 ' + p1[0].toFixed(2) + ' ' + p1[1].toFixed(2);
+}
+function _cldClockHTML(c){
+  try{
+    var win = _cldWin(c), plist = _cldPcsOf(c), off = _cldOffToday(c);
+    var S = 168, cx = S/2, cy = S/2, rO = 66, rI = 50;
+    var kst = new Date(Date.now() + 9*3600000);
+    var nowH = kst.getUTCHours() + kst.getUTCMinutes()/60;
+    var uid = 'ck' + Math.random().toString(36).slice(2,8);
+    var g = '';
+    /* 바탕 고리 둘 */
+    g += '<path d="' + _cldArcD(cx,cy,rO,0,24) + '" class="ckk-tr"/>';
+    g += '<path d="' + _cldArcD(cx,cy,rI,0,24) + '" class="ckk-tr in"/>';
+    /* 눈금 — 0 · 6 · 12 · 18 (바깥으로 짧게) */
+    [0,6,12,18,24].forEach(function(h){
+      var a = 135 + (h/24)*270, p1 = _cldPt(cx,cy,rO+7,a), p2 = _cldPt(cx,cy,rO+12,a);
+      g += '<line x1="'+p1[0].toFixed(1)+'" y1="'+p1[1].toFixed(1)+'" x2="'+p2[0].toFixed(1)+'" y2="'+p2[1].toFixed(1)+'" class="ckk-tk"/>';
+      if(h !== 24){
+        var pt = _cldPt(cx,cy,rO+21,a);
+        g += '<text x="'+pt[0].toFixed(1)+'" y="'+pt[1].toFixed(1)+'" class="ckk-hr">'+pad2(h)+'</text>';
+      }
+    });
+    /* 바깥 = 맡긴 시간 (유리) */
+    var need = 0;
+    if(win){
+      var L = (win.e - win.s) % 24; if(L <= 0) L += 24; need = L;
+      g += '<path d="' + _cldArcD(cx,cy,rO,win.s,L) + '" class="ckk-need" stroke="url(#' + uid + ')"/>';
+    }
+    /* 안쪽 = 사람 */
+    var covered = {}, who = [];
+    plist.forEach(function(p){
+      (p.assignments || []).forEach(function(a){
+        if(!a || !a.staff || !(a.len > 0)) return;
+        var st = (typeof staffById === 'function') ? staffById(a.staff) : null;
+        var nm = st ? String(st.name || '') : '';
+        var col = (typeof _pcv2Col === 'function') ? _pcv2Col(nm) : '#7aa7d8';
+        for(var j = 0; j < Math.ceil(a.len); j++) covered[((Math.floor(a.start)+j) % 24 + 24) % 24] = 1;
+        if(nm && who.indexOf(nm) < 0) who.push(nm);
+        g += '<path d="' + _cldArcD(cx,cy,rI,((a.start%24)+24)%24,Math.min(24,a.len)) + '" class="ckk-bar" stroke="' + col + '"/>';
+      });
+    });
+    var gap = 0;
+    if(win && need > 0) for(var i = 0; i < Math.ceil(need); i++){
+      if(!covered[((Math.floor(win.s)+i) % 24 + 24) % 24]) gap++;
+    }
+    /* 지금 */
+    var an = 135 + (nowH/24)*270, n1 = _cldPt(cx,cy,rI-9,an), n2 = _cldPt(cx,cy,rO+4,an);
+    g += '<line x1="'+n1[0].toFixed(1)+'" y1="'+n1[1].toFixed(1)+'" x2="'+n2[0].toFixed(1)+'" y2="'+n2[1].toFixed(1)+'" class="ckk-now"/>';
+    var nd = _cldPt(cx,cy,rO+4,an);
+    g += '<circle cx="'+nd[0].toFixed(1)+'" cy="'+nd[1].toFixed(1)+'" r="2.6" class="ckk-nowd"/>';
+    /* 가운데 */
+    var mid = win ? (pad2(win.s) + '–' + pad2(win.e)) : '––';
+    g += '<text x="'+cx+'" y="'+(cy-4)+'" class="ckk-big">' + mid + '</text>';
+    g += '<text x="'+cx+'" y="'+(cy+16)+'" class="ckk-sub">' + (win ? (need + 'H') : '시간 미정') + '</text>';
+    var svg = '<svg viewBox="0 0 '+S+' '+S+'" width="'+S+'" height="'+S+'" class="ckk' + (off ? ' off' : '') + '">'
+      + '<defs><linearGradient id="'+uid+'" x1="0" y1="0" x2="0" y2="1">'
+      +   '<stop offset="0" stop-color="rgba(255,255,255,.72)"/>'
+      +   '<stop offset=".55" stop-color="rgba(255,255,255,.3)"/>'
+      +   '<stop offset="1" stop-color="rgba(226,196,130,.4)"/>'
+      + '</linearGradient></defs>' + g + '</svg>';
+    return { svg:svg, need:need, gap:gap, off:off, win:win, who:who };
+  }catch(e){ return { svg:'', need:0, gap:0, off:false, win:null, who:[] }; }
+}
+
+/* 이 클라의 하루 한 줄 — 격자와 같은 문법 (v1547 부터 시계를 쓴다. 이건 남겨 둔다) */
 function _cldBandHTML(c){
   try{
     var win = _cldWin(c), plist = _cldPcsOf(c), off = _cldOffToday(c);
@@ -63566,6 +63674,31 @@ function _agBind(host){
           const ob = (el0 && el0.closest) ? el0.closest('#ag-wrap .ag-bar') : null;
           if(ob && ob !== bar) overBar = ob;
         }catch(_){}
+        /* ═══ [v1547] 줄을 못 잡으면 좌표로 직접 잰다 ═══════════════════════════
+           사장님 "이미 배치되어 있는 PC에서만 저게 뜨잖아, 다른 PC에 옮길때도
+                  저게 떠야한다니까" / "내가 현재 옮기고 있는 위치가 어딘지 보여줘야
+                  할거 아니냐"
+
+           줄 판정을 **커서 밑에 무엇이 있나**(elementFromPoint) 로만 하고 있었다.
+           그 한 가지에 기대면, 커서 밑에 마침 다른 것이 놓여 있는 순간(끌고 있는
+           막대 조각·툴팁·자기 그림자·빈 줄의 안내 글자) 줄을 놓친다. 놓치면
+           tgtPc 가 null 이 되어 **미리보기가 아예 안 그려진다.**
+
+           줄은 **화면에서 자리를 차지한 것**이므로 좌표로 재면 놓칠 수가 없다.
+           원래 방법을 먼저 쓰고, 못 잡았을 때만 줄들의 사각형을 훑어 커서의 y 가
+           들어가는 줄을 고른다. 결과가 같고 실패만 사라진다. */
+        if(!overRow){
+          try{
+            var _rows = host.querySelectorAll('.ag-row[data-pc]');
+            for(var _i = 0; _i < _rows.length; _i++){
+              var _rw2 = _rows[_i];
+              if(_rw2.classList.contains('ag-head')) continue;
+              var _rr = _rw2.getBoundingClientRect();
+              if(last.clientY >= _rr.top && last.clientY <= _rr.bottom
+                 && last.clientX >= _rr.left && last.clientX <= _rr.right){ overRow = _rw2; break; }
+            }
+          }catch(_){}
+        }
       }
       const overPc = overRow ? Number(overRow.dataset.pc) : null;
       /* [v1292] '밖'은 진짜 밖만 — 눈금자·스크롤바 위에서 놓으면 삭제되던 것 (Ctrl+Z만이 살길이었다) */
