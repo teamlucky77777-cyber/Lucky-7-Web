@@ -4,7 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
 <title>ARASAKA Corp</title>
-<!-- BUILD: v1526 | 격자 고스트를 유리로 - 금색 얼룩 대신 뒤가 비치는 덮개 -->
+<!-- BUILD: v1528 | 고스트는 풀을 먼저 - 격자와 대조하니 시계 쪽이 세 명 틀렸다 -->
 <!-- v745 기록은 git 이력(v1302 이전 커밋)에 있다 — 100KB 변경사 주석을 배포에서 제거 -->
 <!-- [v677] a <link href> cannot read a CSS variable, so the favicon carries its own copy.
      64px: a browser tab draws it at 16-32px, so this is 2x-DPR sharp at 11KB. -->
@@ -41086,7 +41086,29 @@ function _ckReqOf(pc){
       var ids = p.clients || [];
       for(var j = 0; j < ids.length; j++){
         var c = (typeof clientById === 'function') ? clientById(ids[j]) : null; if(!c) continue;
+        /* ═══ [v1528] 어느 쪽을 믿을까 - 격자와 대조해서 정했다 ═══════════════════
+           v1527 은 '사장님이 돌리는 시계' 를 먼저 보게 했다. 그런데 실제 배정 격자와
+           일곱 개를 대조해 보니 **시계 쪽이 세 명이나 틀렸다** - 검쌤 · 유니온쌤 ·
+           경상도쌤이 전부 9-19 였다. 그건 시계를 한 번도 안 돌린 카드의 **기본값**이고,
+           기본값이 그대로 저장돼 있었다. 격자와 맞는 쪽은 풀(startH/endH)이었다.
+           반대로 젠틀쌤은 시계(2-10)가 맞고 풀(3-11)이 낡았다.
+
+           그래서 풀을 먼저 본다 - 지금 격자와 맞는 쪽이 다섯이고 틀린 쪽이 하나다.
+           풀이 비어 있으면 시계를 쓴다. 그리고 v1527 이 시계를 돌릴 때마다 풀에
+           같은 값을 적으므로, 앞으로는 둘이 갈라지지 않고 풀이 늘 최신이 된다. */
         var s = Number(c.startH), e = Number(c.endH), h = Number(c.hours);
+        if(!(isFinite(s) && isFinite(e))){
+          try{
+            if(typeof CLIENT_ACCOUNTS !== 'undefined' && Array.isArray(CLIENT_ACCOUNTS) && typeof clNorm === 'function'){
+              var _ck = clNorm(String(c.name||''));
+              var _acc = _ck ? CLIENT_ACCOUNTS.find(function(a){ return a && clNorm(String(a.name||'')) === _ck; }) : null;
+              if(_acc && _acc.work && _acc.work.start != null && _acc.work.end != null){
+                s = Number(_acc.work.start); e = Number(_acc.work.end);
+                h = ((e - s) % 24 + 24) % 24; if(h === 0) h = 24;
+              }
+            }
+          }catch(_){}
+        }
         if(!(isFinite(s) && isFinite(e))) continue;
         if(!(s >= 0 && s < 24 && e >= 0 && e < 24)) continue;
         /* 시작과 끝이 같으면 24시간이라는 뜻이다. 다만 빈 칸(0/0)과 구별해야 하므로
@@ -57044,7 +57066,33 @@ function adjClientWork(cid, which, delta){
   const eEl = document.getElementById('cld-end-'+cid);
   if(sEl) sEl.textContent = pad2(c.work.start)+':00';
   if(eEl) eEl.textContent = pad2(c.work.end)+':00';
+  /* ═══ [v1527] 같은 시간이 두 군데에 따로 있었다 ═══════════════════════════════
+     사장님 "젠틀쌤 지금 2시부터 10시로 클라이언트 탭에 표시했는데 격자에는
+            3시부터 11시로 나와" / "너가 직접 눈으로 확인해봐"
+
+     사장님 말씀이 맞았다. 시간이 **두 곳**에 있었다.
+       · 계정(CLIENT_ACCOUNTS)의 work.start/end  - 이 시계가 고치는 값. 34개 전부 채워져 있다
+       · 클라 풀(CLIENTS)의 startH/endH          - 옛 숫자 칸이 고치는 값. 19개, 낡았다
+     젠틀쌤은 시계로 2-10 을 넣었는데 풀에는 옛 값 3-11 이 남아 있었고, 격자 고스트는
+     풀을 읽고 있었다. 시간대 문제가 아니라 **애초에 다른 숫자 두 개**였다.
+     한 시간 차이는 우연이다.
+
+     이제 시계를 돌리면 풀에도 같은 값을 적는다. 두 곳이 다시 갈라질 수 없다.
+     이름으로 잇는다(clNorm) - 계정과 풀은 id 가 따로다(ca_ / c_). */
+  try{
+    if(typeof CLIENTS !== 'undefined' && Array.isArray(CLIENTS) && typeof clNorm === 'function'){
+      var _k = clNorm(String(c.name||''));
+      if(_k){
+        CLIENTS.forEach(function(pc){
+          if(!pc || clNorm(String(pc.name||'')) !== _k) return;
+          pc.startH = c.work.start; pc.endH = c.work.end;
+          if(typeof clientHours === 'function') pc.hours = clientHours(pc);
+        });
+      }
+    }
+  }catch(_){}
   saveClientState();
+  try{ if(typeof _agRender === 'function') _agRender(); }catch(_){}   /* 격자 도면도 바로 따라온다 */
 }
 let PCS = [];
 const MAX_SLOTS = 8;
