@@ -4,7 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
 <title>ARASAKA Corp</title>
-<!-- BUILD: v1548 | 클라 시간을 270도 시계로 - 바깥은 맡긴 시간, 안쪽은 앉은 사람 -->
+<!-- BUILD: v1552 | 시계를 잡아서 돌린다 - 손잡이 둘, 고리를 끌면 통째로 -->
 <!-- v745 기록은 git 이력(v1302 이전 커밋)에 있다 — 100KB 변경사 주석을 배포에서 제거 -->
 <!-- [v677] a <link href> cannot read a CSS variable, so the favicon carries its own copy.
      64px: a browser tab draws it at 16-32px, so this is 2x-DPR sharp at 11KB. -->
@@ -2920,26 +2920,45 @@ html[data-theme=light] #dt-pop{background:rgba(255,255,255,.99);border-color:#d8
 /* ═══ [v1547] 클라 시계 — 270도만 도는 계량기 ════════════════════════════════
    바깥 고리 = 고객이 맡긴 시간(유리) · 안쪽 고리 = 실제로 앉은 사람(그 사람 색).
    나란히 두니 '바깥은 있는데 안쪽이 없는 자리' 가 그대로 구멍으로 보인다. */
-.ckk{display:block;margin:0 auto 4px;overflow:visible}
+/* [v1552] 고리 자체가 손잡이다 — 잡을 것이 보이고, 잡으면 커진다 */
+.ckk .ckk-need.grab{cursor:grab}
+.ckk .ckk-hit{fill:rgba(0,0,0,0);stroke:none;cursor:grab}
+.ckk .ckk-hit:active{cursor:grabbing}
+.ckk .ckk-kn{fill:#fff;stroke:rgba(0,0,0,.35);stroke-width:1;pointer-events:none;
+  filter:drop-shadow(0 2px 5px rgba(0,0,0,.5));transition:r .12s ease}
+.ckk .ckk-kn2{fill:rgba(20,18,14,.55);stroke:none;pointer-events:none}
+.ckk .ckk-hit:hover + .ckk-kn{r:9}
+body.cld-dialing{cursor:grabbing;user-select:none}
+body.cld-dialing .ckk .ckk-kn{r:9.5}
+.ckk .ckk-cta{fill:#14120f;font-weight:800;font-size:11px;text-anchor:middle;stroke:none;
+  pointer-events:none;letter-spacing:-.01em}
+.ckk .ckk-ctab{fill:var(--ac,#c2a04a);stroke:none;cursor:pointer;
+  filter:drop-shadow(0 3px 10px rgba(194,160,74,.35))}
+.ckk .ckk-ctab:hover{filter:drop-shadow(0 3px 12px rgba(194,160,74,.5)) brightness(1.06)}
+.ckk.empty{opacity:1}
+.ckk.empty .ckk-tr{stroke:rgba(255,255,255,.05)}
+.ckk.empty .ckk-none{fill:var(--tx3,#8a8a86)}
+.cld-dialhint{text-align:center;font-size:10.5px;color:var(--tx4,#5f5e5a);margin:2px 0 10px}
+.ckk{display:block;margin:0 auto 2px;overflow:visible}
 .ckk path,.ckk line{fill:none;stroke-linecap:round}
-.ckk .ckk-tr{stroke:rgba(255,255,255,.07);stroke-width:13}
-.ckk .ckk-tr.in{stroke:rgba(255,255,255,.05);stroke-width:9}
-.ckk .ckk-need{stroke-width:13;
-  filter:drop-shadow(0 2px 5px rgba(0,0,0,.45))}
-.ckk .ckk-bar{stroke-width:9;filter:drop-shadow(0 1px 3px rgba(0,0,0,.5))}
-.ckk .ckk-tk{stroke:rgba(255,255,255,.3);stroke-width:1.5}
-.ckk .ckk-hr{fill:var(--tx3,#8a8a86);font:700 9.5px ui-monospace,monospace;
-  text-anchor:middle;dominant-baseline:middle}
-.ckk .ckk-now{stroke:#e2b45c;stroke-width:1.5;opacity:.85}
-.ckk .ckk-nowd{fill:#e2b45c;stroke:none;filter:drop-shadow(0 0 4px rgba(226,180,92,.7))}
-.ckk .ckk-big{fill:var(--tx,#e6e5e2);font-weight:800;font-size:25px;letter-spacing:-.02em;
-  text-anchor:middle;font-variant-numeric:tabular-nums}
-.ckk .ckk-sub{fill:var(--tx3,#8a8a86);font-weight:700;font-size:11px;text-anchor:middle;
-  letter-spacing:.04em}
+.ckk .ckk-tr{stroke:rgba(255,255,255,.065);stroke-width:15}
+.ckk .ckk-tr.in{stroke:rgba(255,255,255,.045);stroke-width:11}
+.ckk .ckk-need{stroke-width:15;filter:drop-shadow(0 2px 6px rgba(0,0,0,.5))}
+.ckk .ckk-bar{stroke-width:11;filter:drop-shadow(0 1px 4px rgba(0,0,0,.55))}
+.ckk .ckk-tk{stroke:rgba(255,255,255,.26);stroke-width:1.5}
+.ckk .ckk-hr{fill:var(--tx4,#6c6b66);font:700 9.5px ui-monospace,monospace;text-anchor:middle;stroke:none}
+.ckk .ckk-nowd{fill:#e2b45c;stroke:none;filter:drop-shadow(0 0 5px rgba(226,180,92,.6))}
+.ckk .ckk-big{fill:var(--tx,#e6e5e2);font-weight:800;font-size:27px;letter-spacing:-.03em;
+  text-anchor:middle;stroke:none;font-variant-numeric:tabular-nums}
+.ckk .ckk-sub{fill:var(--tx3,#8a8a86);font-weight:700;font-size:10.5px;text-anchor:middle;stroke:none;letter-spacing:.02em}
+.ckk .ckk-none{fill:var(--tx3,#8a8a86);font-weight:800;font-size:15px;text-anchor:middle;stroke:none;letter-spacing:-.01em}
+.ckk .ckk-sub2{fill:var(--tx4,#5f5e5a);font-weight:600;font-size:9.5px;text-anchor:middle;stroke:none}
+.ckk .ckk-gap{fill:#e0967a;font-weight:800;font-size:9.5px;text-anchor:middle;stroke:none;letter-spacing:.01em}
+.ckk.empty{opacity:.62}
 .ckk.off{filter:grayscale(1) brightness(.62);opacity:.72}
-html[data-theme=light] .ckk .ckk-tr{stroke:rgba(0,0,0,.09)}
-html[data-theme=light] .ckk .ckk-tr.in{stroke:rgba(0,0,0,.06)}
-html[data-theme=light] .ckk .ckk-tk{stroke:rgba(0,0,0,.25)}
+html[data-theme=light] .ckk .ckk-tr{stroke:rgba(0,0,0,.08)}
+html[data-theme=light] .ckk .ckk-tr.in{stroke:rgba(0,0,0,.055)}
+html[data-theme=light] .ckk .ckk-tk{stroke:rgba(0,0,0,.28)}
 
 .cldb{position:relative;height:44px;border-radius:10px;overflow:hidden;margin:2px 0 5px;
   background:var(--bg-i,#151517);
@@ -9128,6 +9147,10 @@ html[data-theme=light] #ag-wrap .ag-track{background:rgba(0,0,0,.04);
     0 0 18px color-mix(in srgb,var(--gc,#c9963a) 28%,transparent);
   animation:agGhIn .19s cubic-bezier(.2,.9,.25,1.05) both}
 #ag-wrap .ag-gh .gh-h{margin-left:auto;font-weight:700;opacity:.85}
+/* [v1549] 옆으로 밀면 시간도 바뀐다 — 한 번만 알려 주면 다음엔 안 읽는다 */
+#ag-wrap .ag-gh .gh-hint{flex:none;margin-left:6px;padding:1px 5px;border-radius:4px;
+  font-size:8.5px;font-weight:800;letter-spacing:0;white-space:nowrap;
+  background:rgba(20,20,22,.62);color:rgba(255,255,255,.82)}
 #ag-wrap .ag-gh.swapback{--gc:#a98fd6}
 /* ═══ [v1537] 떠난 자리 — 좌우로 얼마나 움직였나 ══════════════════════════════
    사장님 "배정격자 옮기는거 흐릿하게 보이는거 좋은데, 좌우도 표시해줘야지
@@ -57098,30 +57121,15 @@ function openClientDetail(cid){
         <div class="cld-block-h">🕐 작업 시간대</div>
         ${(function(){
           var B = _cldClockHTML(c), ko = _isKo;
-          var w = B.win, n = B.need;
+          var w = B.win;
           var wib = function(x){ return ((Number(x) - 2) % 24 + 24) % 24; };
-          var s = (c.work && c.work.start != null) ? c.work.start : (w ? w.s : 9);
-          var e = (c.work && c.work.end   != null) ? c.work.end   : (w ? w.e : 19);
-          return B.svg
-          + '<div class="cldb-sum" style="justify-content:center">'
-          +   (B.gap > 0 ? ('<span class="k">' + (ko?'사람 없는 시간':'Uncovered') + '</span><span class="v warn">' + B.gap + (ko?'시간':'h') + '</span>') : '')
-          +   (B.who.length ? ('<span class="k">' + (ko?'맡은 사람':'On it') + '</span><span class="v dim">' + B.who.map(function(x){ return String(x).replace(/[<>&"]/g,''); }).join(' · ') + '</span>') : '')
+          return '<div id="cld-dialwrap-' + (B.cid||'x') + '">' + B.svg + '</div>'
+          + (_clEditable && w ? ('<div class="cld-dialhint">' + (ko ? '흰 손잡이를 끌어서 시간을 바꿉니다 · 고리를 끌면 통째로 움직입니다' : 'Drag a handle to change, drag the ring to shift') + '</div>') : '')
+          + (w ? ('<div class="cldb-sum" style="justify-content:center">'
+          +   '<span class="k">' + (ko?'자카르타':'Jakarta') + '</span><span class="v dim">' + pad2(wib(w.s)) + ':00 – ' + pad2(wib(w.e)) + ':00</span>'
+          +   (canSeeSsal ? ('<span class="k">🌾</span><span class="v">' + fmtSsal(clientSsal(c.name)) + '</span>') : '')
           +   (B.off ? ('<span class="v dim">' + (ko?'오늘은 쉬는 날':'Off today') + '</span>') : '')
-          +   (canSeeSsal && w ? ('<span class="k">🌾</span><span class="v">' + fmtSsal(clientSsal(c.name)) + '</span><span class="hint">' + (ko?'10시간 = 1쌀':'10h = 1') + '</span>') : '')
-          + '</div>'
-          + (_clEditable ? (
-              '<div class="cldb-adj">'
-            +   '<div class="u"><em>' + (ko?'시작':'Start') + '</em>'
-            +     '<button onclick="adjClientWork(\'' + c.id + '\',\'start\',-1)">−</button>'
-            +     '<b id="cld-start-' + c.id + '">' + pad2(s) + ':00</b>'
-            +     '<button onclick="adjClientWork(\'' + c.id + '\',\'start\',1)">+</button></div>'
-            +   '<div class="u"><em>' + (ko?'종료':'End') + '</em>'
-            +     '<button onclick="adjClientWork(\'' + c.id + '\',\'end\',-1)">−</button>'
-            +     '<b id="cld-end-' + c.id + '">' + pad2(e) + ':00</b>'
-            +     '<button onclick="adjClientWork(\'' + c.id + '\',\'end\',1)">+</button></div>'
-            + '</div>'
-            + '<div class="cldb-ax" style="height:auto;margin:6px 0 0;text-align:center"><s style="position:static;transform:none">'
-            +   (ko?'자카르타 ':'Jakarta ') + pad2(wib(s)) + ':00 – ' + pad2(wib(e)) + ':00</s></div>') : '');
+          + '</div>') : '');
         })()}
       </div>
 
@@ -58087,33 +58095,35 @@ function _cldArcD(cx, cy, r, h0, len){
   return 'M' + p0[0].toFixed(2) + ' ' + p0[1].toFixed(2)
        + 'A' + r + ' ' + r + ' 0 ' + large + ' 1 ' + p1[0].toFixed(2) + ' ' + p1[1].toFixed(2);
 }
-function _cldClockHTML(c){
+function _cldClockHTML(c, cidIn){
   try{
     var win = _cldWin(c), plist = _cldPcsOf(c), off = _cldOffToday(c);
-    var S = 168, cx = S/2, cy = S/2, rO = 66, rI = 50;
+    var cid = cidIn || null;
+    if(!cid){ try{ if(typeof CLIENT_ACCOUNTS !== 'undefined' && Array.isArray(CLIENT_ACCOUNTS) && typeof clNorm === 'function'){
+      var k0 = clNorm(String(c.name||''));
+      var a0 = k0 ? CLIENT_ACCOUNTS.find(function(a){ return a && clNorm(String(a.name||'')) === k0; }) : null;
+      if(a0) cid = a0.id; } }catch(_){} }
+    var edit = (typeof _clDialEditable === 'function') ? _clDialEditable() : false;
+    var S = 200, cx = S/2, cy = S/2, rO = 76, rI = 57;
     var kst = new Date(Date.now() + 9*3600000);
     var nowH = kst.getUTCHours() + kst.getUTCMinutes()/60;
     var uid = 'ck' + Math.random().toString(36).slice(2,8);
-    var g = '';
-    /* 바탕 고리 둘 */
+    var g = '', need = 0;
+    if(win){ var L = (win.e - win.s) % 24; if(L <= 0) L += 24; need = L; }
     g += '<path d="' + _cldArcD(cx,cy,rO,0,24) + '" class="ckk-tr"/>';
     g += '<path d="' + _cldArcD(cx,cy,rI,0,24) + '" class="ckk-tr in"/>';
-    /* 눈금 — 0 · 6 · 12 · 18 (바깥으로 짧게) */
-    [0,6,12,18,24].forEach(function(h){
-      var a = 135 + (h/24)*270, p1 = _cldPt(cx,cy,rO+7,a), p2 = _cldPt(cx,cy,rO+12,a);
-      g += '<line x1="'+p1[0].toFixed(1)+'" y1="'+p1[1].toFixed(1)+'" x2="'+p2[0].toFixed(1)+'" y2="'+p2[1].toFixed(1)+'" class="ckk-tk"/>';
-      if(h !== 24){
-        var pt = _cldPt(cx,cy,rO+21,a);
-        g += '<text x="'+pt[0].toFixed(1)+'" y="'+pt[1].toFixed(1)+'" class="ckk-hr">'+pad2(h)+'</text>';
-      }
+    [0,6,12,18].forEach(function(h){
+      var a = 135 + (h/24)*270;
+      var t1 = _cldPt(cx,cy,rO+9,a), t2 = _cldPt(cx,cy,rO+13,a), tx = _cldPt(cx,cy,rO+24,a);
+      g += '<line x1="'+t1[0].toFixed(1)+'" y1="'+t1[1].toFixed(1)+'" x2="'+t2[0].toFixed(1)+'" y2="'+t2[1].toFixed(1)+'" class="ckk-tk"/>';
+      g += '<text x="'+tx[0].toFixed(1)+'" y="'+tx[1].toFixed(1)+'" dy=".33em" class="ckk-hr">'+pad2(h)+'</text>';
     });
-    /* 바깥 = 맡긴 시간 (유리) */
-    var need = 0;
+    /* 맡긴 시간 — 이 고리가 곧 손잡이다 */
     if(win){
-      var L = (win.e - win.s) % 24; if(L <= 0) L += 24; need = L;
-      g += '<path d="' + _cldArcD(cx,cy,rO,win.s,L) + '" class="ckk-need" stroke="url(#' + uid + ')"/>';
+      g += '<path d="' + _cldArcD(cx,cy,rO,win.s,need) + '" class="ckk-need'+(edit&&cid?' grab':'')+'" stroke="url(#'+uid+')"'
+         + (edit&&cid ? (' onpointerdown="_cldDialDown(event,\''+cid+'\',\'band\')"') : '') + '/>';
     }
-    /* 안쪽 = 사람 */
+    /* 사람 */
     var covered = {}, who = [];
     plist.forEach(function(p){
       (p.assignments || []).forEach(function(a){
@@ -58131,23 +58141,149 @@ function _cldClockHTML(c){
       if(!covered[((Math.floor(win.s)+i) % 24 + 24) % 24]) gap++;
     }
     /* 지금 */
-    var an = 135 + (nowH/24)*270, n1 = _cldPt(cx,cy,rI-9,an), n2 = _cldPt(cx,cy,rO+4,an);
-    g += '<line x1="'+n1[0].toFixed(1)+'" y1="'+n1[1].toFixed(1)+'" x2="'+n2[0].toFixed(1)+'" y2="'+n2[1].toFixed(1)+'" class="ckk-now"/>';
-    var nd = _cldPt(cx,cy,rO+4,an);
-    g += '<circle cx="'+nd[0].toFixed(1)+'" cy="'+nd[1].toFixed(1)+'" r="2.6" class="ckk-nowd"/>';
+    var an = 135 + (nowH/24)*270;
+    var q0 = _cldPt(cx,cy,rO+9.5,an), q1 = _cldPt(cx,cy,rO+16,an-2.6), q2 = _cldPt(cx,cy,rO+16,an+2.6);
+    g += '<path d="M'+q0[0].toFixed(1)+' '+q0[1].toFixed(1)+'L'+q1[0].toFixed(1)+' '+q1[1].toFixed(1)
+       + 'L'+q2[0].toFixed(1)+' '+q2[1].toFixed(1)+'Z" class="ckk-nowd"/>';
+    /* 손잡이 둘 — 잡을 것이 보여야 잡는다 */
+    if(win && edit && cid){
+      [['s',win.s],['e',win.e]].forEach(function(hh){
+        var p = _cldPt(cx,cy,rO,135 + (hh[1]/24)*270);
+        g += '<circle cx="'+p[0].toFixed(1)+'" cy="'+p[1].toFixed(1)+'" r="11" class="ckk-hit"'
+           + ' onpointerdown="_cldDialDown(event,\''+cid+'\',\''+hh[0]+'\')"/>';
+        g += '<circle cx="'+p[0].toFixed(1)+'" cy="'+p[1].toFixed(1)+'" r="7.5" class="ckk-kn"/>';
+        g += '<circle cx="'+p[0].toFixed(1)+'" cy="'+p[1].toFixed(1)+'" r="2.6" class="ckk-kn2"/>';
+      });
+    }
     /* 가운데 */
-    var mid = win ? (pad2(win.s) + '–' + pad2(win.e)) : '––';
-    g += '<text x="'+cx+'" y="'+(cy-4)+'" class="ckk-big">' + mid + '</text>';
-    g += '<text x="'+cx+'" y="'+(cy+16)+'" class="ckk-sub">' + (win ? (need + 'H') : '시간 미정') + '</text>';
-    var svg = '<svg viewBox="0 0 '+S+' '+S+'" width="'+S+'" height="'+S+'" class="ckk' + (off ? ' off' : '') + '">'
+    if(win){
+      g += '<text x="'+cx+'" y="'+cy+'" dy="-.18em" class="ckk-big">' + pad2(win.s) + '–' + pad2(win.e) + '</text>';
+      g += '<text x="'+cx+'" y="'+cy+'" dy="1.35em" class="ckk-sub">' + need + '시간</text>';
+      if(gap > 0) g += '<text x="'+cx+'" y="'+cy+'" dy="2.95em" class="ckk-gap">' + gap + '시간 비었음</text>';
+    } else {
+      g += '<text x="'+cx+'" y="'+cy+'" dy="-.15em" class="ckk-none">시간 미정</text>';
+      if(edit && cid){
+        g += '<text x="'+cx+'" y="'+cy+'" dy="1.6em" class="ckk-cta" onpointerdown="_cldDialStart(event,\''+cid+'\')">＋ 눌러서 정하기</text>';
+        g += '<rect x="'+(cx-56)+'" y="'+(cy+8)+'" width="112" height="26" rx="13" class="ckk-ctab" onpointerdown="_cldDialStart(event,\''+cid+'\')"/>';
+      }
+    }
+    var svg = '<svg id="cld-dial-'+(cid||'x')+'" viewBox="0 0 '+S+' '+S+'" width="'+S+'" height="'+S+'" class="ckk'
+      + (off ? ' off' : '') + (win ? '' : ' empty') + '">'
       + '<defs><linearGradient id="'+uid+'" x1="0" y1="0" x2="0" y2="1">'
-      +   '<stop offset="0" stop-color="rgba(255,255,255,.72)"/>'
-      +   '<stop offset=".55" stop-color="rgba(255,255,255,.3)"/>'
-      +   '<stop offset="1" stop-color="rgba(226,196,130,.4)"/>'
+      +   '<stop offset="0" stop-color="rgba(255,255,255,.82)"/>'
+      +   '<stop offset=".48" stop-color="rgba(255,255,255,.42)"/>'
+      +   '<stop offset="1" stop-color="rgba(255,250,238,.3)"/>'
       + '</linearGradient></defs>' + g + '</svg>';
-    return { svg:svg, need:need, gap:gap, off:off, win:win, who:who };
-  }catch(e){ return { svg:'', need:0, gap:0, off:false, win:null, who:[] }; }
+    return { svg:svg, need:need, gap:gap, off:off, win:win, who:who, cid:cid };
+  }catch(e){ return { svg:'', need:0, gap:0, off:false, win:null, who:[], cid:null }; }
 }
+/* 시간이 없던 클라 — 한 번 누르면 기본값(09-19)으로 시작한다. 그 다음은 끌어서 맞춘다 */
+window._cldDialStart = function(ev, cid){
+  try{
+    ev.preventDefault(); ev.stopPropagation();
+    if(!_clDialEditable()) return;
+    var acc = CLIENT_ACCOUNTS.find(function(a){ return a && a.id === cid; }); if(!acc) return;
+    acc.work = { start:9, end:19 };
+    _cldDialSave(cid);
+    _cldDialPaint(cid);
+  }catch(_){}
+};
+/* ═══ [v1552] 시계를 잡아서 돌린다 ═══════════════════════════════════════════
+   사장님 "인터페이스 자체가 너무 너저분하고, 시간 설정을 애초에 어떻게 해야하는지도
+          모르겠어. 훨씬 직관적이어야 해."
+
+   내가 핵심을 빼먹었다. 시계를 **보여주기만** 하고 '어떻게 바꾸나' 는 아래 ＋ − 칸에
+   따로 두었다. 그림과 손잡이가 떨어져 있으면 사람은 그 둘을 잇지 못한다 —
+   시계를 보고 있는데 시간을 바꾸는 법은 다른 데 있는 셈이었다.
+
+   **고리 자체가 손잡이다.** 아이폰 취침 시간 다이얼과 같은 말이다 — 양 끝에 잡을
+   것이 있고, 그걸 끌면 시간이 바뀌고, 가운데를 끌면 통째로 움직인다. 누구나 안다.
+   그래서 ＋ − 칸을 없앤다(같은 일을 하는 것이 둘이면 하나는 군더더기다).
+
+   너저분한 것도 같이 정리했다 — '맡은 사람' 줄은 안쪽 고리가 이미 말하고,
+   '사람 없는 시간' 은 시계 가운데로 들어갔다. 남은 것은 자카르타 시각 한 줄. */
+function _cldDialH(cid, cx, cy, px, py){
+  var a = Math.atan2(py - cy, px - cx) * 180 / Math.PI;   /* -180..180, y 아래 */
+  var d = (a - 135) % 360; if(d < 0) d += 360;
+  if(d > 285) d = 0;                 /* 아래 빈 구간에서 손을 놓으면 0시로 */
+  if(d > 270) d = 270;
+  return Math.round(d / 270 * 24) % 24;
+}
+window._cldDial = null;
+window._cldDialDown = function(ev, cid, kind){
+  try{
+    ev.preventDefault(); ev.stopPropagation();
+    if(typeof _clDialEditable === 'function' && !_clDialEditable()) return;
+    var acc = (typeof CLIENT_ACCOUNTS !== 'undefined' && Array.isArray(CLIENT_ACCOUNTS))
+      ? CLIENT_ACCOUNTS.find(function(a){ return a && a.id === cid; }) : null;
+    if(!acc) return;
+    if(!acc.work || acc.work.start == null || acc.work.end == null) acc.work = { start:9, end:19 };
+    var svg = document.getElementById('cld-dial-' + cid); if(!svg) return;
+    var r = svg.getBoundingClientRect(), cx = r.left + r.width/2, cy = r.top + r.height/2;
+    var h0 = _cldDialH(cid, cx, cy, ev.clientX, ev.clientY);
+    window._cldDial = { cid:cid, kind:kind, cx:cx, cy:cy, h0:h0,
+                        s0:Number(acc.work.start), e0:Number(acc.work.end), moved:false };
+    var mv = function(e2){
+      var d = window._cldDial; if(!d) return;
+      var h = _cldDialH(d.cid, d.cx, d.cy, e2.clientX, e2.clientY);
+      if(h !== d.h0) d.moved = true;
+      if(d.kind === 'band'){
+        var len = (d.e0 - d.s0) % 24; if(len <= 0) len += 24;
+        var ns = ((h - d.h0 + d.s0) % 24 + 24) % 24;
+        acc.work = { start:ns, end:(ns + len) % 24 };
+      } else if(d.kind === 's'){
+        if(h !== acc.work.end) acc.work = { start:h, end:acc.work.end };
+      } else {
+        if(h !== acc.work.start) acc.work = { start:acc.work.start, end:h };
+      }
+      _cldDialPaint(cid);
+    };
+    var up = function(){
+      window.removeEventListener('pointermove', mv);
+      window.removeEventListener('pointerup', up);
+      var d = window._cldDial; window._cldDial = null;
+      try{ document.body.classList.remove('cld-dialing'); }catch(_){}
+      if(!d || !d.moved) return;
+      _cldDialSave(cid);
+    };
+    try{ document.body.classList.add('cld-dialing'); }catch(_){}
+    window.addEventListener('pointermove', mv);
+    window.addEventListener('pointerup', up);
+  }catch(e){ try{ console.error('[dial]', e); }catch(_){} }
+};
+/* 끌고 있는 동안 시계만 다시 그린다 — 패널 전체를 다시 그리면 손이 끊긴다 */
+function _cldDialPaint(cid){
+  try{
+    var host = document.getElementById('cld-dialwrap-' + cid); if(!host) return;
+    var acc = CLIENT_ACCOUNTS.find(function(a){ return a && a.id === cid; }); if(!acc) return;
+    var pool = null;
+    try{ pool = (typeof CLIENTS !== 'undefined' ? CLIENTS : []).find(function(x){
+      return x && typeof clNorm === 'function' && clNorm(String(x.name||'')) === clNorm(String(acc.name||'')); }); }catch(_){}
+    var seed = pool || { name:acc.name, startH:acc.work.start, endH:acc.work.end };
+    host.innerHTML = _cldClockHTML(seed, cid).svg;
+  }catch(_){}
+}
+/* 손을 놓으면 저장 — 시계(계정)와 풀 둘 다, 그리고 격자를 다시 그린다 */
+function _cldDialSave(cid){
+  try{
+    var acc = CLIENT_ACCOUNTS.find(function(a){ return a && a.id === cid; }); if(!acc) return;
+    var S = Number(acc.work.start), E = Number(acc.work.end);
+    if(typeof CLIENTS !== 'undefined' && Array.isArray(CLIENTS) && typeof clNorm === 'function'){
+      var k = clNorm(String(acc.name||''));
+      CLIENTS.forEach(function(p){
+        if(!p || clNorm(String(p.name||'')) !== k) return;
+        p.startH = S; p.endH = E;
+        try{ p.hours = (typeof clientHours === 'function') ? clientHours(p) : null; }catch(_){}
+      });
+    }
+    try{ saveClientState(); }catch(_){}
+    try{ logAction('update', '작업 시간대 · ' + (acc.name||''), pad2(S) + ':00-' + pad2(E) + ':00'); }catch(_){}
+    var n = (E - S) % 24; if(n <= 0) n += 24;
+    try{ toast('🕐 ' + pad2(S) + ':00–' + pad2(E) + ':00 · ' + n + '시간'); }catch(_){}
+    try{ if(typeof _agRender === 'function') _agRender(); }catch(_){}
+  }catch(_){}
+}
+function _clDialEditable(){ try{ return currentUserRole === 'admin' || currentUserRole === 'op'; }catch(_){ return false; } }
 
 /* 이 클라의 하루 한 줄 — 격자와 같은 문법 (v1547 부터 시계를 쓴다. 이건 남겨 둔다) */
 function _cldBandHTML(c){
@@ -63499,7 +63635,13 @@ function _agGhostDraw(host, plan){
       if(p.color) el.style.setProperty('--gc', p.color);
       el.style.left  = (sg[0]/24*100).toFixed(3) + '%';
       el.style.width = (sg[1]/24*100).toFixed(3) + '%';
-      if(i === 0 && p.from){
+      if(i === 0 && p.hint){
+        /* [v1549] 옆으로 밀면 시간도 바뀐다는 것을 화면이 말한다.
+           손짓만 만들어 놓고 적지 않으면 없는 기능과 같다(v1508 과 같은 교훈). */
+        el.innerHTML = '<span>' + String(p.name||'').replace(/[<>&"]/g,'') + '</span>'
+                     + '<span class="gh-h">' + p.len + 'h</span>'
+                     + '<span class="gh-hint">' + p.hint + '</span>';
+      } else if(i === 0 && p.from){
         /* [v1537] 있던 자리 — 몇 시간 움직였는지만 말한다 */
         var d = Number(p.delta) || 0;
         if(d > 12) d -= 24; if(d < -12) d += 24;
@@ -63737,7 +63879,20 @@ function _agBind(host){
            이제 한 드래그 안에서 ① 세로 성분이 먼저 커지거나 ② 한 번이라도
            제 줄을 벗어나면 lockTime 이 켜지고, 그 드래그가 끝날 때까지 시간은
            절대 안 움직인다. 가로 = 시간, 세로 = PC — 두 손짓은 영원히 안 섞인다. */
-        if(tgtPc != null || tgtSwap) lockTime = true;
+        /* ═══ [v1549] 여기가 진짜 원인이었다 ═══════════════════════════════════
+           사장님 "아직도 안되잖아 · Zacky 다른 PC 다른 시간대로 옮기고 싶은데
+                  배정격자 막대가 고정되어서 움직여버림"
+
+           v1545·v1546 에서 손 쪽(pointermove)의 잠금을 풀 수 있게 만들었다.
+           그런데 **그리는 쪽(paint)에서 매 프레임 다시 잠그고 있었다** —
+           다른 PC 위에 있으면 무조건 lockTime = true. 그래서 손으로 풀어 놓아도
+           다음 프레임에 곧바로 되잠겼고, 사장님에게는 아무것도 안 바뀐 것으로
+           보였다(막대가 원래 시각에 고정된 채 PC 만 따라온다).
+
+           한 번 일부러 푼 드래그(lockFreed)면 여기서도 다시 잠그지 않는다.
+           ★ 교훈: 같은 값을 두 곳에서 정하면 한 곳만 고쳐도 안 고쳐진다.
+              고치기 전에 그 값을 **누가 쓰나** 를 전부 세어 볼 것. */
+        if((tgtPc != null || tgtSwap) && !lockFreed) lockTime = true;
         if(lockTime){ a.start = st0; }
         else { a.start = ((Math.round((st0 + dh)/AG_SNAP)*AG_SNAP) % 24 + 24) % 24; }
       } else if(mode === 'size'){
@@ -63812,7 +63967,8 @@ function _agBind(host){
             }catch(_){}
           } else if(tgtPc != null && overRow){
             var _ot = overRow.querySelector('.ag-track');
-            if(_ot) _plan.push({ track:_ot, start:a.start, len:a.len, color:_myCol, name:_myNm });
+            if(_ot) _plan.push({ track:_ot, start:a.start, len:a.len, color:_myCol, name:_myNm,
+                                  hint:(lockTime ? '← → 시간도 바꿈' : null) });
           }
           /* [v1537] 있던 자리 — 줄을 옮기든 시간만 밀든, 움직였으면 남긴다.
              같은 줄에서 좌우로 밀 때는 이것이 유일한 기준점이다. */
