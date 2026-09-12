@@ -4,7 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
 <title>ARASAKA Corp</title>
-<!-- BUILD: v1498 | 손 시트가 언제 것인지 화면이 먼저 말한다 (내용이 7월이었다) -->
+<!-- BUILD: v1499 | 초대 코드에 받는 사람을 묶는다 (Ilmi 코드를 Phil 이 쓴 일) -->
 <!-- v745 기록은 git 이력(v1302 이전 커밋)에 있다 — 100KB 변경사 주석을 배포에서 제거 -->
 <!-- [v677] a <link href> cannot read a CSS variable, so the favicon carries its own copy.
      64px: a browser tab draws it at 16-32px, so this is 2x-DPR sharp at 11KB. -->
@@ -47908,7 +47908,11 @@ window._obInviteCode = async function(a){
   if(a.invite_code) return a.invite_code;
   if(typeof sb==='undefined' || !sb){ toast('DB 연결 없음', true); return null; }
   var code='STAFF-'+Math.random().toString(36).slice(2,7).toUpperCase();
-  try{ var r=await sb.from('invite_codes').insert({ code:code, role:'staff', used:false }); if(r.error){ toast('코드 생성 실패: '+r.error.message, true); return null; } }
+  /* [v1499] 코드에 받는 사람을 적는다. 9/11 에 Ilmi 에게 만든 코드를 Phil 이 썼다 —
+     코드만 알면 누구나 그 자리로 들어온다. 가입 화면이 이 이름과 맞춰 본다. */
+  try{ var r=await sb.from('invite_codes').insert({ code:code, role:'staff', used:false,
+        for_name:String(a.name||'').trim() || null, for_applicant:String(a.id||'') || null });
+       if(r.error){ toast('코드 생성 실패: '+r.error.message, true); return null; } }
   catch(e){ toast('코드 생성 실패: '+(e&&e.message), true); return null; }
   a.invite_code=code; a.invite_at=_todayKST(); saveRecruits(true);
   try{ logAction('create', '초대 코드 발급 · '+a.name+' · '+code, a.id); }catch(_){}
@@ -47916,6 +47920,7 @@ window._obInviteCode = async function(a){
 };
 /* [v1473] boss "구원씨가 온보딩에서도 만들 수 있게" — 코드만 복사하면 안내문은 매번 손으로 썼다.
    왓츠앱에 그대로 붙여넣을 안내문을 통째로 만든다(한국어 + 인도네시아어). */
+/* [v1499] 안내문에도 이름을 적어 둔다. 코드가 남에게 건네지는 것을 한 번 더 막는다. */
 window._obInviteMsg = function(name, code){
   var nm = String(name || '').trim().split(' ')[0] || '';
   return (nm ? (nm + '님, ') : '') + '웹사이트 가입 안내입니다.\n'
@@ -53326,6 +53331,28 @@ async function signUp(){
       }catch(e){ showAuthMsg('초대코드 확인 실패 — 잠시 후 다시 시도해주세요'); return; }
       if(!invite){ showAuthMsg('유효하지 않은 초대코드입니다'); return; }
       if(invite.used){ showAuthMsg('이미 사용된 초대코드입니다'); return; }
+      /* ═══ [v1499] 이 코드가 이 사람 것인가 ═══════════════════════════════════
+         9/11 에 Ilmi 에게 만든 코드를 Phil 이 썼다. 코드는 왓츠앱으로 돌아다니고,
+         받은 사람이 옆 사람에게 넘기면 시스템은 알 길이 없었다.
+         v1499 부터 코드에 주인 이름이 적힌다(for_name). 여기서 맞춰 본다.
+
+         너그럽게 본다 — 여기서 과하게 막으면 진짜 본인이 못 들어온다.
+         · 대소문자·공백·점 무시
+         · 첫 낱말끼리 비교 (Wirapermana 를 'Wira' 라고 적어도 통과)
+         · 한쪽이 다른 쪽의 앞부분이면 통과
+         옛 코드(for_name 이 없는 것)는 그대로 통과시킨다 — 없는 규칙으로 막으면 안 된다. */
+      if(invite.for_name){
+        var _nk = function(x){ return String(x||'').toLowerCase().replace(/^\s*(mr|ms|mrs)\.?\s*/,'')
+                                 .replace(/[^a-z0-9가-힣 ]/g,'').trim().split(/\s+/)[0] || ''; };
+        var _a = _nk(invite.for_name), _b = _nk(name);
+        var _ok = !_a || !_b || _a === _b || _a.indexOf(_b) === 0 || _b.indexOf(_a) === 0;
+        if(!_ok){
+          showAuthMsg('이 초대코드는 ' + String(invite.for_name).trim().split(' ')[0]
+            + ' 님에게 보낸 코드입니다. 본인 코드를 받아서 쓰세요 — OP TEAM 에 물어보면 새로 만들어 줍니다.');
+          try{ console.warn('[가입] 코드 주인 불일치:', invite.code, invite.for_name, '→', name); }catch(_){}
+          return;
+        }
+      }
 
       // 2. Supabase Auth 가입
       const {data:authData, error:authErr} = await sb.auth.signUp({email, password: pass});
