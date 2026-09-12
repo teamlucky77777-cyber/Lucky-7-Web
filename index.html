@@ -4,7 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
 <title>ARASAKA Corp</title>
-<!-- BUILD: v1523 | 내 페이슬립을 부주와 리더에게서 뺀다 -->
+<!-- BUILD: v1524 | 배정 격자 고스트가 클라 카드의 운영시간을 쓴다 - 그림은 있었는데 자료가 없었다 -->
 <!-- v745 기록은 git 이력(v1302 이전 커밋)에 있다 — 100KB 변경사 주석을 배포에서 제거 -->
 <!-- [v677] a <link href> cannot read a CSS variable, so the favicon carries its own copy.
      64px: a browser tab draws it at 16-32px, so this is 2x-DPR sharp at 11KB. -->
@@ -41029,7 +41029,46 @@ function _ckColor(n){ var k=_ckKey(n); if(!_ckCmap[k]) _ckCmap[k]=_CKPAL[_ckCi++
 function _ckPt(r,h){ var a=(-90+h*15)*Math.PI/180; return [_CKCX+r*Math.cos(a), _CKCY+r*Math.sin(a)]; }
 function _ckArc(r,h1,h2){ if(h2<=h1)h2=h1+0.02; var p1=_ckPt(r,h1),p2=_ckPt(r,h2); var big=((h2-h1)*15)>180?1:0; return 'M'+p1[0].toFixed(2)+' '+p1[1].toFixed(2)+' A'+r+' '+r+' 0 '+big+' 1 '+p2[0].toFixed(2)+' '+p2[1].toFixed(2); }
 function _ckInShift(h,st){ var d=((h-st.start)%24+24)%24; return d<st.len; }
-function _ckReqOf(pc){ var m=window._ckReq||{}; return m[pc]||m[String(pc)]||null; }
+/* ═══ [v1524] 고스트가 클라 카드의 운영시간을 쓴다 ══════════════════════════
+   사장님 "클라이언트 요청 시간, 즉 그 PC 운영시간을 배정격자에 표시해놓고 싶은데.
+          배정격자에서 사람 한명 빼면 도저히 어디에서 뺐는지 감을 못잡겠어서"
+
+   그림은 v1127 에 이미 다 그려져 있었다(.ag-rail 치수선 + .ag-need 점선 도면).
+   없던 것은 **자료**다. 그리는 자료가 clock_req 한 곳뿐이었는데, 그 표를 채우려면
+   시계 보드의 숨은 창을 열어 PC 마다 손으로 시각을 또 적어야 했다. 아무도 몰랐고,
+   그래서 그 표는 **지금까지 한 줄도 없다**(2026-09-12 확인). 그림은 있는데 안 보였다.
+
+   그런데 같은 값이 이미 **클라 카드**에 있다 — 사장님이 PC 현황에서 클라를 눌러
+   고치는 그 운영시간(startH/endH). 16대 중 14대가 이미 채워져 있었다.
+   따로 적게 하지 말고 그걸 쓴다. 사장님이 카드에서 시간을 고치면 격자가 따라 바뀐다.
+
+   따로 적어 둔 clock_req 가 있으면 그쪽이 이긴다 — 예외를 손으로 잡을 길은 남긴다. */
+function _ckReqOf(pc){
+  var m = window._ckReq || {};
+  var r = m[pc] || m[String(pc)];
+  if(r && r.s != null && r.e != null) return r;
+  try{
+    var n = Number(pc); if(!(n > 0)) return null;
+    if(typeof PCS === 'undefined' || !Array.isArray(PCS)) return null;
+    for(var i = 0; i < PCS.length; i++){
+      var p = PCS[i]; if(!p || Number(p.id) !== n) continue;
+      if(p.status === 'offline') return null;
+      var ids = p.clients || [];
+      for(var j = 0; j < ids.length; j++){
+        var c = (typeof clientById === 'function') ? clientById(ids[j]) : null; if(!c) continue;
+        var s = Number(c.startH), e = Number(c.endH), h = Number(c.hours);
+        if(!(isFinite(s) && isFinite(e))) continue;
+        if(!(s >= 0 && s < 24 && e >= 0 && e < 24)) continue;
+        /* 시작과 끝이 같으면 24시간이라는 뜻이다. 다만 빈 칸(0/0)과 구별해야 하므로
+           그때만 '시간' 칸이 하루를 채우는지 한 번 더 본다. */
+        if(s === e && !(h >= 23)) continue;
+        return { s:s, e:e, _auto:1 };
+      }
+      return null;
+    }
+  }catch(_){}
+  return null;
+}
 function _ckCanEdit(){ try{ return typeof currentUserRole!=='undefined' && (currentUserRole==='admin'||currentUserRole==='op'); }catch(_){ return false; } }
 function _ckToStaff(name){ try{ var all=window._srRecAll; if(!all||!all.daily){ if(typeof toast==='function')toast('기록 로딩 중이에요',true); return; } var nn=String(name||'').toLowerCase().trim(); var hit=null; all.daily.forEach(function(r){ var rn=String(r.name||'').toLowerCase().trim(); if(rn===nn||rn.split(' ')[0]===nn.split(' ')[0]) hit=r.key; }); if(hit){ window._srRecMode='staff'; window._srRecClient=''; window._srRecFilter=hit; if(typeof _srRecReRender==='function') _srRecReRender(); var t=document.getElementById('ch-other'); if(t)t.scrollTop=0; try{ window.scrollTo(0,0); }catch(_){} } else if(typeof toast==='function'){ toast(name+'의 EXP 기록이 아직 없어요', true); } }catch(_){} }
 function _ckToStaffIdx(pc, i){ try{ var P=(window._ckPCS||[]).filter(function(x){return x.id===pc||String(x.id)===String(pc);})[0]; if(!P)return; var a=P.assigns[i]; if(a)_ckToStaff(a.name); }catch(_){} }
