@@ -4,7 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
 <title>ARASAKA Corp</title>
-<!-- BUILD: v1512 | 평범한 리니지 카드가 아직 회색이던 것 - 보라가 순서에 밀려 지고 있었다 -->
+<!-- BUILD: v1517 | 리포트 단추가 카드마다 다른 높이에 있던 것 - 앞면이 남은 높이를 받게 -->
 <!-- v745 기록은 git 이력(v1302 이전 커밋)에 있다 — 100KB 변경사 주석을 배포에서 제거 -->
 <!-- [v677] a <link href> cannot read a CSS variable, so the favicon carries its own copy.
      64px: a browser tab draws it at 16-32px, so this is 2x-DPR sharp at 11KB. -->
@@ -64,6 +64,7 @@
      MIX(한 PC 에 두 게임)는 보라를 리니지에 내주고 비어 있던 파랑을 받는다. */
   --g-lineage:#8f5cd6;--g-lineage-bg:rgba(143,92,214,.10);
   --g-maple:#d97a3a;--g-maple-bg:rgba(217,122,58,.10);
+  --rep:#c8601b;--rep-bg:rgba(200,96,27,.10);   /* [v1513] 리포트 단추 - 사장님 지정 주황 */
 
   /* RANK COLORS — LoL 풍 */
   --r-challenger:#f7c200;
@@ -93,6 +94,7 @@
   --glow-ac:0 0 0 4px rgba(194,160,74,.18);
   --g-lineage:#b074ec;--g-lineage-bg:rgba(176,116,236,.13);
   --g-maple:#e58e51;--g-maple-bg:rgba(229,142,81,.13);
+  --rep:#ff9647;--rep-bg:rgba(255,150,71,.13);   /* [v1513] 리포트 단추 */
 }
 *,*::before,*::after{box-sizing:border-box}
 html,body{margin:0;padding:0}
@@ -10012,23 +10014,55 @@ html .cs-ed-dialnum.bump-up .h.up,html .cs-ed-dialnum.bump-dn .h.dn{opacity:1}
 
    그래서 단추에서 색을 전부 뺀다. 남의 카드는 흐린 테두리, 내 카드는 **꽉 찬 흰 단추**.
    색조가 하나도 없어도(아니, 없어서) 내 것 하나는 판에서 제일 먼저 보인다 -
-   어두운 카드 위의 흰 덩어리보다 눈에 띄는 것은 없다. 밝은 테마에서는 저절로 뒤집힌다. */
+   어두운 카드 위의 흰 덩어리보다 눈에 띄는 것은 없다. 밝은 테마에서는 저절로 뒤집힌다.
+
+   ═══ [v1514] 주석을 한 번 닫았다가 다시 이어 쓴 탓에 규칙이 통째로 버려졌다 ═══
+   v1513 이 주석을 닫은 뒤에 설명을 더 적었다. 그 글이 CSS 로 읽히면서 파서가 그 자리부터
+   회복할 때까지 버렸고, 첫 덩어리(.sr-clrep 기본 규칙)가 통째로 사라졌다.
+   증상 둘이 같은 원인이었다 - 단추가 폭을 안 채우던 것, 그리고 사장님이 본
+   '메이플 카드만 단추가 위에 있다'(margin-top:auto 가 죽어 바닥에 안 붙었다).
+   눈으로 보면 색은 맞는데 자리만 틀려서 다른 문제로 보인다. 화면에서 재 보고 찾았다.
+   ★ v1515 - v1514 도 같은 실수를 했다. 설명문 안에 닫는 기호를 그대로 적었더니 거기서 또
+     닫혔다. **CSS 주석 안에는 닫는 기호를 글로도 쓰지 말 것.** 고치고 다시 재서 확인했다.
+
+   ═══ [v1513] REPORT · 주황 글자 ═══════════════════════════════════════════
+   사장님 "색 빠진건 좋은데 너무 시인성이 없네 - 그냥 REPORT 라고 영어로 박아놓으면
+   될듯 주황색 글자로"
+
+   v1511 의 회색은 조용한 대신 안 보였다. 하루 여덟 번 누르는 단추가 안 보이면 실패다.
+   그래서 **주황 글자**로 세운다. 카드 테두리(보라·주황)와 싸우지 않는 이유는 자리와
+   크기가 다르기 때문이다 - 테두리는 카드 둘레의 실선이고 이건 가운데 놓인 짧은 글자다.
+   한글 '리포트 쓰기' 대신 **REPORT** 를 쓴다. 대문자 다섯 글자에 자간을 벌리면
+   글자가 아니라 **도장**처럼 읽혀서, 작아도 멀리서 눈에 걸린다(사장님 지정).
+   부주 대부분이 인도네시아 사람이라 영어 한 단어가 오히려 덜 헷갈린다.
+
+   내 카드는 주황으로 꽉 채운다. 그 하나만 판에서 소리치면 된다. */
 #sr-app .sr-clrep{margin-top:auto;width:100%;height:36px;flex:none;
-  display:flex;align-items:center;justify-content:center;gap:7px;
-  margin-bottom:-1px;border-radius:10px;cursor:pointer;
-  font-weight:700;font-size:12.5px;line-height:1;letter-spacing:-.01em;font-family:inherit;
-  background:transparent;border:1px solid var(--br2,#2f2f2d);color:var(--tx3,#8a8a86);
+  display:flex;align-items:center;justify-content:center;
+  margin-bottom:-1px;border-radius:9px;cursor:pointer;
+  font-weight:800;font-size:12px;line-height:1;letter-spacing:.18em;text-indent:.18em;font-family:inherit;
+  background:var(--rep-bg,rgba(255,150,71,.13));border:1px solid transparent;color:var(--rep,#ff9647);
   transition:background .15s,color .15s,transform .12s,box-shadow .15s,border-color .15s}
 #sr-app .sr-clrep-sp{height:10px;flex:none}
-#sr-app .sr-clrep:hover{background:var(--bg-i,#1a1a1a);border-color:var(--tx3,#6c6b66);color:var(--tx,#e6e5e2)}
+#sr-app .sr-clrep:hover{border-color:var(--rep,#ff9647)}
 #sr-app .sr-clrep:active{transform:translateY(1px)}
-#sr-app .sr-clrep:focus-visible{outline:2px solid var(--tx2,#989792);outline-offset:2px}
-/* 내 카드 - 색조 없이 밝기만으로 말한다 */
-#sr-app .sr-clrep.mine{font-weight:800;background:var(--tx,#e6e5e2);border-color:var(--tx,#e6e5e2);
-  color:var(--bg-c,#161616);box-shadow:0 2px 12px rgba(0,0,0,.34)}
-#sr-app .sr-clrep.mine:hover{filter:brightness(.93);transform:translateY(-1px)}
+#sr-app .sr-clrep:focus-visible{outline:2px solid var(--rep,#ff9647);outline-offset:2px}
+/* 내 카드 - 꽉 채운다 */
+#sr-app .sr-clrep.mine{background:var(--rep,#ff9647);border-color:var(--rep,#ff9647);
+  color:#1a1206;box-shadow:0 2px 14px var(--rep-bg,rgba(255,150,71,.13))}
+#sr-app .sr-clrep.mine:hover{filter:brightness(1.07);transform:translateY(-1px)}
 /* 뒷면(기준 고치는 면)으로 뒤집혀 있으면 단추는 안 보인다 - 뒷면은 읽고 고치는 면이다 */
 #sr-app .sr-clcard.flipped .sr-clrep{visibility:hidden}
+/* [v1516] 사장님 "메이플 플래닛 카드는 리포트 쓰기가 위쪽에 있는데 위치 통일해야지"
+   margin-top:auto 는 붙일 바닥이 있어야 민다. 앞면(.sr-clfront)이 제 글 높이만큼만
+   커서, 글이 짧은 카드는 바닥이 글 바로 밑이었다 - 그래서 단추가 위로 올라왔다.
+   카드는 줄마다 키가 같게 늘어나므로 앞면을 그 키에 맞춰 준다. 그러면 한 줄의
+   단추가 전부 같은 선에 선다. 뒷면(기준 화면)은 따로 놀므로 건드리지 않는다.
+   [v1517] min-height:100% 로는 안 됐다 - 퍼센트는 부모 키가 확정이어야 푸는데
+   .sr-clflip 은 flex 로 늘어난 키라 확정이 아니다. 껍데기를 세로 flex 로 만들고
+   앞면에 flex:1 을 줘서 남은 높이를 받게 한다. 뒷면은 position:absolute 라 영향 없다. */
+#sr-app .sr-clcard > .sr-clflip{display:flex;flex-direction:column}
+#sr-app .sr-clcard > .sr-clflip > .sr-clfront{flex:1 1 auto;min-height:0}
 @media (prefers-reduced-motion:reduce){#sr-app .sr-clrep{transition:none}#sr-app .sr-clrep:hover{transform:none}}
 /* [v1512] 클래스 하나(#sr-app .sr-clcard-li)로는 힘이 모자랐다 - 같은 힘의
    `#sr-app .sr-clcard{border:1px solid var(--br)}` 가 스크립트로 나중에 깔려서 이겼다.
@@ -73403,7 +73437,7 @@ console.info('AUTO100 build applied',AUTO100_BUILD.version,v3Audit());
         + ' data-nm="' + esc2(clientName) + '" data-pc="' + esc2(pc == null ? '' : pc) + '"'
         + ' title="' + esc2(k ? (mine ? '내가 맡은 카드예요 - 눌러서 이번 시간 리포트를 씁니다' : '이 클라 리포트를 씁니다')
                               : (mine ? 'Your card - write this hour report' : 'Write a report for this client')) + '">'
-        + '✍ ' + (k ? '리포트 쓰기' : 'Write report') + '</button>';
+        + 'REPORT</button>';
     }catch(_){ return ''; }
   };
   window._mcDotsHTML = function(clientName, pc){
