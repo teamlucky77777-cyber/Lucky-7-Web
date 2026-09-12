@@ -4,7 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
 <title>ARASAKA Corp</title>
-<!-- BUILD: v1524 | 배정 격자 고스트가 클라 카드의 운영시간을 쓴다 - 그림은 있었는데 자료가 없었다 -->
+<!-- BUILD: v1526 | 격자 고스트를 유리로 - 금색 얼룩 대신 뒤가 비치는 덮개 -->
 <!-- v745 기록은 git 이력(v1302 이전 커밋)에 있다 — 100KB 변경사 주석을 배포에서 제거 -->
 <!-- [v677] a <link href> cannot read a CSS variable, so the favicon carries its own copy.
      64px: a browser tab draws it at 16-32px, so this is 2x-DPR sharp at 11KB. -->
@@ -796,6 +796,14 @@ html[data-theme=light] #dt-pop{background:rgba(255,255,255,.99);border-color:#d8
 .cdo-dot-off{background:var(--tx4);opacity:.5}
 .cdo-name{font-size:11px;font-weight:600;color:var(--tx);flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 .cdo-name-off{color:var(--tx3);font-weight:500}
+/* [v1525] 클라 시간 칸의 시계 버튼 */
+.cd-tz{display:inline-flex;margin-left:8px;border:1px solid var(--br2,#2f2f2d);border-radius:7px;overflow:hidden;flex:none}
+.cd-tzb{border:0;background:transparent;color:var(--tx3,#8a8a86);font-weight:700;font-size:10px;line-height:1;font-family:inherit;padding:5px 9px;cursor:pointer;white-space:nowrap}
+.cd-tzb+.cd-tzb{border-left:1px solid var(--br2,#2f2f2d)}
+.cd-tzb:hover{color:var(--tx,#e6e5e2)}
+.cd-tzb.on{background:var(--ac,#c2a04a);color:#14120f}
+.cd-tzalt{margin-top:-4px}
+.cd-tzalt span{font-size:10.5px;color:var(--tx3,#8a8a86)}
 .cdo-pc{font-size:10px;font-weight:600;color:#5fa3d9;flex-shrink:0}
 .cdo-pc-none{color:var(--tx4);font-weight:500}
 .cdo-role-tag{font-size:8.5px;font-weight:700;color:var(--tx4);background:var(--bg-h);padding:1px 6px;border-radius:5px;flex-shrink:0}
@@ -9248,26 +9256,48 @@ html[data-theme=light] #ag-reason{background:rgba(255,255,255,.99);border-color:
    구간만 저절로 드러난다. 점선 테두리는 '아직 실체가 아니다'를 말하는 관용구다.
    숨은 아주 느리게 — 4.5초. 눈이 따라가지 않을 만큼 느려야 배경으로 남는다. */
 /* ① 맡긴 구간 레일 — 줄 위쪽 2px. 막대 영역을 침범하지 않으므로 글자가 안 가려진다.
-   끝에 짧은 턱을 세워 ‘여기부터 여기까지’ 를 도면의 치수선처럼 말한다. */
+   끝에 짧은 턱을 세워 ‘여기부터 여기까지’ 를 도면의 치수선처럼 말한다.
+   ═══ [v1526] 유리로 바꾼다 ═══════════════════════════════════════════════
+   사장님 "클라이언트 시간 뒤에 나오는거 지금 노란색이지? 이거 유리같은 느낌으로
+          디자인해줄수있음? 이번에 바뀐 아이폰 UI UX 같은 느낌으로 퀄리티 좋게?"
+
+   금색 얼룩은 '칠한 것' 이라 판 위에 떠 있지 않고 판을 더럽힌다. 유리는 다르다 -
+   **제 색이 거의 없고 뒤를 비추면서 가장자리에서만 빛난다.** 그래서 같은 자리에
+   있어도 얼룩이 아니라 덮개로 읽힌다.
+   유리의 세 가지: ① 뒤가 비친다(backdrop-filter) ② 윗변에 빛이 한 줄 선다
+   ③ 아래로 그림자가 진다. 색은 거의 빼고 아주 옅은 호박빛만 남긴다 -
+   '비었다' 는 뜻은 지켜야 하니까.
+   점선은 없앤다. 유리에 점선은 없다 - 대신 가장자리 한 줄이 그 말을 한다.
+   숨은 5초로 더 느리게, 색이 아니라 **투명도**로만 쉰다. */
 #ag-wrap .ag-rail{
-  position:absolute;top:0;height:2px;z-index:2;border-radius:2px;pointer-events:none;
-  background:linear-gradient(90deg,rgba(194,160,74,.85),rgba(194,160,74,.5));
-}
+  position:absolute;top:0;height:3px;z-index:2;border-radius:3px;pointer-events:none;
+  background:linear-gradient(180deg,rgba(255,255,255,.62),rgba(226,193,120,.42));
+  box-shadow:inset 0 1px 0 rgba(255,255,255,.75),0 1px 3px rgba(0,0,0,.4)}
 #ag-wrap .ag-rail::before,#ag-wrap .ag-rail::after{
-  content:'';position:absolute;top:0;width:2px;height:6px;border-radius:1px;
-  background:rgba(194,160,74,.9)}
+  content:'';position:absolute;top:0;width:2px;height:7px;border-radius:1px;
+  background:linear-gradient(180deg,rgba(255,255,255,.8),rgba(226,193,120,.45));
+  box-shadow:0 1px 3px rgba(0,0,0,.4)}
 #ag-wrap .ag-rail::before{left:0}
 #ag-wrap .ag-rail::after{right:0}
-/* ② 채워야 할 자리 — 여기엔 막대가 없다. 그래서 마음껏 눈에 띄어도 된다.
-   테두리는 점선 — ‘아직 실체가 아니다’ 라는 관용구다. 아주 느리게 숨 쉰다. */
+/* ② 채워야 할 자리 — 막대가 없는 곳이라 유리 한 장을 그대로 덮는다 */
 #ag-wrap .ag-need{
-  position:absolute;top:2px;bottom:2px;z-index:0;border-radius:4px;pointer-events:none;
-  background:rgba(194,160,74,.10);
-  border:1px dashed rgba(194,160,74,.45);
+  position:absolute;top:2px;bottom:2px;z-index:0;border-radius:7px;pointer-events:none;
   box-sizing:border-box;
-  animation:agNeed 3.2s ease-in-out infinite}
-@keyframes agNeed{0%,100%{background-color:rgba(194,160,74,.07);border-color:rgba(194,160,74,.34)}
-  50%{background-color:rgba(194,160,74,.16);border-color:rgba(194,160,74,.6)}}
+  background:linear-gradient(180deg,rgba(255,255,255,.13) 0,rgba(255,255,255,.035) 46%,rgba(226,193,120,.10) 100%);
+  -webkit-backdrop-filter:blur(7px) saturate(150%);
+  backdrop-filter:blur(7px) saturate(150%);
+  border:1px solid rgba(255,255,255,.17);
+  box-shadow:inset 0 1px 0 rgba(255,255,255,.32),inset 0 -1px 0 rgba(0,0,0,.24),0 3px 12px rgba(0,0,0,.3);
+  animation:agNeed 5s ease-in-out infinite}
+@keyframes agNeed{0%,100%{opacity:.72}50%{opacity:1}}
+/* 밝은 테마에서는 흰 빛 대신 그늘로 유리를 만든다 */
+html[data-theme=light] #ag-wrap .ag-need{
+  background:linear-gradient(180deg,rgba(255,255,255,.55) 0,rgba(255,255,255,.2) 46%,rgba(190,150,60,.12) 100%);
+  border-color:rgba(0,0,0,.10);
+  box-shadow:inset 0 1px 0 rgba(255,255,255,.8),0 2px 8px rgba(0,0,0,.14)}
+html[data-theme=light] #ag-wrap .ag-rail{
+  background:linear-gradient(180deg,rgba(255,255,255,.9),rgba(176,132,40,.55));
+  box-shadow:inset 0 1px 0 rgba(255,255,255,.9),0 1px 3px rgba(0,0,0,.2)}
 @media (prefers-reduced-motion:reduce){#ag-wrap .ag-need{animation:none}}
 /* 막대는 고스트 위에 — 실체가 앞이다 */
 #ag-wrap .ag-bar{z-index:1}
@@ -57567,6 +57597,18 @@ try{ pcTZ = localStorage.getItem('lucky7_pc_tz') === 'wib' ? 'wib' : 'kst'; }cat
 const _tzOff = () => pcTZ === 'wib' ? -2 : 0;
 const _tzH = h => (((Number(h)||0) + _tzOff()) % 24 + 24) % 24;              // KST → 표시 시각 (소수 시간 보존)
 const _tzBackVal = v => (((Number(v)||0) - _tzOff()) % 24 + 24) % 24;        // 표시 입력값 → KST
+/* [v1525] 클라 시간 칸에 시계를 붙인다.
+   사장님 "젠틀쌤 2시부터 10시로 클라이언트 탭에 표시했는데 격자에는 3시부터 11시로 나와"
+          "클라이언트 시간대 자카르타 한국 두개 버튼으로 변경하는 버튼 넣어줘"
+   칸에는 숫자만 있고 어느 시계인지가 안 적혀 있었다. 표시 시간대 스위치는 PC 현황
+   위쪽에 따로 있어서, 그게 어느 쪽인지 모른 채 숫자를 치면 두 시간이 통째로 어긋난다.
+   값은 늘 한국시간으로 저장되지만 화면은 아니다.
+   칸 옆에 시계를 붙이고 반대쪽 시각을 바로 아래에 같이 적는다. */
+function setPcTZ(tz){
+  var want = (tz === 'wib') ? 'wib' : 'kst';
+  if(typeof pcTZ !== 'undefined' && pcTZ === want) return;
+  try{ togglePcTZ(); }catch(_){}
+}
 function togglePcTZ(){
   pcTZ = pcTZ === 'wib' ? 'kst' : 'wib';
   try{ localStorage.setItem('lucky7_pc_tz', pcTZ); }catch(_){}
@@ -64596,6 +64638,14 @@ function clientEditForm(c, opts){
         <input type="number" class="num" min="0" max="24" placeholder="종료" value="${c.endH==null?'':_tzH(c.endH)}" onchange="setClientTime('${c.id}','endH',this.value===''?'':_tzBackVal(this.value))">
         <span class="suffix">:00</span>
         <span class="cd-hrs">${clientHours(c)?clientHours(c)+'h':'—'}</span>
+        <span class="cd-tz">
+          <button type="button" class="cd-tzb${(typeof pcTZ!=='undefined'&&pcTZ==='kst')?' on':''}" onclick="setPcTZ('kst')" title="이 칸의 숫자를 한국시간으로 봅니다">한국</button>
+          <button type="button" class="cd-tzb${(typeof pcTZ!=='undefined'&&pcTZ==='wib')?' on':''}" onclick="setPcTZ('wib')" title="이 칸의 숫자를 자카르타 시간으로 봅니다">자카르타</button>
+        </span>
+      </div>
+      <div class="c-form-row cd-tzalt">
+        <label></label>
+        <span>${(c.startH==null||c.endH==null) ? '' : ((typeof pcTZ!=='undefined'&&pcTZ==='wib') ? ('한국시간 ' + pad2(c.startH) + ':00 - ' + pad2(c.endH) + ':00') : ('자카르타 ' + pad2(((+c.startH-2)%24+24)%24) + ':00 - ' + pad2(((+c.endH-2)%24+24)%24) + ':00'))}</span>
       </div>
     </div>
     <div class="c-form-row">
