@@ -4,7 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
 <title>ARASAKA Corp</title>
-<!-- BUILD: v1531 | 유리 다듬기 - 색을 빼고 빛줄기를 가늘게 -->
+<!-- BUILD: v1535 | 깜빡임 방지가 제 표식을 지우고 있었다 -->
 <!-- v745 기록은 git 이력(v1302 이전 커밋)에 있다 — 100KB 변경사 주석을 배포에서 제거 -->
 <!-- [v677] a <link href> cannot read a CSS variable, so the favicon carries its own copy.
      64px: a browser tab draws it at 16-32px, so this is 2x-DPR sharp at 11KB. -->
@@ -8947,7 +8947,8 @@ html[data-theme=light] #ch-pc-status #pc-cmdbar .dp-day.on{background:#fff;color
   --six:repeating-linear-gradient(90deg,rgba(255,255,255,.14) 0 1px,transparent 1px calc(100%/4));
   background:var(--bg-i,#151517);
   background-image:repeating-linear-gradient(90deg,transparent 0,transparent calc(100%/24 - 1px),rgba(255,255,255,.055) calc(100%/24 - 1px),rgba(255,255,255,.055) calc(100%/24));
-  box-shadow:inset 0 0 0 1px rgba(255,255,255,.045)}
+  box-shadow:inset 0 0 0 1px rgba(255,255,255,.045);
+  transition:box-shadow .2s var(--ease,cubic-bezier(.16,1,.3,1)),background-color .2s var(--ease,cubic-bezier(.16,1,.3,1))}
 html[data-theme=light] #ag-wrap .ag-track{background:rgba(0,0,0,.04);
   background-image:repeating-linear-gradient(90deg,transparent 0,transparent calc(100%/24 - 1px),rgba(0,0,0,.08) calc(100%/24 - 1px),rgba(0,0,0,.08) calc(100%/24))}
 /* 밤(21~06시)을 살짝 어둡게 — 낮밤이 한눈에 갈린다 */
@@ -8989,6 +8990,15 @@ html[data-theme=light] #ag-wrap .ag-track{background:rgba(0,0,0,.04);
 #ag-wrap .ag-bar:hover{filter:brightness(1.12);box-shadow:inset 0 0 0 1px rgba(255,255,255,.34)}
 #ag-wrap .ag-bar.act{cursor:grabbing;filter:brightness(1.2);z-index:3;box-shadow:0 4px 14px rgba(0,0,0,.4),inset 0 0 0 1px rgba(255,255,255,.5)}
 #ag-wrap .ag-bar.willdrop{opacity:.42;filter:grayscale(.7)}
+/* [v1533] 놓는 순간 - 막대가 새 자리에서 한 번 눌렸다 펴진다.
+   끌 때는 손을 따라가야 하므로 transform 전환을 안 건다(그러면 손보다 늦는다).
+   대신 **놓은 뒤 딱 한 번** 이 애니메이션으로 '앉았다' 를 말한다. */
+#ag-wrap .ag-bar.ag-settle{animation:agSettle .26s cubic-bezier(.2,.9,.25,1.04) both}
+@keyframes agSettle{
+  0%{transform:scale(1.045);filter:brightness(1.16)}
+  60%{transform:scale(.995);filter:brightness(1.04)}
+  100%{transform:scale(1);filter:brightness(1)}}
+@media (prefers-reduced-motion:reduce){#ag-wrap .ag-bar.ag-settle{animation:none}}
 #ag-wrap .ag-bar.cont{border-top-left-radius:2px;border-bottom-left-radius:2px}
 #ag-wrap .ag-bar.planned{background:repeating-linear-gradient(45deg,
   color-mix(in srgb,var(--bc) 46%,#000 54%) 0 5px, color-mix(in srgb,var(--bc) 30%,#000 70%) 5px 10px);
@@ -9004,6 +9014,38 @@ html[data-theme=light] #ag-wrap .ag-track{background:rgba(0,0,0,.04);
   border-left:1px solid rgba(255,255,255,.75);border-right:1px solid rgba(255,255,255,.75)}
 /* [v1278] 맞바꾸기 — 상대 막대 위에 겹치면 둘 다 보라로 빛난다 */
 #ag-wrap .ag-bar.ag-swtgt{box-shadow:0 0 0 2px #a98fd6,0 0 12px rgba(169,143,214,.55);z-index:6}
+/* ═══ [v1532] 착지 미리보기 ══════════════════════════════════════════════════
+   사장님 "배정격자를 잡고 옮길때 그게 도통 어디로 가는지 안보이거든
+          실시간으로 좀 흐릿하게 처리해서 보이는 그래픽을 좀 만들어줘 퀄리티 높게"
+
+   맞다. 지금은 막대가 **원래 줄에 그대로 남아 있고** 목표 줄의 테두리만 빛난다.
+   그래서 '어느 줄' 은 알겠지만 '몇 시부터 몇 시까지 어떤 모양으로' 는 안 보인다.
+   놓을 자리에 그 막대를 **유리로 미리 깔아** 준다 — 같은 자리·같은 폭·같은 색,
+   대신 속이 비치고 가장자리만 빛난다. 그게 '아직 실체가 아니다' 라는 말이다.
+   맞바꾸기면 두 장을 깐다(내 것이 저쪽으로, 저쪽 것이 내 자리로) — 스왑은
+   두 사람이 동시에 움직이는 일이라 한 장만 보여 주면 절반만 말하는 셈이다. */
+#ag-wrap .ag-gh{
+  position:absolute;top:2px;bottom:2px;z-index:4;border-radius:5px;pointer-events:none;
+  box-sizing:border-box;overflow:hidden;
+  display:flex;align-items:center;gap:4px;padding:0 5px;
+  font-size:10px;font-weight:800;letter-spacing:-.01em;white-space:nowrap;
+  color:#fff;text-shadow:0 1px 2px rgba(0,0,0,.6);
+  background:linear-gradient(180deg,
+    color-mix(in srgb,var(--gc,#c9963a) 42%,transparent) 0,
+    color-mix(in srgb,var(--gc,#c9963a) 20%,transparent) 55%,
+    color-mix(in srgb,var(--gc,#c9963a) 30%,transparent) 100%);
+  -webkit-backdrop-filter:blur(6px) saturate(150%) brightness(1.1);
+  backdrop-filter:blur(6px) saturate(150%) brightness(1.1);
+  box-shadow:
+    inset 0 0 0 1px color-mix(in srgb,var(--gc,#c9963a) 75%,transparent),
+    inset 0 1px 0 rgba(255,255,255,.5),
+    0 4px 16px rgba(0,0,0,.45),
+    0 0 18px color-mix(in srgb,var(--gc,#c9963a) 28%,transparent);
+  animation:agGhIn .19s cubic-bezier(.2,.9,.25,1.05) both}
+#ag-wrap .ag-gh .gh-h{margin-left:auto;font-weight:700;opacity:.85}
+#ag-wrap .ag-gh.swapback{--gc:#a98fd6}
+@keyframes agGhIn{from{opacity:0;transform:scale(.94)}to{opacity:1;transform:scale(1)}}
+@media (prefers-reduced-motion:reduce){#ag-wrap .ag-gh{animation:none}}
 /* [v1333] 🛟 Cover 를 받을 막대 — 손에 든 것과 같은 파랑(.cover-grab)으로 말한다.
    자리 바꾸기(보라)와 다른 색이라 무슨 일이 일어날지 놓기 전에 안다. */
 #ag-wrap .ag-bar.ag-covtgt{box-shadow:0 0 0 2px #4aa0c2,0 0 12px rgba(74,160,194,.6);z-index:6}
@@ -9298,7 +9340,10 @@ html[data-theme=light] #ag-reason{background:rgba(255,255,255,.99);border-color:
 #ag-wrap .ag-rail::after{right:0}
 /* ② 채워야 할 자리 — 유리 한 장. 바닥보다 밝고, 윗변에 빛이 맺히고, 빛줄기가 지난다 */
 #ag-wrap .ag-need{
-  position:absolute;top:2px;bottom:2px;z-index:0;border-radius:8px;pointer-events:none;
+  /* [v1532] 사장님 "배정격자 막대 크기 정도는 좀 되어야 할듯" — 막대와 같은 자리·같은
+     모서리(5px)로 맞춘다. 테두리도 실선 대신 안쪽 그림자로 둬서 속살이 막대처럼
+     22px 를 꽉 채운다(1px 테두리가 있으면 그만큼 좁아 보인다). */
+  position:absolute;top:2px;bottom:2px;z-index:0;border-radius:5px;pointer-events:none;
   box-sizing:border-box;overflow:hidden;
   /* [v1531] 색을 뺀다 - 호박빛을 깔면 유리가 아니라 흙탕이 된다. 거의 무채색으로
      두고 맨 아래에만 아주 옅은 따뜻함 한 겹. 유리는 원래 제 색이 없다. */
@@ -9306,11 +9351,10 @@ html[data-theme=light] #ag-reason{background:rgba(255,255,255,.99);border-color:
     linear-gradient(180deg,rgba(255,255,255,.20) 0,rgba(255,255,255,.075) 34%,rgba(255,255,255,.045) 70%,rgba(226,196,130,.075) 100%);
   -webkit-backdrop-filter:blur(10px) saturate(125%) brightness(1.22);
   backdrop-filter:blur(10px) saturate(125%) brightness(1.22);
-  border:1px solid rgba(255,255,255,.30);
+  border:0;
   box-shadow:
+    inset 0 0 0 1px rgba(255,255,255,.26),
     inset 0 1px 0 rgba(255,255,255,.7),
-    inset 1px 0 0 rgba(255,255,255,.18),
-    inset -1px 0 0 rgba(255,255,255,.18),
     inset 0 -1px 0 rgba(0,0,0,.32),
     0 4px 13px rgba(0,0,0,.4);
   animation:agNeed 5.5s ease-in-out infinite}
@@ -9423,6 +9467,8 @@ html[data-theme=light] #ag-menu,html[data-theme=light] #ag-pick{
   border:1px dashed rgba(224,113,106,.6);border-radius:4px;padding:0 3px;cursor:pointer;flex:0 0 auto}
 #ag-wrap .ag-bk:hover{background:rgba(224,113,106,.18)}
 /* [v1275] 막대를 다른 줄 위로 끌고 갔을 때 — 놓으면 여기로 간다 */
+/* [v1533] 목표 줄이 딱 켜지고 딱 꺼지던 것 - 같은 곡선(--ease)으로 번지게 한다.
+   전환은 .ag-track 제 규칙에 걸어야 꺼질 때도 부드럽다(여기만 걸면 켜질 때만 된다). */
 #ag-wrap .ag-row.ag-tgt .ag-track{box-shadow:inset 0 0 0 1.5px var(--ac,#c9963a);
   background-color:color-mix(in srgb,var(--ac,#c9963a) 7%,transparent)}
 #ag-wrap .ag-row.ag-tgt .ag-lab b{color:var(--ac,#c9963a)}
@@ -62947,6 +62993,49 @@ try{
 }catch(_){}
 /* ── 막대를 직접 만진다: 옮기기 · 길이 · 해제 ──
    폼에 숫자를 치는 대신 손으로 민다. 시간축이 하나뿐이라 민 만큼이 곧 몇 시다. */
+/* [v1532] 착지 미리보기 — 잡은 막대가 놓일 자리를 유리로 미리 깐다.
+   한 군데에서만 그리고 한 군데에서만 치운다(끌기가 어떻게 끝나든 남지 않게). */
+function _agGhostClear(host){
+  try{ if(host) host._agGhSig = ''; }catch(_){}
+  try{ (host || document).querySelectorAll('#ag-wrap .ag-gh').forEach(function(x){ x.remove(); }); }catch(_){}
+}
+function _agGhostDraw(host, plan){
+  /* ═══ [v1533] 매 프레임 다시 그리면 깜빡인다 ═══════════════════════════════
+     v1532 는 paint 마다(초당 60번) 지우고 새로 만들었다. 그러면 들어오는
+     애니메이션(agGhIn)이 매번 처음부터 다시 시작해서 **유리가 떨린다.**
+     손가락은 멈추지 않으니 사람 눈에는 계속 깜빡이는 것으로 보인다.
+     그래서 '무엇을 그릴지' 가 실제로 바뀌었을 때만 다시 만든다 -
+     같은 줄·같은 시각이면 손대지 않는다. 만드는 일이 초당 60번에서
+     '줄을 넘거나 시간이 바뀔 때' 로 줄어든다. */
+  var sig = '';
+  try{ sig = (plan||[]).map(function(p){
+    return (p && p.track ? (p.track.parentNode && p.track.parentNode.dataset ? p.track.parentNode.dataset.pc : '?') : '-')
+         + ':' + (p?p.start:'') + ':' + (p?p.len:'') + ':' + (p&&p.back?'b':'f'); }).join('|'); }catch(_){}
+  if(host && host._agGhSig === sig) return;
+  /* [v1535] 순서가 중요하다 - 치우는 함수가 표식을 비우므로, 표식은 **치운 뒤에** 적는다.
+     반대로 두면 방금 적은 표식이 바로 지워져서 깜빡임 방지가 하나도 안 듣는다
+     (v1533 이 그랬다. 손으로 돌려 보고서야 알았다 - 같은 그림을 두 번 그리는지 세 봤다). */
+  _agGhostClear(host);
+  if(host) host._agGhSig = sig;
+  if(!plan || !plan.length) return;
+  plan.forEach(function(p){
+    if(!p || !p.track) return;
+    var segs = [];
+    try{ segs = _agSegs(p.start, p.len); }catch(_){ segs = [[p.start, p.len]]; }
+    segs.forEach(function(sg, i){
+      var el = document.createElement('div');
+      el.className = 'ag-gh' + (p.back ? ' swapback' : '');
+      if(p.color) el.style.setProperty('--gc', p.color);
+      el.style.left  = (sg[0]/24*100).toFixed(3) + '%';
+      el.style.width = (sg[1]/24*100).toFixed(3) + '%';
+      if(i === 0 && p.name){
+        el.innerHTML = '<span>' + String(p.name).replace(/[<>&"]/g, '') + '</span>'
+                     + '<span class="gh-h">' + p.len + 'h</span>';
+      }
+      p.track.appendChild(el);
+    });
+  });
+}
 function _agBind(host){
   if(host._agB) return; host._agB = 1;
   host.addEventListener('contextmenu', _agCtx);   /* [v1086] 나머지는 전부 우클릭으로 */
@@ -63087,6 +63176,30 @@ function _agBind(host){
       });
       const hh = bar.querySelector('.ag-hh'); if(hh) hh.textContent = a.len+'h';
       bar.setAttribute('title', pad2(_tzH(a.start))+'–'+pad2(_tzH((a.start+a.len)%24))+' · '+a.len+'h');
+      /* [v1532] 착지 미리보기 — 옮길 줄이 정해졌을 때만 그린다(제 줄이면 막대 자신이 말한다) */
+      try{
+        if(mode !== 'move' || dropOut){ _agGhostClear(host); }
+        else {
+          var _plan = [], _myCol = '';
+          try{ _myCol = bar.style.getPropertyValue('--bc') || ''; }catch(_){}
+          var _myNm = ''; try{ var _n0 = bar.querySelector('.ag-nm'); _myNm = _n0 ? _n0.textContent : ''; }catch(_){}
+          if(tgtSwap){
+            var _tTrack = tgtSwap.el.parentNode;
+            _plan.push({ track:_tTrack, start:a.start, len:a.len, color:_myCol, name:_myNm });
+            /* 저쪽 사람이 내 자리로 온다 — 그것도 같이 보여 준다 */
+            try{
+              var _sp = PCS.find(function(x){ return x.id === tgtSwap.pc; });
+              var _sa = _sp && (_sp.assignments||[])[tgtSwap.idx];
+              var _snm = ''; try{ var _n1 = tgtSwap.el.querySelector('.ag-nm'); _snm = _n1 ? _n1.textContent : ''; }catch(_){}
+              if(_sa) _plan.push({ track:track, start:_sa.start, len:_sa.len, name:_snm, back:true });
+            }catch(_){}
+          } else if(tgtPc != null && overRow){
+            var _ot = overRow.querySelector('.ag-track');
+            if(_ot) _plan.push({ track:_ot, start:a.start, len:a.len, color:_myCol, name:_myNm });
+          }
+          _agGhostDraw(host, _plan);
+        }
+      }catch(_){}
       try{ _pcRTDrag(pcId, idx, a.start, a.len, { tgt:tgtPc, swap:(tgtSwap?{pc:tgtSwap.pc,idx:tgtSwap.idx}:null), out:dropOut }); }catch(_){}   /* [v1339·v1341] 끄는 중 가로+세로 조준까지 상대 화면에도 흐르게 */
     };
     const mv = e2 => {
@@ -63106,6 +63219,7 @@ function _agBind(host){
       if(raf){ cancelAnimationFrame(raf); raf = 0; }
       if(moved) paint();
       host.classList.remove('ag-dragging'); bar.classList.remove('act','willdrop');
+      try{ _agGhostClear(host); }catch(_){}   /* [v1532] 어떻게 끝나든 미리보기는 치운다 */
       try{ if(moved) _pcRTDrag(pcId, idx, a.start, a.len, null, true); }catch(_){}   /* [v1339] 마지막 프레임은 스로틀 무시 — 캔버스 v902와 같음 */
       try{ _pcRTFree(); }catch(_){}   /* [v1338] 놓는 순간 상대 화면의 "잡고 있음" 표시를 거둔다 */
       /* [v1103] 끌지 않고 그냥 눌렀다 = 이 배정을 어떻게 할지 묻는 것.
@@ -63180,7 +63294,24 @@ function _agBind(host){
       /* [v1285] 실제로 뭔가 바뀌었을 때만 되돌릴 장을 남긴다 */
       _agCommit(uSnap, dropOut ? '해제|unassign' : tgtSwap ? '맞바꿈|swap' : (tgtPc != null) ? 'PC 이동|PC move'
                      : (mode === 'size') ? '길이 조절|resize' : '시간 이동|time move');
+      /* [v1533·v1534] 놓은 막대가 새 자리에서 한 번 앉는다. 다시 그린 뒤에 붙여야
+         하므로(그리기가 요소를 갈아치운다) 다음 프레임에 찾아서 건다. */
+      var _stlPc = dropOut ? null : (tgtSwap ? tgtSwap.pc : (tgtPc != null ? tgtPc : pcId));
       try{ render(); }catch(_){ _agRender(); }
+      if(_stlPc != null){
+        try{
+          requestAnimationFrame(function(){
+            try{
+              var _row = host.querySelector('.ag-row[data-pc="' + _stlPc + '"]');
+              if(!_row) return;
+              _row.querySelectorAll('.ag-bar').forEach(function(el){
+                el.classList.add('ag-settle');
+                setTimeout(function(){ try{ el.classList.remove('ag-settle'); }catch(_){} }, 320);
+              });
+            }catch(_){}
+          });
+        }catch(_){}
+      }
     };
     window.addEventListener('pointermove', mv); window.addEventListener('pointerup', up);
     window.addEventListener('pointercancel', up);   /* [v1292] 터치 스크롤로 드래그가 끊겨도 반드시 정리 — 반쯤 끌린 시간이 저장되던 것 */
