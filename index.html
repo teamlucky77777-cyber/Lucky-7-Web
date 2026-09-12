@@ -4,7 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
 <title>ARASAKA Corp</title>
-<!-- BUILD: v1522 | 관리 칸을 리더에게 반만 - 시스템 로그만 열고 나머지는 자물쇠 -->
+<!-- BUILD: v1523 | 내 페이슬립을 부주와 리더에게서 뺀다 -->
 <!-- v745 기록은 git 이력(v1302 이전 커밋)에 있다 — 100KB 변경사 주석을 배포에서 제거 -->
 <!-- [v677] a <link href> cannot read a CSS variable, so the favicon carries its own copy.
      64px: a browser tab draws it at 16-32px, so this is 2x-DPR sharp at 11KB. -->
@@ -16015,7 +16015,7 @@ const CHANNEL_TREE = {
         { id:'pl-my-shift',    name:'내 시프트',icon:'calendar', module:'myshift', kind:'view' },
         { id:'pl-my-calendar', name:'내 캘린더',icon:'calendar', module:'mycalendar', kind:'view' },
         { id:'pl-daily-board', name:'내 업무',  icon:'check',    module:'mytasks', kind:'view', unread:6 },
-        { id:'op-paystub',     name:'내 페이슬립', icon:'scroll',  module:'paystub', kind:'view' }
+        { id:'op-paystub',     name:'내 페이슬립', icon:'scroll',  module:'paystub', kind:'view', perms:['admin','op','manager','settlement','hr'] }   /* [v1523] 부주·리더에게는 안 보인다 */
       ]
     },
     {
@@ -54059,7 +54059,11 @@ const ROLE_PERMS = {
   'op-trust':       { manager:true, settlement:false, hr:true, staff:false, leader:true },
   'pl-my-score':    { manager:true, settlement:true,  hr:true, staff:true,  leader:true },
   'op-settlement':  { manager:true, settlement:true, hr:false, staff:false, leader:false },
-  'op-paystub':     { manager:true, settlement:true, hr:true, staff:true, leader:true },
+  /* [v1523] 사장님 "Player 나 Playerleader 들이 페이슬립 못보게 그냥 빼버려"
+     player 칸을 같이 적어 둔다 - 이 표에 없는 역할은 matrixAllows 가 **막지 않고 통과**시킨다.
+     지금 쓰는 역할은 staff(부주 31명)·leader(3)·ceo(2)·hr(1) 뿐이지만, player 역할이
+     되살아나면 적어 두지 않은 쪽이 조용히 다시 열린다. */
+  'op-paystub':     { manager:true, settlement:true, hr:true, staff:false, leader:false, player:false },
   // [v647] Standard EXP: team leaders may VIEW it (they need the per-map targets), nobody below may edit.
   // Editing stays with CEO/Manager via expCanEdit(). Was unlisted here, so matrixAllows() denied everyone
   // except the admin tier and the page never showed up on the Permissions screen either.
