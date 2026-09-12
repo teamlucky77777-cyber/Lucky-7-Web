@@ -4,7 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
 <title>ARASAKA Corp</title>
-<!-- BUILD: v1501 | 저금통에서 명세 한 장 복사 (한국어+인니어) — 보내는 건 사람이 한다 -->
+<!-- BUILD: v1502 | 출근했는데 격자에 자리가 없는 사람을 현황 보드가 말한다 -->
 <!-- v745 기록은 git 이력(v1302 이전 커밋)에 있다 — 100KB 변경사 주석을 배포에서 제거 -->
 <!-- [v677] a <link href> cannot read a CSS variable, so the favicon carries its own copy.
      64px: a browser tab draws it at 16-32px, so this is 2x-DPR sharp at 11KB. -->
@@ -336,6 +336,8 @@ body{font-family:'Inter',-apple-system,sans-serif;font-size:var(--t-body);line-h
 
 .att-sb-card.att-sb-ro{cursor:default}
 .att-sb-card.att-sb-ro:hover{transform:none}
+.att-sb-noseat{font-size:9px;font-weight:700;white-space:nowrap;padding:2px 6px;border-radius:5px;
+  color:var(--ac-strong,#c2a04a);background:var(--ac-bg,rgba(194,160,74,.14));border:1px solid var(--ac-bord,rgba(194,160,74,.35))}
 /* 실시간 직원 현황 보드 (채용 칸반 미니) */
 .att-sb-section{margin:20px 0 16px}
 .att-sb-title{font-size:12px;font-weight:700;color:var(--tx);margin-bottom:9px}
@@ -19728,7 +19730,20 @@ async function renderAttendance(){
     const _absentN = offDuty.filter(m => m.meta === 'absent').length;
     _attTodayByUser = byUser; _attTeamCache = team;  // [v221] expose to attSbDrop
 
+    /* ═══ [v1502] 출근했는데 격자에 자리가 없는 사람 ══════════════════════════
+       Zacky 는 닷새 32.8시간을 일했는데 PC 배정이 아예 없었다. 아무 화면도 그 말을 안 했다 —
+       PC 현황은 '자리에 앉은 사람' 만 그리고, 출퇴근 화면은 '출근한 사람' 만 그린다.
+       둘을 겹쳐 보는 곳이 없어서 그 사이로 사람이 빠졌다.
+       이 보드는 둘을 다 알고 있는 유일한 곳이다. 여기서 한 마디만 한다.
+       자리가 없다고 리포트를 못 쓰는 것은 아니다 — Mapo·Icarus 는 자리 없이도 잘 쓴다.
+       다만 격자가 실제와 다르면 자동 마감도 교대도 대타도 그 위에서 어긋난다.
+       그래서 '고쳐라' 가 아니라 '이런 사람이 있다' 고만 말한다. */
+    const _seated = (function(){ var o = {};
+      try{ (typeof PCS !== 'undefined' ? PCS : []).forEach(function(p){
+        (p.assignments || []).forEach(function(a){ if(a && a.staff) o[String(a.staff)] = 1; }); }); }catch(_){}
+      return o; })();
     const miniCard = (m, accent) => {
+      const noSeat = (m.status === 'online' || m.status === 'break' || m.status === 'down') && !_seated[String(m.id)];
       const meta = m.meta || (m.pc && m.pc !== '—' ? m.pc : (m.shift||'').split('(')[0].trim());
       const dotCls = m.status === 'down' ? 'down' : m.status === 'break' ? 'break' : (m.status==='offline'||m.status==='off') ? 'off' : 'on';
       return `<div class="att-sb-card att-sb-${dotCls}${_sbEdit?'':' att-sb-ro'}"${_sbEdit ? ` draggable="true"
@@ -19739,6 +19754,7 @@ async function renderAttendance(){
           <span class="att-sb-dot att-sb-dot-${dotCls}"></span>
         </span>
         <span class="att-sb-name">${m.name}</span>
+        ${noSeat ? `<span class="att-sb-noseat" title="${_uiLang()==='ko'?'출근했는데 PC 격자에 자리가 없습니다 — 자동 마감·교대·대타가 이 격자를 봅니다':'Clocked in but has no slot on the PC grid'}">자리 없음</span>` : ''}
         <span class="att-sb-meta">${meta}</span>
       </div>`;
     };
@@ -19755,7 +19771,10 @@ async function renderAttendance(){
     </div>`;
 
     statusBoard = `<div class="att-sb-section">
-      <div class="att-sb-title">실시간 직원 현황 <span class="att-sb-hint">${_sbEdit ? '드래그로 상태 변경' : '보기 전용'}</span></div>
+      <div class="att-sb-title">실시간 직원 현황 <span class="att-sb-hint">${_sbEdit ? '드래그로 상태 변경' : '보기 전용'}</span>${(function(){
+        try{ var n = working.concat(resting, downed).filter(function(m){ return !_seated[String(m.id)]; }).length;
+             return n ? ('<span class="att-sb-noseat" style="margin-left:8px">' + (_uiLang()==='ko' ? ('자리 없음 ' + n + '명') : (n + ' without a slot')) + '</span>') : ''; }catch(_){ return ''; }
+      })()}</div>
       <div class="att-sb-board">
         ${col('근무 중', '🟢', working, '#3aa05a', 'online')}
         ${col('중단됨', '⚠', downed, '#d4633a', 'down')}
