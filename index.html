@@ -4,7 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
 <title>ARASAKA Corp</title>
-<!-- BUILD: v1504 | PC 저장이 말없이 거부되던 것 — 이제 화면이 말한다 -->
+<!-- BUILD: v1505 | 직원 풀을 엑셀로 한 장 — 손 시트를 웹으로 옮겨오려면 웹이 먼저 내놓아야 한다 -->
 <!-- v745 기록은 git 이력(v1302 이전 커밋)에 있다 — 100KB 변경사 주석을 배포에서 제거 -->
 <!-- [v677] a <link href> cannot read a CSS variable, so the favicon carries its own copy.
      64px: a browser tab draws it at 16-32px, so this is 2x-DPR sharp at 11KB. -->
@@ -48278,6 +48278,45 @@ async function renderOnboarding(pickId){
     +   '<b>18번</b>이 이 화면의 심장입니다. 앞의 열여덟 개가 진짜로 됐는지는 <b>출퇴근이 찍히고 리포트가 들어오는 것</b>으로만 증명됩니다.</div>'
     + '</div>';
 }
+/* ═══ [v1505] 직원 풀을 엑셀로 뽑는다 ══════════════════════════════════════
+   로드맵 2번의 "스프레드시트 뽑기 — 손으로 적는 걸 없애야 웹으로 옮겨온다".
+   구원 씨는 아직 따로 시트를 들고 있다. 웹이 그 시트를 못 내놓으면 옮겨올 이유가 없다.
+   그래서 웹에 있는 것을 그대로 한 장으로 낸다 — 새 화면을 만들지 않고 단추 하나.
+
+   계좌·전화는 개인정보다. OP TEAM 에게만 단추가 보이고, 뽑을 때 한 번 더 묻는다.
+   파일이 나가는 순간부터는 앱이 지켜 줄 수 없다 — 그 말을 확인창에 적는다. */
+window._sfxCsv = async function(){
+  try{
+    var ko = (typeof _uiLang !== 'function' || _uiLang() === 'ko');
+    var team = (typeof STAFF !== 'undefined' && Array.isArray(STAFF) ? STAFF : []).filter(function(m){ return m && m.id && !m.virtual; });
+    if(!team.length){ toast('직원 목록이 비어 있습니다', true); return; }
+    if(!await _askC((ko ? '직원 ' : '') + team.length + (ko
+      ? '명을 엑셀로 뽑습니다.\n\n은행 · 계좌 · 전화가 들어갑니다.\n파일이 나가는 순간부터는 웹이 지켜 줄 수 없습니다.\n\n계속할까요?'
+      : ' staff will be exported.\n\nBank, account and phone are included.\nOnce the file leaves, the app cannot protect it.\n\nContinue?'))) return;
+    var seat = {};
+    try{ (typeof PCS !== 'undefined' ? PCS : []).forEach(function(p){ (p.assignments || []).forEach(function(a){
+      if(a && a.staff && !seat[String(a.staff)]) seat[String(a.staff)] = p.id; }); }); }catch(_){}
+    var H = ['이름','실명','직책','입사일','시프트','PC','은행','계좌','전화','디스코드 아이디','데일리보드','메이플 캐릭터','상태'];
+    var q = function(v){ return '"' + String(v == null ? '' : v).replace(/"/g, '""') + '"'; };
+    var L = [H.map(q).join(',')];
+    team.slice().sort(function(a,b){ return String(a.name||'').localeCompare(String(b.name||'')); }).forEach(function(m){
+      var P = (STAFF_PROFILE[m.id] && STAFF_PROFILE[m.id].personal) || {};
+      var mc = P.maple_char && P.maple_char.name ? P.maple_char.name : '';
+      L.push([ m.name || '', P.full_name || '', m.position || '', P.start_work || '',
+               P.shift_pattern || '', seat[String(m.id)] ? ('PC-' + pad2(seat[String(m.id)])) : '',
+               P.bank || '', P.account || '', P.phone || '', P.discord_id || '',
+               P.discord_thread ? 'O' : '', mc, m.resigned ? '퇴사' : '재직' ].map(q).join(','));
+    });
+    var blob = new Blob(['﻿' + L.join('\n')], { type:'text/csv;charset=utf-8' });   /* 엑셀이 한글을 안 깨뜨리게 BOM */
+    var a = document.createElement('a');
+    var d = new Date(Date.now() + 9*3600000).toISOString().slice(0,10);
+    a.href = URL.createObjectURL(blob); a.download = 'lucky7-직원-' + d + '.csv';
+    document.body.appendChild(a); a.click();
+    setTimeout(function(){ URL.revokeObjectURL(a.href); a.remove(); }, 1000);
+    try{ logAction('update', '직원 목록 엑셀로 뽑음 · ' + team.length + '명', ''); }catch(_){}
+    toast('📄 ' + team.length + '명 · 계좌가 들어 있습니다 — 파일 간수해 주세요');
+  }catch(e){ toast('못 뽑았습니다 — ' + (e && e.message), true); }
+};
 async function renderStaff(){
   try{
     return await _renderStaffBody();
@@ -48516,6 +48555,9 @@ const _SHIFT_ORDER = {
       ${staffStatusFilter!=='all' ? `<button class="sfx-clr" onclick="staffStatusFilter='all';renderStaff()">✕ ${(STATUS[staffStatusFilter]||{}).label||''}만 보는 중</button>` : ''}
       ${resignedN>0 ? `<button class="sfx-clr${_showInactiveStaff?' on':''}" onclick="_showInactiveStaff=!_showInactiveStaff;renderStaff()">⊘ 퇴사 ${resignedN}</button>` : ''}
       <input class="sfx-q" placeholder="이름" value="${staffSearch}" oninput="staffSearch=this.value;renderStaff()">
+      ${(function(){ try{ var r = String((currentUser && currentUser.role) || '').toLowerCase();
+          return (['ceo','admin','manager','hr','settlement'].indexOf(r) >= 0)
+            ? '<button class="sfx-clr" onclick="_sfxCsv()" title="이름 · 실명 · 입사일 · 시프트 · PC · 은행 · 계좌 · 전화 · 디스코드까지 한 장으로. 계좌가 들어갑니다">⬇ 엑셀</button>' : ''; }catch(_){ return ''; } })()}
     </div>
     ${(placed.length || unplaced.length) ? `
       ${placed.length ? `<div class="sfx-cut"><b>스케줄 배치</b><span>${placed.length}</span></div>
