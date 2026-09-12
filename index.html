@@ -4,7 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
 <title>ARASAKA Corp</title>
-<!-- BUILD: v1500 | 직원 명함에 이번 달 급여·리포트·경고 세 줄 (화면을 합치는 대신 명함을 채운다) -->
+<!-- BUILD: v1501 | 저금통에서 명세 한 장 복사 (한국어+인니어) — 보내는 건 사람이 한다 -->
 <!-- v745 기록은 git 이력(v1302 이전 커밋)에 있다 — 100KB 변경사 주석을 배포에서 제거 -->
 <!-- [v677] a <link href> cannot read a CSS variable, so the favicon carries its own copy.
      64px: a browser tab draws it at 16-32px, so this is 2x-DPR sharp at 11KB. -->
@@ -47173,6 +47173,55 @@ async function _bnkRender(host){
     + '</div></div>';
 }
 
+/* ═══ [v1501] 명세 한 장 — 그 사람에게 그대로 보낼 글 ═══════════════════════
+   저금통은 사장님만 본다. 직원은 자기 돈이 어떻게 나왔는지 모른다 —
+   "왜 이만큼이냐" 는 물음에 답할 것이 지금은 없다.
+   그렇다고 자동으로 보내지는 않는다. 보내는 것은 사장님이 정할 일이다.
+   글만 만들어 복사한다 — 초대 안내문(v1473)이 잘 굴러간 것과 같은 모양이다.
+   한국어 + 인도네시아어. 직원은 인도네시아 사람이다.
+   숫자는 저금통이 낸 것을 그대로 쓴다. 여기서 다시 더하지 않는다. */
+window._bnkSlip = function(uid){
+  try{
+    var d = _bnkMonth; if(!d) return;
+    var r = (d.rows || []).find(function(x){ return String(x.user_id) === String(uid); });
+    if(!r){ toast('그 사람 줄이 없습니다', true); return; }
+    var k = uid + '|' + _bnkYM, days = _bnkDays[k] || [];
+    var ym = String(d.ym || ''), yy = ym.slice(0,4), mm = String(+ym.slice(5,7));
+    var n = function(v){ return (Number(v)||0).toLocaleString('ko-KR'); };
+    var line = function(koL, idL, v, sign){
+      v = Number(v) || 0; if(!v) return '';
+      var t = (sign === '-' ? '-' : (sign === '+' ? '+' : '')) + n(Math.abs(v));
+      return '  ' + (koL + ' / ' + idL).padEnd(30, ' ') + t + '\n';
+    };
+    var first = days.length ? String(days[0].day).slice(5) : '';
+    var last  = days.length ? String(days[days.length-1].day).slice(5) : '';
+    var t = '';
+    t += '🏦 ' + yy + '년 ' + mm + '월 급여 명세 / Slip gaji ' + mm + '/' + yy + '\n';
+    t += (r.name || '') + (first ? ('   ' + first + ' - ' + last) : '') + '\n';
+    t += '────────────────────────────\n';
+    t += line('기본급', 'Gaji pokok', r.base_pay);
+    t += line('미달 차감', 'Potongan target', r.goal_cut, '-');
+    t += line('상금', 'Hadiah race', r.race_pay, '+');
+    t += line('벌금', 'Denda', r.race_penalty, '-');
+    t += line('경고 차감', 'Potongan peringatan', r.warn_cut, '-');
+    t += line('트러스트', 'Trust', r.trust_bonus, '+');
+    t += line('수당', 'Tunjangan', r.allow_pay, '+');
+    if(Number(r.adjust)) t += line('조정', 'Penyesuaian', r.adjust, (Number(r.adjust) < 0 ? '-' : '+'));
+    t += '────────────────────────────\n';
+    t += '  ' + ('합계 / Total').padEnd(30, ' ') + n(r.total) + ' Rp\n';
+    t += '\n';
+    t += '  일한 날 / Hari kerja   ' + (r.days || 0) + '\n';
+    t += '  일한 시간 / Jam kerja  ' + ((Number(r.work_min)||0)/60).toFixed(1) + 'h\n';
+    if(Number(r.no_report_days)){
+      t += '\n⚠ 성적을 못 잰 날 ' + r.no_report_days + '일 (리포트가 없거나 점수가 안 붙은 날)\n';
+      t +=   '   ' + r.no_report_days + ' hari tanpa nilai (laporan tidak ada / tidak terhitung)\n';
+    }
+    t += '\n* 하루치는 매일 밤 굳습니다. 틀린 곳이 있으면 말해 주세요.\n';
+    t += '  Dihitung tiap malam. Kalau ada yang salah, bilang ya.\n';
+    try{ copyText(t); }catch(_){}
+    toast('📄 ' + (r.name || '') + ' 명세를 복사했습니다 — 왓츠앱에 붙여넣기');
+  }catch(e){ toast('명세를 못 만들었습니다 — ' + (e && e.message), true); }
+};
 function _bnkDayHtml(uid, esc, canEdit){
   var k = uid + '|' + _bnkYM, days = _bnkDays[k], adj = _bnkAdj[k] || [];
   if(!days) return '<div class="bnk-daywrap"><div class="bnk-note">불러오는 중…</div></div>';
@@ -47195,6 +47244,9 @@ function _bnkDayHtml(uid, esc, canEdit){
       + '<td class="bnk-tot">' + _bnkM(r.grand_total) + '</td></tr>';
   }).join('');
   var h = '<div class="bnk-daywrap" onclick="event.stopPropagation()">'
+    + '<div style="display:flex;justify-content:flex-end;margin-bottom:8px">'
+    +   '<button class="bnk-btn" onclick="_bnkSlip(\'' + esc(uid) + '\')" title="이 사람에게 그대로 보낼 명세를 복사합니다 (한국어+인니어)">📄 명세 복사</button>'
+    + '</div>'
     + '<table class="bnk-dtbl"><thead><tr><th>날짜</th><th>시프트</th><th>시간</th><th>시급</th>'
     +   '<th>기본</th><th>미달</th><th>상금</th><th>벌금</th><th>경고</th><th>트러스트</th><th>수당</th><th>조정</th><th>하루 합계</th>'
     + '</tr></thead><tbody>' + rows + '</tbody></table>';
