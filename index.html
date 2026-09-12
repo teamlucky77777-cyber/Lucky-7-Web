@@ -4,7 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
 <title>ARASAKA Corp</title>
-<!-- BUILD: v1544 | 있던 자리를 옅은 유리로 - 1px 실선은 안 보였다 -->
+<!-- BUILD: v1546 | 잠금을 한 번 풀면 그 드래그 동안 다시 안 잠근다 -->
 <!-- v745 기록은 git 이력(v1302 이전 커밋)에 있다 — 100KB 변경사 주석을 배포에서 제거 -->
 <!-- [v677] a <link href> cannot read a CSS variable, so the favicon carries its own copy.
      64px: a browser tab draws it at 16-32px, so this is 2x-DPR sharp at 11KB. -->
@@ -9126,16 +9126,17 @@ html[data-theme=light] #ag-wrap .ag-track{background:rgba(0,0,0,.04);
    사장님 말씀이 답이다 — "흐릿하게 보여야". 채워진 유리와 같은 말을 쓰되 **절반 세기**로
    깐다. 갈 자리는 진한 유리, 있던 자리는 옅은 유리. 같은 문법이라 배울 것이 없고,
    세기 차이만으로 '어디서 어디로' 가 읽힌다. */
+/* [v1545] 사장님 "이동한 자리를 유리로 만들라는게 아니고 그냥 흐릿하게 처리하면 되고"
+   내가 과하게 만들었다. 있던 자리는 **그 막대를 흐리게 한 것** 이면 된다 —
+   유리(윗변 빛·두께·그림자)는 '갈 자리' 만의 말로 남긴다. 여기는 그 사람 색을
+   옅게 깔고 테두리 한 줄만. 유리 효과는 전부 뺀다(가볍고, 뜻도 안 섞인다). */
 #ag-wrap .ag-gh.from{
-  z-index:3;justify-content:center;color:rgba(255,255,255,.9);
-  background:linear-gradient(180deg,rgba(255,255,255,.13) 0,rgba(255,255,255,.05) 45%,rgba(255,255,255,.08) 100%);
-  -webkit-backdrop-filter:blur(4px) brightness(1.06);backdrop-filter:blur(4px) brightness(1.06);
-  box-shadow:inset 0 0 0 1px rgba(255,255,255,.42),inset 0 1px 0 rgba(255,255,255,.5),
-             inset 0 -1px 0 rgba(0,0,0,.3),0 2px 9px rgba(0,0,0,.34)}
-html[data-theme=light] #ag-wrap .ag-gh.from{
-  color:rgba(0,0,0,.75);
-  background:linear-gradient(180deg,rgba(255,255,255,.6) 0,rgba(255,255,255,.3) 100%);
-  box-shadow:inset 0 0 0 1px rgba(0,0,0,.22),inset 0 1px 0 rgba(255,255,255,.8),0 2px 8px rgba(0,0,0,.14)}
+  z-index:3;justify-content:center;color:rgba(255,255,255,.86);
+  -webkit-backdrop-filter:none;backdrop-filter:none;
+  background:color-mix(in srgb,var(--gc,#9a9a9a) 22%,transparent);
+  box-shadow:inset 0 0 0 1px color-mix(in srgb,var(--gc,#9a9a9a) 55%,transparent);
+  opacity:.72}
+html[data-theme=light] #ag-wrap .ag-gh.from{color:rgba(0,0,0,.7)}
 #ag-wrap .ag-gh.from .gh-d{
   font-size:9.5px;font-weight:800;letter-spacing:.02em;
   padding:1px 5px;border-radius:4px;
@@ -63538,6 +63539,9 @@ function _agBind(host){
     const ox = ev.clientX, oy = ev.clientY;
     const st0 = ((Number(a.start)||0)%24+24)%24, len0 = Number(a.len)||1;
     let raf = 0, last = ev, moved = false, dropOut = false, tgtPc = null, tgtSwap = null, lockTime = false;
+    /* [v1545] 잠긴 순간의 손 위치 — 여기서 옆으로 더 밀면 잠금을 푼다
+       [v1546] 한 번 일부러 풀었으면 그 드래그 동안 다시 안 잠근다 */
+    let lockX = 0, lockFreed = false;
     let fillPend = null;                                            /* [v1281] 세로 늘리기 예약값 */
     const vt0 = bar.style.top, vb0 = bar.style.bottom;              /* [v1281] 원래 높이 복원용 */
     const uSnap = _agTake();                                        /* [v1285] 되돌리기 — 손대기 전 한 장 */
@@ -63682,7 +63686,8 @@ function _agBind(host){
           /* [v1544] 손이 움직이기 시작하면 곧바로 깐다 — 한 칸도 안 밀렸을 때도
              '여기서 출발했다' 가 보여야 얼마나 밀렸는지 눈으로 잴 수 있다. */
           if(moved && _myTrack){
-            _plan.push({ track:_myTrack, start:st0, len:len0, from:true, delta:(a.start - st0) });
+            _plan.push({ track:_myTrack, start:st0, len:len0, from:true,
+                         color:_myCol, delta:(a.start - st0) });   /* [v1545] 그 사람 색으로 옅게 */
           }
           _agGhostDraw(host, _plan);
         }
@@ -63695,7 +63700,30 @@ function _agBind(host){
       moved = true; last = e2;
       /* [v1280] 잠금 판정은 rAF 밖에서 — 이벤트가 프레임에 뭉쳐도 세로 이탈을 놓치지 않는다.
          줄 높이 22px 의 절반 넘게 세로로 갔으면 그 손은 PC 를 옮기는 중이다. */
-      if(mode==='move' && !lockTime && Math.abs(e2.clientY - oy) > 14) lockTime = true;
+      /* ═══ [v1545] PC 를 옮기면서 시간도 같이 바꿀 수 있게 ═════════════════════
+         사장님 "Zacky 를 잡아서 PC 21번으로 옮기고 싶은데, 꼭 같은 시간으로 옮기는게
+                아니잖아 옆 시간대로 옮길수도 있는거잖아. PC 번호 변경과 더불어서"
+
+         v1280 은 세로로 간 드래그의 시간을 **끝까지** 잠갔다. 옳은 판단이었다 —
+         그때 문제는 세로로 옮기는 중의 **손 떨림**이 시간을 딸려 보내는 것이었다
+         (사장님 "다른 PC로 옮기면 시간대가 바뀌어버리고 자꾸 꼬여").
+         그런데 그 잠금이 **일부러 옆으로 옮기는 것까지** 막고 있었다.
+
+         떨림과 의도를 가른다. 잠긴 자리에서 **한 시간 폭만큼 옆으로 더 밀면**
+         그건 떨림이 아니라 뜻이다 — 그때 잠금을 풀고 시간이 다시 따라온다.
+         한 번 풀리면 그 드래그 동안 다시 안 잠근다(풀었다 잠기면 손이 헷갈린다).
+         기준은 눈금 한 칸 폭(트랙/24) 이고 최소 22px 는 넘게 둔다 — 좁은 판에서
+         한 칸이 8px 면 떨림과 구별이 안 된다. */
+      if(mode==='move' && !lockTime && !lockFreed && Math.abs(e2.clientY - oy) > 14){
+        lockTime = true; lockX = e2.clientX;
+      }
+      if(mode==='move' && lockTime){
+        var _cell = 22;
+        try{ var _tw = bar.parentNode.getBoundingClientRect().width; if(_tw) _cell = Math.max(22, _tw/24); }catch(_){}
+        /* [v1546] 손으로 돌려 보고 잡았다 — 풀린 뒤 다시 세로로 움직이면 또 잠겼다.
+           풀었다 잠기면 손이 헷갈린다. 한 번 풀면 이 드래그 동안 끝이다. */
+        if(Math.abs(e2.clientX - lockX) > _cell){ lockTime = false; lockFreed = true; }
+      }
       if(!raf) raf = requestAnimationFrame(paint);
     };
     const up = (eU) => {
