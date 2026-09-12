@@ -4,7 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
 <title>ARASAKA Corp</title>
-<!-- BUILD: v1499 | 초대 코드에 받는 사람을 묶는다 (Ilmi 코드를 Phil 이 쓴 일) -->
+<!-- BUILD: v1500 | 직원 명함에 이번 달 급여·리포트·경고 세 줄 (화면을 합치는 대신 명함을 채운다) -->
 <!-- v745 기록은 git 이력(v1302 이전 커밋)에 있다 — 100KB 변경사 주석을 배포에서 제거 -->
 <!-- [v677] a <link href> cannot read a CSS variable, so the favicon carries its own copy.
      64px: a browser tab draws it at 16-32px, so this is 2x-DPR sharp at 11KB. -->
@@ -73548,6 +73548,50 @@ console.info('AUTO100 build applied',AUTO100_BUILD.version,v3Audit());
     }
 
     var canMore = false; try{ canMore = (currentUserRole === 'admin' || currentUserRole === 'op' || currentUserRole === 'hr' || currentUserRole === 'manager'); }catch(_){}
+
+    /* [v1500] 이번 달 급여 — 저금통(pay_month_v)이 낸 값을 그대로 읽는다. 여기서 더하지 않는다. */
+    var payV = '<span class="dim">' + (L ? '불러오는 중…' : 'loading…') + '</span>';
+    try{
+      var pm = live && live.pay;
+      if(pm === null) payV = '<span class="dim">' + (L ? '이번 달 굳은 줄 없음' : 'nothing frozen yet') + '</span>';
+      else if(pm) {
+        var _t = Number(pm.total) || 0, _d = Number(pm.days) || 0, _nr = Number(pm.no_report_days) || 0;
+        payV = '<span class="sp-left">' + _t.toLocaleString('ko-KR') + '</span>'
+             + '<small>' + _d + (L ? '일' : 'd')
+             + (_nr ? (' · <span style="color:var(--ac-strong,#c2a04a)">' + (L ? ('성적 못 잰 날 ' + _nr) : (_nr + ' unscored')) + '</span>') : '')
+             + '</small>';
+      }
+    }catch(_){}
+
+    /* [v1500] 이번 달 리포트 — 이미 브라우저에 있는 것만 센다. 네트워크에 안 간다. */
+    var repV = '<span class="dim">—</span>';
+    try{
+      var _ym = new Date(Date.now() + 9*3600000).toISOString().slice(0,7);
+      /* 명함 머리의 name 은 _pcFriendlyStaffName 이 'Mr.' 를 뗀 것이다(Mr.Mapo → Mapo).
+         리포트의 booster 는 'Mr.Mapo' 그대로다. 양쪽에서 같이 떼야 맞는다. */
+      var _st = function(x){ return String(x || '').toLowerCase()
+                    .replace(/^\s*(mrs|mr|ms)\.?\s*/, '').trim().split(/\s+/)[0] || ''; };
+      var _k = _st(s.name || name);
+      var _rr = (typeof _rcGetCache === 'function' ? (_rcGetCache() || {}).reports : null) || [];
+      var _n = 0, _last = '';
+      for(var _i = 0; _i < _rr.length; _i++){ var _r = _rr[_i]; if(!_r) continue;
+        if(_st(_r.booster) !== _k) continue;
+        var _d2 = String(_r.date || ''); if(_d2.slice(0,7) !== _ym) continue;
+        _n++; if(_d2 > _last) _last = _d2; }
+      repV = _n ? ('<span class="sp-left">' + _n + (L ? '건' : '') + '</span><small>' + (L ? '마지막 ' : 'last ') + md(_last) + '</small>')
+                : ('<span class="dim">' + (L ? '이번 달 0건' : 'none this month') + '</span>');
+    }catch(_){}
+
+    /* [v1500] 경고 · 트러스트 — 점수판이 이미 들고 있는 값 */
+    var trV = '<span class="dim">—</span>';
+    try{
+      var _t0 = (typeof TRUST_DATA !== 'undefined' && TRUST_DATA[s.id]) || null;
+      if(_t0){
+        var _w = Number(_t0.warn_pts) || 0, _tp = Number(_t0.trust_pts) || 0;
+        trV = (_w ? ('<span class="sp-left" style="color:var(--re,#e0504a)">⚠ ' + _w + '</span>') : '<span class="sp-ok">⚠ 0</span>')
+            + '<small>' + (L ? '트러스트 ' : 'trust ') + _tp + '</small>';
+      }
+    }catch(_){}
     return '<div class="sp-hd" style="--sp-c:' + col + '">'
       + '<div class="sp-av" style="background:' + col + '">' + esc(ini) + '</div>'
       + '<div><div class="sp-nm">' + esc(name) + '</div><div class="sp-sub">' + (pos ? '<b>' + esc(pos) + '</b>' : '') + (p ? '<span class="sp-pc">PC-' + p2(p.id) + '</span>' : '') + (game ? '<span>' + game + '</span>' : '') + '</div></div>'
@@ -73558,6 +73602,18 @@ console.info('AUTO100 build applied',AUTO100_BUILD.version,v3Audit());
       + row(L ? '온 지' : 'Since', sinceV)
       + row(L ? '보호 7일' : 'Shield 7d', protV)
       + row(L ? '수습 30일' : 'Trial 30d', probV)
+      /* ═══ [v1500] 명함에 네 줄 — 화면을 합치는 대신 명함을 채운다 ═══════════════
+         한 사람을 보려고 화면 넷(채용·온보딩·직원목록·점수판)을 돌던 것이 로드맵 3번이다.
+         넷을 하나로 뭉치면 그 하나가 무거워진다 — 온보딩에서 방금 겪었다(v1483→v1495).
+         그래서 합치지 않고, 이미 있는 명함에 네 줄만 얹는다. 요소를 새로 만들지 않는다.
+         명함은 요약이고 문이지 집이 아니다 — 한 화면을 넘기면 그때 '자세히' 로 보낸다.
+         이 넷은 OP TEAM 에게만 보인다. 급여와 경고는 옆자리가 볼 것이 아니다
+         (DB 쪽도 v1484 에서 같이 막았다 — 화면만 가리는 것이 아니다). */
+      + (canMore ? (
+          row(L ? '이번 달' : 'This month', payV)
+        + row(L ? '리포트' : 'Reports', repV)
+        + row(L ? '경고 · 트러스트' : 'Warn · Trust', trV)
+        ) : '')
       + '</div>'
       + (canMore ? '<div class="sp-ft"><a onclick="_spClose();try{openStaffDetail(\'' + esc(s.id) + '\')}catch(_){}">' + (L ? '자세히 →' : 'Details →') + '</a></div>' : '<div style="height:6px"></div>');
   }
@@ -73572,14 +73628,18 @@ console.info('AUTO100 build applied',AUTO100_BUILD.version,v3Audit());
     requestAnimationFrame(function(){ E.b.classList.add('open'); E.c.classList.add('open'); });
     /* 살아 있는 것들은 뒤에서 채운다 — 마지막 출근 기록, 가입일, [v1424] 첫 출근 기록 */
     (async function(){
-      var live = { att: null, created: null, first: null };
+      var live = { att: null, created: null, first: null, pay: undefined };
       try{ if(typeof sb !== 'undefined' && sb){
         var q1 = sb.from('attendance').select('date,clock_in,clock_out,break_start,break_end').eq('user_id', s.id).order('clock_in', { ascending:false }).limit(1);
         var q2 = sb.from('user_profiles').select('created_at').eq('id', s.id).maybeSingle();
         /* [v1424] 이 사람의 가장 이른 출근 기록 — '온 지 며칠'의 근거로 가입일보다 훨씬 낫다.
            가입일은 웹 계정을 만든 날이라 일하기 시작한 날과 몇 주씩 벌어진다. */
         var q3 = sb.from('attendance').select('date').eq('user_id', s.id).order('date', { ascending:true }).limit(1);
-        var rs = await Promise.all([q1, q2, q3]);
+        /* [v1500] 이번 달 저금통 한 줄. 못 읽으면(권한 없음) 조용히 넘어간다 — 화면이 안 깨진다. */
+        var _ym0 = new Date(Date.now() + 9*3600000).toISOString().slice(0,7);
+        var q4 = sb.from('pay_month_v').select('total,days,no_report_days').eq('user_id', s.id).eq('ym', _ym0).maybeSingle();
+        var rs = await Promise.all([q1, q2, q3, q4.then(function(x){ return x; }, function(){ return null; })]);
+        try{ live.pay = (rs[3] && rs[3].data) ? rs[3].data : null; }catch(_){ live.pay = null; }
         live.att = (rs[0] && rs[0].data && rs[0].data[0]) || null;
         live.created = (rs[1] && rs[1].data && rs[1].data.created_at) || null;
         live.first = (rs[2] && rs[2].data && rs[2].data[0] && rs[2].data[0].date) || null;
