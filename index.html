@@ -4,7 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
 <title>ARASAKA Corp</title>
-<!-- BUILD: v1506 | 클라별 카드 테두리도 게임 색 — 리니지 보라 · 메이플 주황, 케어는 색 대신 세기로 -->
+<!-- BUILD: v1507 | 앉아서 일하는데 리포트가 0건인 사람을 실시간 직원 현황이 말한다 -->
 <!-- v745 기록은 git 이력(v1302 이전 커밋)에 있다 — 100KB 변경사 주석을 배포에서 제거 -->
 <!-- [v677] a <link href> cannot read a CSS variable, so the favicon carries its own copy.
      64px: a browser tab draws it at 16-32px, so this is 2x-DPR sharp at 11KB. -->
@@ -338,6 +338,9 @@ body{font-family:'Inter',-apple-system,sans-serif;font-size:var(--t-body);line-h
 .att-sb-card.att-sb-ro:hover{transform:none}
 .att-sb-noseat{font-size:9px;font-weight:700;white-space:nowrap;padding:2px 6px;border-radius:5px;
   color:var(--ac-strong,#c2a04a);background:var(--ac-bg,rgba(194,160,74,.14));border:1px solid var(--ac-bord,rgba(194,160,74,.35))}
+/* [v1507] 앉아서 일하는데 리포트가 한 건도 없는 사람 - 자리 없음(금색)보다 급하다 */
+.att-sb-norep{font-size:9px;font-weight:800;white-space:nowrap;padding:2px 6px;border-radius:5px;
+  color:#e0604a;background:rgba(224,96,74,.13);border:1px solid rgba(224,96,74,.42)}
 /* 실시간 직원 현황 보드 (채용 칸반 미니) */
 .att-sb-section{margin:20px 0 16px}
 .att-sb-title{font-size:12px;font-weight:700;color:var(--tx);margin-bottom:9px}
@@ -19765,8 +19768,53 @@ async function renderAttendance(){
       try{ (typeof PCS !== 'undefined' ? PCS : []).forEach(function(p){
         (p.assignments || []).forEach(function(a){ if(a && a.staff) o[String(a.staff)] = 1; }); }); }catch(_){}
       return o; })();
+    /* ═══ [v1507] 앉아서 일하는데 리포트가 한 건도 없는 사람 ═════════════════
+       v1502 가 "자리가 없는 사람"을 말하게 했다. 그 반대쪽 구멍이 남아 있었다 -
+       자리도 있고 고객도 붙었는데 리포트를 한 건도 안 올리는 사람이다.
+       Zacky - Kal - Shuri - El 이 전부 이 구멍으로 몇 주씩 빠졌다.
+
+       기존 빠짐 검사는 체크인이 있어야 돈다. 체크인을 안 한 사람은 검사 자체에
+       안 걸린다(그게 Shuri - El 이 몇 주 조용했던 이유다). 그래서 여기서는
+       체크인을 안 본다 - 출퇴근 기록과 PC 격자만 본다. 둘 다 이 화면이 이미 알고 있다.
+
+       사람을 탓하는 표시이므로 틀리면 안 된다. 세 겹으로 조심한다.
+         1. 리포트 사본이 없거나 45분보다 낡았으면 **아무 말도 안 한다**
+         2. 자리에 고객이 안 붙은 PC 는 뺀다 - 빈 PC 는 원래 쓸 것이 없다
+         3. 출근 두 시간이 지나야 센다 - 막 온 사람을 부르지 않는다 */
+    const _sbNm = function(n){ return String(n||'').toLowerCase().replace(/^\s*(mr|ms|mrs)(\.|\s)\s*/,'').trim().split(/\s+/)[0] || ''; };
+    const _repToday = (function(){
+      try{
+        var z = (typeof _rcGetCache === 'function') ? _rcGetCache() : null;
+        if(!z || !Array.isArray(z.reports)) return null;
+        if(!(Number(z.t) > 0) || (Date.now() - Number(z.t)) > 45*60000) return null;
+        var d = new Date(Date.now() + 9*3600000).toISOString().slice(0,10);
+        var o = {};
+        z.reports.forEach(function(r){
+          if(!r || String(r.date||'').slice(0,10) !== d) return;
+          var k = _sbNm(r.booster); if(k) o[k] = (o[k]||0) + 1;
+        });
+        return o;
+      }catch(_){ return null; }
+    })();
+    const _seatCli = (function(){ var o = {};
+      try{ (typeof PCS !== 'undefined' ? PCS : []).forEach(function(p){
+        if(!p || !Array.isArray(p.clients) || !p.clients.length) return;
+        (p.assignments || []).forEach(function(a){ if(a && a.staff) o[String(a.staff)] = p.id; }); }); }catch(_){}
+      return o; })();
+    const _inHrs = function(id){ try{ var r = byUser[id];
+      if(!r || !r.clock_in) return 0;
+      return (Date.now() - new Date(r.clock_in).getTime()) / 3600000; }catch(_){ return 0; } };
+    const _noRep = function(m){
+      if(!_repToday) return false;
+      if(m.status !== 'online' && m.status !== 'break') return false;
+      if(!_seatCli[String(m.id)]) return false;
+      if(_inHrs(m.id) < 2) return false;
+      return !_repToday[_sbNm(m.name)];
+    };
+
     const miniCard = (m, accent) => {
       const noSeat = (m.status === 'online' || m.status === 'break' || m.status === 'down') && !_seated[String(m.id)];
+      const noRep = _noRep(m);
       const meta = m.meta || (m.pc && m.pc !== '—' ? m.pc : (m.shift||'').split('(')[0].trim());
       const dotCls = m.status === 'down' ? 'down' : m.status === 'break' ? 'break' : (m.status==='offline'||m.status==='off') ? 'off' : 'on';
       return `<div class="att-sb-card att-sb-${dotCls}${_sbEdit?'':' att-sb-ro'}"${_sbEdit ? ` draggable="true"
@@ -19778,6 +19826,7 @@ async function renderAttendance(){
         </span>
         <span class="att-sb-name">${m.name}</span>
         ${noSeat ? `<span class="att-sb-noseat" title="${_uiLang()==='ko'?'출근했는데 PC 격자에 자리가 없습니다 — 자동 마감·교대·대타가 이 격자를 봅니다':'Clocked in but has no slot on the PC grid'}">자리 없음</span>` : ''}
+        ${noRep ? `<span class="att-sb-norep" title="${_uiLang()==='ko'?('PC-'+pad2(_seatCli[String(m.id)])+' 에 고객이 붙어 있고 출근한 지 '+Math.floor(_inHrs(m.id))+'시간이 지났는데 오늘 리포트가 한 건도 없습니다'):('Seated at PC-'+pad2(_seatCli[String(m.id)])+' with a client, '+Math.floor(_inHrs(m.id))+'h since clock-in, but no report today')}">${_uiLang()==='ko'?'리포트 0':'no report'}</span>` : ''}
         <span class="att-sb-meta">${meta}</span>
       </div>`;
     };
@@ -19797,6 +19846,9 @@ async function renderAttendance(){
       <div class="att-sb-title">실시간 직원 현황 <span class="att-sb-hint">${_sbEdit ? '드래그로 상태 변경' : '보기 전용'}</span>${(function(){
         try{ var n = working.concat(resting, downed).filter(function(m){ return !_seated[String(m.id)]; }).length;
              return n ? ('<span class="att-sb-noseat" style="margin-left:8px">' + (_uiLang()==='ko' ? ('자리 없음 ' + n + '명') : (n + ' without a slot')) + '</span>') : ''; }catch(_){ return ''; }
+      })()}${(function(){
+        try{ var n = working.concat(resting).filter(_noRep).length;
+             return n ? ('<span class="att-sb-norep" style="margin-left:6px">' + (_uiLang()==='ko' ? ('리포트 0 ' + n + '명') : (n + ' with no report')) + '</span>') : ''; }catch(_){ return ''; }
       })()}</div>
       <div class="att-sb-board">
         ${col('근무 중', '🟢', working, '#3aa05a', 'online')}
