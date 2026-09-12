@@ -4,7 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
 <title>ARASAKA Corp</title>
-<!-- BUILD: v1509 | 리포트 0 오탐 수리 - 사본이 오늘을 모르면 아무 말도 안 한다 + 클라별 우클릭에 리포트 쓰기 -->
+<!-- BUILD: v1510 | 리포트 단추를 클라 카드 바닥에 크게 - 내 카드는 꽉 찬 단추 -->
 <!-- v745 기록은 git 이력(v1302 이전 커밋)에 있다 — 100KB 변경사 주석을 배포에서 제거 -->
 <!-- [v677] a <link href> cannot read a CSS variable, so the favicon carries its own copy.
      64px: a browser tab draws it at 16-32px, so this is 2x-DPR sharp at 11KB. -->
@@ -9999,6 +9999,32 @@ html .cs-ed-dialnum.bump-up .h.up,html .cs-ed-dialnum.bump-dn .h.dn{opacity:1}
    잃는 것이 없다. 신규(청록)는 게임과 다른 축이라 그대로 이긴다.
 
    아래 세 줄(new · care)이 이 규칙을 덮어쓰도록 **일부러 이 위에** 둔다. */
+/* ═══ [v1510] 리포트 단추는 카드에 크게 ══════════════════════════════════════
+   사장님 "그냥 리포트는 버튼을 카드에 퀄리티 좋고 크게 달아두는게 맞는것 같은데?"
+   맞다. 우클릭(v1508)은 숨은 길이고, 리포트는 부주가 한 시간에 한 번 누르는 것이다.
+   하루에 여덟 번 누르는 단추를 메뉴 안에 숨겨 두면 안 된다.
+
+   색은 카드의 게임 색을 그대로 쓴다(보라=리니지 · 주황=메이플) - 새 색을 만들지 않는다.
+   내 카드면 꽉 찬 단추로, 남의 카드면 테두리만. 판에 단추 스물다섯 개가 한꺼번에
+   소리치지 않게 하면서, 정작 내가 눌러야 할 하나는 멀리서도 보이게. */
+#sr-app .sr-clrep{margin-top:auto;width:100%;height:36px;flex:none;
+  display:flex;align-items:center;justify-content:center;gap:7px;
+  margin-bottom:-1px;border-radius:10px;cursor:pointer;
+  font-weight:800;font-size:12.5px;line-height:1;letter-spacing:-.01em;font-family:inherit;
+  background:transparent;border:1px solid var(--rep-c,#8a8a86);color:var(--rep-c,#8a8a86);
+  transition:background .15s,color .15s,transform .12s,box-shadow .15s,border-color .15s}
+#sr-app .sr-clrep-sp{height:10px;flex:none}
+#sr-app .sr-clcard-li .sr-clrep{--rep-c:#b074ec}
+#sr-app .sr-clcard-mp .sr-clrep{--rep-c:#e58e51}
+#sr-app .sr-clrep:hover{background:var(--rep-c);color:#14120f;transform:translateY(-1px)}
+#sr-app .sr-clrep:active{transform:translateY(0)}
+#sr-app .sr-clrep:focus-visible{outline:2px solid var(--rep-c);outline-offset:2px}
+#sr-app .sr-clcard-li .sr-clrep.mine{background:#b074ec;border-color:#b074ec;color:#14120f;box-shadow:0 3px 15px rgba(176,116,236,.34)}
+#sr-app .sr-clcard-mp .sr-clrep.mine{background:#e58e51;border-color:#e58e51;color:#14120f;box-shadow:0 3px 15px rgba(229,142,81,.34)}
+#sr-app .sr-clrep.mine:hover{filter:brightness(1.08);transform:translateY(-1px)}
+/* 뒷면(기준 고치는 면)으로 뒤집혀 있으면 단추는 안 보인다 - 뒷면은 읽고 고치는 면이다 */
+#sr-app .sr-clcard.flipped .sr-clrep{visibility:hidden}
+@media (prefers-reduced-motion:reduce){#sr-app .sr-clrep{transition:none}#sr-app .sr-clrep:hover{transform:none}}
 #sr-app .sr-clcard-li{border-color:rgba(176,116,236,.42)}
 #sr-app .sr-clcard.sr-clcard-li:hover{border-color:var(--g-lineage,#b074ec)}
 /* 케어 — 색이 아니라 세기로 말한다 (게임 색 유지) */
@@ -40247,6 +40273,7 @@ function _srRecCardHTML(data){
               + (_newDays!=null?'<b>◌ '+(_kl?'아직 기준 정하는 중':'Standard pending')+'</b>':'<b>⚠ 기준 없음</b>')+'<span>'+o.noStd+(_kl?'시간 안 세짐':'h unscored')+'</span>'
               + '<em>'+few+'</em></div>';
        })()
+      +((typeof _mcReportBtn==='function')?_mcReportBtn(o.client||c,o.pc):'')   /* [v1510] 리포트 단추 - 앞면 맨 바닥 */
       +'</div>'                       /* ← 앞면 끝 */
       +'<div class="sr-clface sr-clback" data-cl="'+esc(o.client||c)+'"></div>'
       +'</div></div>';                /* ← 뒤집기 껍데기 · 카드 끝 */
@@ -73334,6 +73361,41 @@ console.info('AUTO100 build applied',AUTO100_BUILD.version,v3Audit());
   };
   /* [v1403] 오늘 채운 칸 — 시작(체크인)부터 지금(또는 끝)까지 한 시간마다 점 하나. 리포트가 있으면 찬 점, 없으면 빈 점(구멍),
      지금 지나는 시간은 흐린 점. 리더가 클라별만 훑어도 누가 어디를 비웠는지 보인다. 오늘 줄이 없는 카드엔 아무것도 없다. */
+  /* [v1510] 카드 바닥의 리포트 단추. 내 카드면 꽉 찬 단추.
+     '내 카드' = ① 최근 12시간 안에 내가 이 카드로 리포트를 냈다(체크아웃 뒤는 아님)
+                 또는 ② PC 격자에서 이 PC 가 내 자리다. 둘 중 하나면 된다. */
+  window._mcReportBtn = function(clientName, pc){
+    try{
+      var k = ko(), mine = false;
+      try{
+        var rs = recentFor(clientName, pc);
+        if(rs.length){
+          var b = rs[rs.length - 1];
+          if(b.ms >= Date.now() - 12*3600000 && b.tag !== 'checkout' && nmKey(b.name) === meKey()) mine = true;
+        }
+      }catch(_){}
+      if(!mine){ try{
+        var n = pcNum(pc);
+        if(n && typeof PCS !== 'undefined' && Array.isArray(PCS)){
+          PCS.forEach(function(p){ if(!p || Number(p.id) !== n) return;
+            (p.assignments || []).forEach(function(a){
+              if(!a || !a.staff) return;
+              var st = (typeof staffById === 'function') ? staffById(a.staff) : null;
+              if(nmKey(st ? st.name : '') === meKey()) mine = true; }); });
+        }
+      }catch(_){} }
+      var esc2 = function(x){ return String(x == null ? '' : x).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;'); };
+      return '<div class="sr-clrep-sp"></div>'
+        + '<button type="button" class="sr-clrep' + (mine ? ' mine' : '') + '"'
+        + ' onclick="event.stopPropagation();_mcOpen(this.dataset.nm,this.dataset.pc)"'
+        + ' ondblclick="event.stopPropagation()"'
+        + ' onmousedown="event.stopPropagation()"'
+        + ' data-nm="' + esc2(clientName) + '" data-pc="' + esc2(pc == null ? '' : pc) + '"'
+        + ' title="' + esc2(k ? (mine ? '내가 맡은 카드예요 - 눌러서 이번 시간 리포트를 씁니다' : '이 클라 리포트를 씁니다')
+                              : (mine ? 'Your card - write this hour report' : 'Write a report for this client')) + '">'
+        + '✍ ' + (k ? '리포트 쓰기' : 'Write report') + '</button>';
+    }catch(_){ return ''; }
+  };
   window._mcDotsHTML = function(clientName, pc){
     try{
       var rs = recentFor(clientName, pc); if(!rs.length) return '';
