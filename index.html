@@ -4,7 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
 <title>ARASAKA Corp</title>
-<!-- BUILD: v1510 | 리포트 단추를 클라 카드 바닥에 크게 - 내 카드는 꽉 찬 단추 -->
+<!-- BUILD: v1511 | 리포트 단추에서 색을 뺀다 - 카드 테두리가 이미 게임 색이라 두 번 칠한 꼴이었다 -->
 <!-- v745 기록은 git 이력(v1302 이전 커밋)에 있다 — 100KB 변경사 주석을 배포에서 제거 -->
 <!-- [v677] a <link href> cannot read a CSS variable, so the favicon carries its own copy.
      64px: a browser tab draws it at 16-32px, so this is 2x-DPR sharp at 11KB. -->
@@ -10004,24 +10004,29 @@ html .cs-ed-dialnum.bump-up .h.up,html .cs-ed-dialnum.bump-dn .h.dn{opacity:1}
    맞다. 우클릭(v1508)은 숨은 길이고, 리포트는 부주가 한 시간에 한 번 누르는 것이다.
    하루에 여덟 번 누르는 단추를 메뉴 안에 숨겨 두면 안 된다.
 
-   색은 카드의 게임 색을 그대로 쓴다(보라=리니지 · 주황=메이플) - 새 색을 만들지 않는다.
-   내 카드면 꽉 찬 단추로, 남의 카드면 테두리만. 판에 단추 스물다섯 개가 한꺼번에
-   소리치지 않게 하면서, 정작 내가 눌러야 할 하나는 멀리서도 보이게. */
+   ═══ [v1511] 색을 뺀다 ═══════════════════════════════════════════════════
+   사장님 "리포트 쓰기 버튼은 색 입히지 말고 - 너무 보라색이라서"
+   맞다. v1510 은 단추에도 게임 색을 줬는데, 카드 테두리가 이미 그 색이다.
+   같은 색을 한 판에 두 번 칠하니 화면이 통째로 보라가 됐다.
+   게임 색은 **카드가 무엇이냐**를 말하는 자리고, 단추는 **무엇을 하느냐**다. 다른 말이다.
+
+   그래서 단추에서 색을 전부 뺀다. 남의 카드는 흐린 테두리, 내 카드는 **꽉 찬 흰 단추**.
+   색조가 하나도 없어도(아니, 없어서) 내 것 하나는 판에서 제일 먼저 보인다 -
+   어두운 카드 위의 흰 덩어리보다 눈에 띄는 것은 없다. 밝은 테마에서는 저절로 뒤집힌다. */
 #sr-app .sr-clrep{margin-top:auto;width:100%;height:36px;flex:none;
   display:flex;align-items:center;justify-content:center;gap:7px;
   margin-bottom:-1px;border-radius:10px;cursor:pointer;
-  font-weight:800;font-size:12.5px;line-height:1;letter-spacing:-.01em;font-family:inherit;
-  background:transparent;border:1px solid var(--rep-c,#8a8a86);color:var(--rep-c,#8a8a86);
+  font-weight:700;font-size:12.5px;line-height:1;letter-spacing:-.01em;font-family:inherit;
+  background:transparent;border:1px solid var(--br2,#2f2f2d);color:var(--tx3,#8a8a86);
   transition:background .15s,color .15s,transform .12s,box-shadow .15s,border-color .15s}
 #sr-app .sr-clrep-sp{height:10px;flex:none}
-#sr-app .sr-clcard-li .sr-clrep{--rep-c:#b074ec}
-#sr-app .sr-clcard-mp .sr-clrep{--rep-c:#e58e51}
-#sr-app .sr-clrep:hover{background:var(--rep-c);color:#14120f;transform:translateY(-1px)}
-#sr-app .sr-clrep:active{transform:translateY(0)}
-#sr-app .sr-clrep:focus-visible{outline:2px solid var(--rep-c);outline-offset:2px}
-#sr-app .sr-clcard-li .sr-clrep.mine{background:#b074ec;border-color:#b074ec;color:#14120f;box-shadow:0 3px 15px rgba(176,116,236,.34)}
-#sr-app .sr-clcard-mp .sr-clrep.mine{background:#e58e51;border-color:#e58e51;color:#14120f;box-shadow:0 3px 15px rgba(229,142,81,.34)}
-#sr-app .sr-clrep.mine:hover{filter:brightness(1.08);transform:translateY(-1px)}
+#sr-app .sr-clrep:hover{background:var(--bg-i,#1a1a1a);border-color:var(--tx3,#6c6b66);color:var(--tx,#e6e5e2)}
+#sr-app .sr-clrep:active{transform:translateY(1px)}
+#sr-app .sr-clrep:focus-visible{outline:2px solid var(--tx2,#989792);outline-offset:2px}
+/* 내 카드 - 색조 없이 밝기만으로 말한다 */
+#sr-app .sr-clrep.mine{font-weight:800;background:var(--tx,#e6e5e2);border-color:var(--tx,#e6e5e2);
+  color:var(--bg-c,#161616);box-shadow:0 2px 12px rgba(0,0,0,.34)}
+#sr-app .sr-clrep.mine:hover{filter:brightness(.93);transform:translateY(-1px)}
 /* 뒷면(기준 고치는 면)으로 뒤집혀 있으면 단추는 안 보인다 - 뒷면은 읽고 고치는 면이다 */
 #sr-app .sr-clcard.flipped .sr-clrep{visibility:hidden}
 @media (prefers-reduced-motion:reduce){#sr-app .sr-clrep{transition:none}#sr-app .sr-clrep:hover{transform:none}}
