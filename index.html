@@ -4,7 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
 <title>ARASAKA Corp</title>
-<!-- BUILD: v1535 | 깜빡임 방지가 제 표식을 지우고 있었다 -->
+<!-- BUILD: v1539 | 어느 칸에서 시간을 고쳐도 격자 유리가 바로 따라온다 -->
 <!-- v745 기록은 git 이력(v1302 이전 커밋)에 있다 — 100KB 변경사 주석을 배포에서 제거 -->
 <!-- [v677] a <link href> cannot read a CSS variable, so the favicon carries its own copy.
      64px: a browser tab draws it at 16-32px, so this is 2x-DPR sharp at 11KB. -->
@@ -9044,6 +9044,29 @@ html[data-theme=light] #ag-wrap .ag-track{background:rgba(0,0,0,.04);
   animation:agGhIn .19s cubic-bezier(.2,.9,.25,1.05) both}
 #ag-wrap .ag-gh .gh-h{margin-left:auto;font-weight:700;opacity:.85}
 #ag-wrap .ag-gh.swapback{--gc:#a98fd6}
+/* ═══ [v1537] 떠난 자리 — 좌우로 얼마나 움직였나 ══════════════════════════════
+   사장님 "배정격자 옮기는거 흐릿하게 보이는거 좋은데, 좌우도 표시해줘야지
+          지금은 상하밖에 표시가 안되니까"
+
+   맞다. v1532 는 **줄을 바꿀 때만** 미리보기를 깔았다. 같은 줄에서 시간만 좌우로
+   밀면 막대가 손을 따라 움직이니 '지금 몇 시' 는 보이지만, **원래 몇 시였는지**
+   가 사라진다. 그래서 두 시간을 밀었는지 다섯 시간을 밀었는지 감이 안 온다.
+
+   떠난 자리에 **속이 빈 테두리**를 남긴다. 유리(채워진 것)와 반대말이다 —
+   채워진 것은 '갈 자리', 빈 것은 '있던 자리'. 가운데에 몇 시간 움직였는지 적는다. */
+#ag-wrap .ag-gh.from{
+  z-index:3;background:none;-webkit-backdrop-filter:none;backdrop-filter:none;
+  justify-content:center;color:rgba(255,255,255,.72);
+  box-shadow:inset 0 0 0 1px rgba(255,255,255,.34),inset 0 0 0 2px rgba(0,0,0,.28)}
+#ag-wrap .ag-gh.from .gh-d{
+  font-size:9.5px;font-weight:800;letter-spacing:.02em;
+  padding:1px 5px;border-radius:4px;
+  background:rgba(20,20,22,.72);color:#fff;
+  box-shadow:inset 0 0 0 1px rgba(255,255,255,.22)}
+html[data-theme=light] #ag-wrap .ag-gh.from{
+  color:rgba(0,0,0,.6);
+  box-shadow:inset 0 0 0 1px rgba(0,0,0,.3),inset 0 0 0 2px rgba(255,255,255,.5)}
+html[data-theme=light] #ag-wrap .ag-gh.from .gh-d{background:rgba(255,255,255,.9);color:#1a1a1a}
 @keyframes agGhIn{from{opacity:0;transform:scale(.94)}to{opacity:1;transform:scale(1)}}
 @media (prefers-reduced-motion:reduce){#ag-wrap .ag-gh{animation:none}}
 /* [v1333] 🛟 Cover 를 받을 막대 — 손에 든 것과 같은 파랑(.cover-grab)으로 말한다.
@@ -9356,15 +9379,17 @@ html[data-theme=light] #ag-reason{background:rgba(255,255,255,.99);border-color:
     inset 0 0 0 1px rgba(255,255,255,.26),
     inset 0 1px 0 rgba(255,255,255,.7),
     inset 0 -1px 0 rgba(0,0,0,.32),
-    0 4px 13px rgba(0,0,0,.4);
-  animation:agNeed 5.5s ease-in-out infinite}
+    0 4px 13px rgba(0,0,0,.4)}
+/* [v1536] 숨쉬기(agNeed)를 뺐다. 깜빡이는 것은 '나 방금 생겼어' 라는 말이고,
+   이 유리는 처음부터 거기 있던 것이다. 늘 있는 것은 숨을 안 쉰다.
+   빛줄기만 남긴다 — 그건 '생겼다' 가 아니라 '유리다' 라는 말이다. */
 /* ③ 표면을 비껴 지나가는 빛줄기 — 가늘고 또렷하게. 굵고 뿌예지면 얼룩으로 읽힌다 */
 #ag-wrap .ag-need::after{
   content:'';position:absolute;top:-60%;bottom:-60%;width:14%;left:-20%;pointer-events:none;
   background:linear-gradient(106deg,transparent 0,rgba(255,255,255,.62) 46%,rgba(255,255,255,.18) 62%,transparent 100%);
   filter:blur(.6px);
   animation:agSheen 9s cubic-bezier(.45,0,.55,1) infinite}
-@keyframes agNeed{0%,100%{opacity:.9}50%{opacity:1}}
+
 @keyframes agSheen{0%{left:-20%}52%,100%{left:112%}}
 @media (prefers-reduced-motion:reduce){#ag-wrap .ag-need::after{animation:none;opacity:.18;left:30%}}
 /* 밝은 테마 — 빛이 아니라 그늘로 두께를 만든다 */
@@ -9431,6 +9456,76 @@ body.pcboxes-on .pbox .s-chip{transition:transform .14s var(--ease),
 .cs-wrap>div[style*="margin:-2px 0 14px"]>button{padding:5px 10px!important;font-size:10.5px!important;border-radius:8px!important}
 .cs-wrap>div[style*="margin:-2px 0 14px"]>span{display:none!important}   /* 시드 설명 — 버튼 툴팁으로 충분 */
 .cs-grid{margin-top:10px}
+/* ═══ [v1538] 격자에서 바로 정하는 운영시간 창 — 유리 언어 그대로 ═══════════
+   판 위에 뜨는 것이므로 뒤가 진짜로 비친다(유리가 제 값을 하는 유일한 자리다).
+   위쪽 한 줄 빛 · 아래 그늘 · 넓은 그림자 — 격자의 유리와 같은 문법. */
+#ag-hrs{position:fixed;inset:0;z-index:4300;display:flex;align-items:center;justify-content:center}
+#ag-hrs .aghr-bg{position:absolute;inset:0;background:rgba(6,6,8,.52);
+  -webkit-backdrop-filter:blur(3px);backdrop-filter:blur(3px)}
+#ag-hrs .aghr-box{position:relative;width:min(340px,92vw);padding:16px 16px 14px;border-radius:18px;
+  background:linear-gradient(180deg,rgba(46,48,56,.82) 0,rgba(26,27,32,.9) 100%);
+  -webkit-backdrop-filter:blur(22px) saturate(170%);backdrop-filter:blur(22px) saturate(170%);
+  box-shadow:inset 0 1px 0 rgba(255,255,255,.3),inset 0 -1px 0 rgba(0,0,0,.4),
+             0 24px 60px rgba(0,0,0,.6),0 0 0 1px rgba(255,255,255,.1);
+  animation:aghrIn .22s cubic-bezier(.2,.9,.25,1.03) both}
+@keyframes aghrIn{from{opacity:0;transform:translateY(8px) scale(.97)}to{opacity:1;transform:none}}
+#ag-hrs .aghr-hd{display:flex;align-items:center;gap:8px;margin-bottom:13px}
+#ag-hrs .aghr-hd b{font-size:14px;font-weight:800;color:#fff;letter-spacing:-.01em}
+#ag-hrs .aghr-hd span{font-size:12px;color:rgba(255,255,255,.62);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+#ag-hrs .aghr-x{margin-left:auto;flex:none;width:26px;height:26px;border:0;border-radius:9px;cursor:pointer;
+  background:rgba(255,255,255,.09);color:rgba(255,255,255,.7);font-size:12px;font-family:inherit;
+  transition:background .15s,color .15s}
+#ag-hrs .aghr-x:hover{background:rgba(255,255,255,.18);color:#fff}
+/* 24시간 띠 — 격자와 같은 눈금 */
+#ag-hrs .aghr-strip{position:relative;height:26px;border-radius:8px;overflow:hidden;margin-bottom:14px;
+  background:rgba(0,0,0,.32);
+  background-image:repeating-linear-gradient(90deg,transparent 0,transparent calc(100%/24 - 1px),rgba(255,255,255,.07) calc(100%/24 - 1px),rgba(255,255,255,.07) calc(100%/24));
+  box-shadow:inset 0 0 0 1px rgba(255,255,255,.08)}
+#ag-hrs .aghr-strip i{position:absolute;top:3px;bottom:3px;border-radius:5px;
+  background:linear-gradient(180deg,rgba(255,255,255,.3) 0,rgba(255,255,255,.1) 50%,rgba(226,196,130,.14) 100%);
+  box-shadow:inset 0 0 0 1px rgba(255,255,255,.3),inset 0 1px 0 rgba(255,255,255,.62);
+  transition:left .18s cubic-bezier(.16,1,.3,1),width .18s cubic-bezier(.16,1,.3,1)}
+#ag-hrs .aghr-strip u{position:absolute;top:0;bottom:0;width:1.5px;background:rgba(255,255,255,.6);
+  transition:left .18s cubic-bezier(.16,1,.3,1)}
+#ag-hrs .aghr-rows{display:flex;flex-direction:column;gap:8px}
+#ag-hrs .aghr-r{display:flex;align-items:center;gap:8px}
+#ag-hrs .aghr-l{flex:none;width:34px;font-size:11px;font-weight:700;color:rgba(255,255,255,.55)}
+#ag-hrs .aghr-r b{flex:1;text-align:center;font-size:17px;font-weight:800;color:#fff;
+  font-variant-numeric:tabular-nums;letter-spacing:-.01em}
+#ag-hrs .aghr-r button{flex:none;width:34px;height:34px;border:0;border-radius:11px;cursor:pointer;
+  background:rgba(255,255,255,.1);color:#fff;font-size:16px;font-weight:700;font-family:inherit;
+  box-shadow:inset 0 1px 0 rgba(255,255,255,.2);
+  transition:background .14s,transform .1s}
+#ag-hrs .aghr-r button:hover{background:rgba(255,255,255,.2)}
+#ag-hrs .aghr-r button:active{transform:scale(.93)}
+#ag-hrs .aghr-sum{display:flex;align-items:baseline;gap:9px;margin:13px 0 14px}
+#ag-hrs .aghr-sum b{font-size:14px;font-weight:800;color:#ffd79a}
+#ag-hrs .aghr-sum span{font-size:11px;color:rgba(255,255,255,.5)}
+#ag-hrs .aghr-btns{display:flex;gap:8px}
+#ag-hrs .aghr-b{flex:1;height:38px;border:0;border-radius:12px;cursor:pointer;
+  font-size:12.5px;font-weight:800;font-family:inherit;
+  background:rgba(255,255,255,.1);color:rgba(255,255,255,.82);
+  box-shadow:inset 0 1px 0 rgba(255,255,255,.18);
+  transition:background .14s,transform .1s,color .14s}
+#ag-hrs .aghr-b:hover{background:rgba(255,255,255,.19);color:#fff}
+#ag-hrs .aghr-b:active{transform:scale(.985)}
+#ag-hrs .aghr-b.go{background:linear-gradient(180deg,#f0c274,#d69a3c);color:#241703;
+  box-shadow:inset 0 1px 0 rgba(255,255,255,.5),0 3px 12px rgba(214,154,60,.32)}
+#ag-hrs .aghr-b.go:hover{filter:brightness(1.07)}
+#ag-hrs .aghr-b.del{flex:0 0 78px;color:#f09a90;background:rgba(224,90,77,.14)}
+#ag-hrs .aghr-b.del:hover{background:rgba(224,90,77,.26);color:#ffb8b0}
+html[data-theme=light] #ag-hrs .aghr-box{
+  background:linear-gradient(180deg,rgba(255,255,255,.9),rgba(246,246,248,.94));
+  box-shadow:inset 0 1px 0 #fff,0 24px 60px rgba(30,25,15,.28),0 0 0 1px rgba(0,0,0,.08)}
+html[data-theme=light] #ag-hrs .aghr-hd b{color:#1a1a1c}
+html[data-theme=light] #ag-hrs .aghr-hd span{color:#6a6a70}
+html[data-theme=light] #ag-hrs .aghr-r b{color:#1a1a1c}
+html[data-theme=light] #ag-hrs .aghr-r button{background:rgba(0,0,0,.06);color:#1a1a1c}
+html[data-theme=light] #ag-hrs .aghr-strip{background:rgba(0,0,0,.05)}
+html[data-theme=light] #ag-hrs .aghr-sum b{color:#a8752a}
+html[data-theme=light] #ag-hrs .aghr-b{background:rgba(0,0,0,.06);color:#3a3a40}
+@media (prefers-reduced-motion:reduce){#ag-hrs .aghr-box{animation:none}}
+
 #ag-menu,#ag-pick{position:fixed;z-index:4200;border-radius:12px;padding:7px;
   background:rgba(20,22,27,.98);border:1px solid var(--br2,#33363d);
   box-shadow:0 20px 50px rgba(0,0,0,.52);display:flex;flex-direction:column;gap:2px;
@@ -57855,8 +57950,25 @@ function setClientTime(cid, field, val){
   const c = clientById(cid); if(!c) return;
   c[field] = (val==='' || val==null) ? null : +val;
   if(c.startH!=null && c.endH!=null) c.hours = clientHours(c);   // keep legacy hours field in sync
+  /* ═══ [v1539] 여기서 고친 것도 시계와 격자에 바로 간다 ═══════════════════════
+     사장님 "클라이언트 풀에서 시간 바꾸면 그게 실시간으로 유리격자로 배정격자에
+            표시가 되어야지"
+     v1527 은 시계(계정) → 풀 한 방향만 묶었다. 이 숫자 칸에서 고치면 시계는 옛 값을
+     들고 있고, 고스트는 시계를 먼저 보므로(v1529) 화면이 안 바뀐다.
+     양쪽을 다 묶는다 — 어느 칸에서 고쳐도 같은 값이 되고 격자가 그 자리에서 따라온다. */
+  try{
+    if(typeof CLIENT_ACCOUNTS !== 'undefined' && Array.isArray(CLIENT_ACCOUNTS) && typeof clNorm === 'function'){
+      var _k = clNorm(String(c.name||''));
+      if(_k) CLIENT_ACCOUNTS.forEach(function(a){
+        if(!a || clNorm(String(a.name||'')) !== _k) return;
+        if(c.startH == null || c.endH == null) a.work = null;
+        else a.work = { start:Number(c.startH), end:Number(c.endH) };
+      });
+    }
+  }catch(_){}
   saveClientState();
   _syncClientUI();
+  try{ if(typeof _agRender === 'function') _agRender(); }catch(_){}   /* [v1539] 격자 유리도 바로 */
 }
 const pcOfClient = cid => PCS.find(p => (p.clients||[]).includes(cid));
 const pad2 = n => String(n).padStart(2,'0');
@@ -62201,32 +62313,30 @@ function _agRender(){
       var _rq = (typeof _ckReqOf==='function') ? _ckReqOf(p.id) : null;
       if(_rq && _rq.s != null && _rq.e != null){
         var _gl = _rq.e - _rq.s; if(_gl <= 0) _gl += 24;
-        /* ① 맡긴 구간을 알려주는 레일 */
+        /* [v1538] 사장님 "유리 위쪽에 보이는 노란색 테두리 같은거 뭐냐 저거 없애"
+           치수선(.ag-rail)을 그만 그린다. v1127 때는 유리가 없어서 구간을 알려 줄
+           것이 그 선뿐이었는데, 이제 유리 한 장이 그 구간을 그대로 보여 준다.
+           같은 말을 두 번 하면 하나는 군더더기다. CSS 는 남겨 둔다 - 되살릴 일이
+           생기면 이 한 줄만 되돌리면 된다. */
+        /* ═══ [v1536] "그냥 거기에 존재했습니다" ════════════════════════════════════
+           사장님 "저 뒤에 유리 생기는건 좋은데, 지금 막대를 밀면 거기를 채우듯이
+                  생기잖아? 그냥 거기에 존재했습니다 라는 것처럼 해봐"
+
+           맞다. v1524 는 **사람이 없는 시간만** 골라서 그렸다. 그러니 막대를 밀 때마다
+           빈 칸을 다시 계산해 새 조각을 만들었고, 그게 '자리를 채우며 생겨나는' 것으로
+           보였다. 유리가 막대를 따라다니는 셈이었다.
+
+           고객이 맡긴 시간은 막대가 어디 있든 **처음부터 그만큼 있었다.** 그러니
+           맡긴 구간 **전체에 한 장**을 깔고, 막대는 그 위에 앉는다(막대 z-index 1,
+           유리 0). 막대를 밀면 유리가 생기는 게 아니라 **덮여 있던 것이 드러난다.**
+
+           화면에 보이는 모양은 전과 같다(가려진 부분은 안 보인다). 달라지는 것은
+           **만들어지지 않는다**는 것뿐이고, 사장님이 본 것이 정확히 그 차이다.
+           빈 칸 계산도 필요 없어졌다 — 코드가 스무 줄 줄었다. */
         _agSegs(_rq.s, _gl).forEach(function(sg){
-          ghost += '<div class="ag-rail" style="left:'+(sg[0]/24*100).toFixed(3)+'%;'
+          ghost += '<div class="ag-need" style="left:'+(sg[0]/24*100).toFixed(3)+'%;'
                  + 'width:'+(sg[1]/24*100).toFixed(3)+'%"></div>';
         });
-        /* ② 그 구간에서 사람이 없는 시간만 — 시간 단위로 세고 이어 붙인다 */
-        var _have = {};
-        (p.assignments||[]).forEach(function(a){
-          if(!a || !a.staff || !(a.len > 0)) return;
-          for(var j = 0; j < Math.ceil(a.len); j++){
-            _have[((Math.floor(a.start) + j) % 24 + 24) % 24] = 1;
-          }
-        });
-        var _runS = null;
-        for(var i = 0; i <= Math.ceil(_gl); i++){
-          var _hh = (Math.floor(_rq.s) + i) % 24;
-          var _empty = (i < Math.ceil(_gl)) && !_have[_hh];
-          if(_empty && _runS === null) _runS = i;
-          if(!_empty && _runS !== null){
-            _agSegs((Math.floor(_rq.s) + _runS) % 24, i - _runS).forEach(function(sg){
-              ghost += '<div class="ag-need" style="left:'+(sg[0]/24*100).toFixed(3)+'%;'
-                     + 'width:'+(sg[1]/24*100).toFixed(3)+'%"></div>';
-            });
-            _runS = null;
-          }
-        }
       }
     }catch(_){}
     let bars = '';
@@ -62646,6 +62756,13 @@ function _agCtx(e){
   const p = PCS.find(x=>x.id===pcId); if(!p) return;
   const bar = e.target.closest('.ag-bar');
   const X = e.clientX, Y = e.clientY;
+  /* [v1538] 누른 자리가 몇 시인가 — 운영시간 시작값으로 미리 넣는다 */
+  var _ctxH = null;
+  try{
+    var _tk = e.target.closest ? e.target.closest('.ag-track') : null;
+    if(_tk){ var _r = _tk.getBoundingClientRect();
+      if(_r.width) _ctxH = Math.max(0, Math.min(23, Math.floor((X - _r.left) / _r.width * 24))); }
+  }catch(_){}
   if(bar){
     const idx = Number(bar.dataset.idx);
     const a = (p.assignments||[])[idx]; if(!a) return;
@@ -62697,6 +62814,10 @@ function _agCtx(e){
   }
   const cli = (typeof CLIENTS!=='undefined'&&Array.isArray(CLIENTS)) ? CLIENTS : [];
   _agMenu(X, Y, 'PC-'+pad2(pcId), [
+    /* [v1538] 사장님 "우클릭으로 배정격자쪽 빈공간 누르면 그 PC 번호에 맞춰서
+       시간 지정하고 만들수있게" — 여태는 클라 풀을 찾아 들어가야 했다.
+       빈 자리를 누른 그 시각을 시작으로 미리 넣어 준다(누른 자리가 곧 뜻이다). */
+    { label:'🕐 운영시간 정하기', run:function(){ _agHoursOpen(pcId, _ctxH); } },
     { label:'🛟 백업 추가', run:function(){
         _agPick('백업으로 대기시킬 사람', _agStaffRows(function(s2){ return !(p.backups||[]).includes(s2.id); }), function(r){
           p.backups = Array.isArray(p.backups)?p.backups:[]; p.backups.push(r.id);
@@ -63010,7 +63131,8 @@ function _agGhostDraw(host, plan){
   var sig = '';
   try{ sig = (plan||[]).map(function(p){
     return (p && p.track ? (p.track.parentNode && p.track.parentNode.dataset ? p.track.parentNode.dataset.pc : '?') : '-')
-         + ':' + (p?p.start:'') + ':' + (p?p.len:'') + ':' + (p&&p.back?'b':'f'); }).join('|'); }catch(_){}
+         + ':' + (p?p.start:'') + ':' + (p?p.len:'') + ':' + (p&&p.back?'b':'f')
+         + ':' + (p&&p.from?('o'+(p.delta||0)):''); }).join('|'); }catch(_){}
   if(host && host._agGhSig === sig) return;
   /* [v1535] 순서가 중요하다 - 치우는 함수가 표식을 비우므로, 표식은 **치운 뒤에** 적는다.
      반대로 두면 방금 적은 표식이 바로 지워져서 깜빡임 방지가 하나도 안 듣는다
@@ -63024,11 +63146,16 @@ function _agGhostDraw(host, plan){
     try{ segs = _agSegs(p.start, p.len); }catch(_){ segs = [[p.start, p.len]]; }
     segs.forEach(function(sg, i){
       var el = document.createElement('div');
-      el.className = 'ag-gh' + (p.back ? ' swapback' : '');
+      el.className = 'ag-gh' + (p.back ? ' swapback' : '') + (p.from ? ' from' : '');
       if(p.color) el.style.setProperty('--gc', p.color);
       el.style.left  = (sg[0]/24*100).toFixed(3) + '%';
       el.style.width = (sg[1]/24*100).toFixed(3) + '%';
-      if(i === 0 && p.name){
+      if(i === 0 && p.from){
+        /* [v1537] 있던 자리 — 몇 시간 움직였는지만 말한다 */
+        var d = Number(p.delta) || 0;
+        if(d > 12) d -= 24; if(d < -12) d += 24;
+        if(d !== 0) el.innerHTML = '<span class="gh-d">' + (d > 0 ? '+' : '') + d + 'h</span>';
+      } else if(i === 0 && p.name){
         el.innerHTML = '<span>' + String(p.name).replace(/[<>&"]/g, '') + '</span>'
                      + '<span class="gh-h">' + p.len + 'h</span>';
       }
@@ -63036,6 +63163,106 @@ function _agGhostDraw(host, plan){
     });
   });
 }
+/* ═══ [v1538] 격자에서 바로 운영시간 정하기 ═══════════════════════════════════
+   사장님 "우클릭으로 배정격자쪽 빈공간 누르면 그 PC 번호에 맞춰서 시간 지정하고
+          만들수있게 해주고 퀄리티 좋게 디자인해줘"
+
+   여태는 이 시간을 고치려면 PC 현황에서 클라 풀을 찾아 클라를 누르고 상세를 열어야
+   했다. 그런데 정작 고치고 싶어지는 순간은 **격자를 보고 있을 때**다 — 빈 자리가
+   눈에 들어온 그 자리에서 바로 정할 수 있어야 한다.
+
+   저장은 두 군데에 같이 한다(v1527 과 같은 규칙) — 클라 시계(계정)가 정답이고
+   풀은 따라간다. 그래서 어느 화면으로 봐도 같은 값이 보인다. */
+function _agPcClient(pcId){
+  var out = { pool:null, acc:null, name:'' };
+  try{
+    var p = (typeof PCS !== 'undefined' ? PCS : []).find(function(x){ return x && Number(x.id) === Number(pcId); });
+    if(!p) return out;
+    var ids = p.clients || [];
+    for(var i = 0; i < ids.length; i++){
+      var c = (typeof clientById === 'function') ? clientById(ids[i]) : null;
+      if(c && c.name){ out.pool = c; out.name = String(c.name); break; }
+    }
+    if(out.name && typeof CLIENT_ACCOUNTS !== 'undefined' && Array.isArray(CLIENT_ACCOUNTS) && typeof clNorm === 'function'){
+      var k = clNorm(out.name);
+      out.acc = CLIENT_ACCOUNTS.find(function(a){ return a && clNorm(String(a.name||'')) === k; }) || null;
+    }
+  }catch(_){}
+  return out;
+}
+window._agHoursOpen = function(pcId, hintH){
+  try{
+    if(typeof _pcCanEdit === 'function' && !_pcCanEdit()) return;
+    var t = _agPcClient(pcId);
+    if(!t.name){ try{ toast('이 PC 에 클라이언트가 없어요 — 먼저 클라이언트를 앉혀 주세요', true); }catch(_){} return; }
+    var cur = null;
+    if(t.acc && t.acc.work && t.acc.work.start != null && t.acc.work.end != null) cur = { s:Number(t.acc.work.start), e:Number(t.acc.work.end) };
+    else if(t.pool && t.pool.startH != null && t.pool.endH != null) cur = { s:Number(t.pool.startH), e:Number(t.pool.endH) };
+    var s0 = cur ? cur.s : (hintH != null ? Number(hintH) : 9);
+    var e0 = cur ? cur.e : ((s0 + 8) % 24);
+    window._agHrs = { pc:Number(pcId), s:((s0%24)+24)%24, e:((e0%24)+24)%24, had:!!cur, name:t.name };
+    var old = document.getElementById('ag-hrs'); if(old) old.remove();
+    var el = document.createElement('div'); el.id = 'ag-hrs';
+    document.body.appendChild(el);
+    _agHoursPaint();
+    el.addEventListener('click', function(ev){ if(ev.target === el) _agHoursClose(); });
+  }catch(e){ try{ console.error('[ag hours]', e); }catch(_){} }
+};
+window._agHoursClose = function(){ var el = document.getElementById('ag-hrs'); if(el) el.remove(); };
+window._agHoursStep = function(which, d){
+  var h = window._agHrs; if(!h) return;
+  h[which] = ((Number(h[which]) + d) % 24 + 24) % 24;
+  _agHoursPaint();
+};
+function _agHoursLen(h){ var n = (Number(h.e) - Number(h.s)) % 24; if(n <= 0) n += 24; return n; }
+function _agHoursPaint(){
+  var el = document.getElementById('ag-hrs'), h = window._agHrs; if(!el || !h) return;
+  var n = _agHoursLen(h), ko = (typeof _uiLang !== 'function') || _uiLang() === 'ko';
+  var segs = []; try{ segs = _agSegs(h.s, n); }catch(_){ segs = [[h.s, n]]; }
+  var strip = segs.map(function(g){
+    return '<i style="left:' + (g[0]/24*100).toFixed(2) + '%;width:' + (g[1]/24*100).toFixed(2) + '%"></i>';
+  }).join('');
+  var wib = function(x){ return ((Number(x) - 2) % 24 + 24) % 24; };
+  el.innerHTML =
+    '<div class="aghr-bg"></div>'
+  + '<div class="aghr-box">'
+  +   '<div class="aghr-hd"><b>PC-' + pad2(h.pc) + '</b><span>' + String(h.name).replace(/[<>&"]/g,'') + '</span>'
+  +     '<button class="aghr-x" onclick="_agHoursClose()">✕</button></div>'
+  +   '<div class="aghr-strip">' + strip + '<u style="left:' + ((h.s/24*100).toFixed(2)) + '%"></u></div>'
+  +   '<div class="aghr-rows">'
+  +     '<div class="aghr-r"><span class="aghr-l">' + (ko ? '시작' : 'Start') + '</span>'
+  +       '<button onclick="_agHoursStep(\'s\',-1)">−</button><b>' + pad2(h.s) + ':00</b><button onclick="_agHoursStep(\'s\',1)">+</button></div>'
+  +     '<div class="aghr-r"><span class="aghr-l">' + (ko ? '종료' : 'End') + '</span>'
+  +       '<button onclick="_agHoursStep(\'e\',-1)">−</button><b>' + pad2(h.e) + ':00</b><button onclick="_agHoursStep(\'e\',1)">+</button></div>'
+  +   '</div>'
+  +   '<div class="aghr-sum"><b>' + n + (ko ? '시간' : 'h') + '</b>'
+  +     '<span>' + (ko ? '자카르타 ' : 'Jakarta ') + pad2(wib(h.s)) + ':00 – ' + pad2(wib(h.e)) + ':00</span></div>'
+  +   '<div class="aghr-btns">'
+  +     (h.had ? '<button class="aghr-b del" onclick="_agHoursSave(true)">' + (ko ? '지우기' : 'Clear') + '</button>' : '')
+  +     '<button class="aghr-b" onclick="_agHoursClose()">' + (ko ? '취소' : 'Cancel') + '</button>'
+  +     '<button class="aghr-b go" onclick="_agHoursSave(false)">' + (ko ? '저장' : 'Save') + '</button>'
+  +   '</div>'
+  + '</div>';
+}
+window._agHoursSave = function(clear){
+  var h = window._agHrs; if(!h) return;
+  try{
+    var t = _agPcClient(h.pc);
+    var S = clear ? null : Number(h.s), E = clear ? null : Number(h.e);
+    if(t.acc){ if(clear) t.acc.work = null; else t.acc.work = { start:S, end:E }; }
+    if(t.pool){
+      t.pool.startH = S; t.pool.endH = E;
+      try{ t.pool.hours = (S == null) ? null : ((typeof clientHours === 'function') ? clientHours(t.pool) : null); }catch(_){}
+    }
+    try{ saveClientState(); }catch(_){}
+    try{ logAction('update', '운영시간 · PC-' + pad2(h.pc), clear ? '지움' : (pad2(S) + ':00-' + pad2(E) + ':00')); }catch(_){}
+    try{ toast(clear ? ('🕐 PC-' + pad2(h.pc) + ' 운영시간 지움')
+                     : ('🕐 PC-' + pad2(h.pc) + ' ' + pad2(S) + ':00–' + pad2(E) + ':00 · ' + _agHoursLen(h) + '시간')); }catch(_){}
+  }catch(e){ try{ toast('저장 실패 — ' + (e && e.message), true); }catch(_){} }
+  _agHoursClose();
+  try{ render(); }catch(_){ try{ _agRender(); }catch(__){} }
+};
+
 function _agBind(host){
   if(host._agB) return; host._agB = 1;
   host.addEventListener('contextmenu', _agCtx);   /* [v1086] 나머지는 전부 우클릭으로 */
@@ -63196,6 +63423,11 @@ function _agBind(host){
           } else if(tgtPc != null && overRow){
             var _ot = overRow.querySelector('.ag-track');
             if(_ot) _plan.push({ track:_ot, start:a.start, len:a.len, color:_myCol, name:_myNm });
+          }
+          /* [v1537] 있던 자리 — 줄을 옮기든 시간만 밀든, 움직였으면 남긴다.
+             같은 줄에서 좌우로 밀 때는 이것이 유일한 기준점이다. */
+          if(a.start !== st0 || a.len !== len0 || tgtPc != null || tgtSwap){
+            _plan.push({ track:track, start:st0, len:len0, from:true, delta:(a.start - st0) });
           }
           _agGhostDraw(host, _plan);
         }
