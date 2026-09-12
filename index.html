@@ -4,7 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
 <title>ARASAKA Corp</title>
-<!-- BUILD: v1521 | 리더에게 스케줄·채용·온보딩·직원 목록을 연다 -->
+<!-- BUILD: v1522 | 관리 칸을 리더에게 반만 - 시스템 로그만 열고 나머지는 자물쇠 -->
 <!-- v745 기록은 git 이력(v1302 이전 커밋)에 있다 — 100KB 변경사 주석을 배포에서 제거 -->
 <!-- [v677] a <link href> cannot read a CSS variable, so the favicon carries its own copy.
      64px: a browser tab draws it at 16-32px, so this is 2x-DPR sharp at 11KB. -->
@@ -16035,16 +16035,31 @@ const CHANNEL_TREE = {
       ]
     },
     {
-      id:'admin', name:'관리', catIcon:'cog', perms:['admin'], collapsed:true,
+      /* ═══ [v1522] 관리 칸을 리더에게 '반만' 연다 ═══════════════════════════════
+         사장님: 3번 - 관리 안에서 안전한 것만.
+         칸 자체는 열되, **위험한 화면에는 하나씩 자물쇠를 채운다.** 칸만 열고 두면
+         아래 여덟 개가 전부 따라 열린다(이 칸의 화면들은 원래 제 잠금이 없다 -
+         칸이 admin 전용이라 필요가 없었다).
+         리더에게 남기는 것은 **시스템 로그 하나** - 누가 무엇을 바꿨는지 되짚는
+         읽기 전용 기록이다. 팀에 무슨 일이 있었는지 리더가 직접 볼 수 있어야 한다.
+         닫아 두는 것과 이유:
+           설정        앱 전체 동작을 바꾼다
+           권한        이 화면이 사장님 접근까지 바꿀 수 있다
+           초대 코드   새 계정을 만들 수 있다
+           투자내역    회사 돈
+           정산 마스터 급여의 원본
+           차단 목록   사람을 막는다
+           디스코드 봇 화면이 아직 없다(빈 칸) - 열어 둘 이유가 없다 */
+      id:'admin', name:'관리', catIcon:'cog', perms:['admin','leader'], collapsed:true,
       channels:[
-        { id:'admin-settings',     name:'설정',        icon:'cog',     module:'settings', kind:'view' },
-        { id:'admin-perms',        name:'권한',        icon:'shield',  kind:'view', module:'perms' },
-        { id:'admin-invites',      name:'초대 코드',   icon:'lock',    kind:'view', module:'invites' },
-        { id:'admin-invest',       name:'투자내역',    icon:'bag',     kind:'view' },
-        { id:'admin-master-sett',  name:'정산 마스터', icon:'dollar',  module:'mastersett', kind:'view' },
+        { id:'admin-settings',     name:'설정',        icon:'cog',     module:'settings', kind:'view', perms:['admin'] },
+        { id:'admin-perms',        name:'권한',        icon:'shield',  kind:'view', module:'perms', perms:['admin'] },
+        { id:'admin-invites',      name:'초대 코드',   icon:'lock',    kind:'view', module:'invites', perms:['admin'] },
+        { id:'admin-invest',       name:'투자내역',    icon:'bag',     kind:'view', perms:['admin'] },
+        { id:'admin-master-sett',  name:'정산 마스터', icon:'dollar',  module:'mastersett', kind:'view', perms:['admin'] },
         { id:'admin-logs',         name:'시스템 로그', icon:'scroll',  module:'logs', kind:'view' },
-        { id:'admin-discord',      name:'디스코드 봇', icon:'megaphone', module:'discord-bot', kind:'view' },
-        { id:'admin-banned',       name:'차단 목록',   icon:'ban',     kind:'view' }
+        { id:'admin-discord',      name:'디스코드 봇', icon:'megaphone', module:'discord-bot', kind:'view', perms:['admin'] },
+        { id:'admin-banned',       name:'차단 목록',   icon:'ban',     kind:'view', perms:['admin'] }
       ]
     }
   ]
@@ -54030,6 +54045,7 @@ const ROLE_PERMS = {
   'op-schedule':    { manager:true, settlement:false, hr:true, staff:false, leader:true },
   'op-clients':     { manager:true, settlement:true, hr:false, staff:false, leader:false },
   'op-weekly-kpi':  { manager:true, settlement:false, hr:true, staff:false, leader:false },
+  'admin-logs':     { manager:true, settlement:false, hr:false, staff:false, leader:true },   /* [v1522] 읽기 전용 기록 - 리더도 본다 */
   'op-recruit':     { manager:true, settlement:false, hr:true, staff:false, leader:true },    /* [v1521] */
   'op-onboarding':  { manager:true, settlement:false, hr:true, staff:false, leader:true },    /* [v1521] */
   'op-hr':          { manager:true, settlement:false, hr:true, staff:false, leader:true },    /* [v1521] */
