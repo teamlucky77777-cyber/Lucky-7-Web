@@ -4,7 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
 <title>ARASAKA Corp</title>
-<!-- BUILD: v1505 | 직원 풀을 엑셀로 한 장 — 손 시트를 웹으로 옮겨오려면 웹이 먼저 내놓아야 한다 -->
+<!-- BUILD: v1506 | 클라별 카드 테두리도 게임 색 — 리니지 보라 · 메이플 주황, 케어는 색 대신 세기로 -->
 <!-- v745 기록은 git 이력(v1302 이전 커밋)에 있다 — 100KB 변경사 주석을 배포에서 제거 -->
 <!-- [v677] a <link href> cannot read a CSS variable, so the favicon carries its own copy.
      64px: a browser tab draws it at 16-32px, so this is 2x-DPR sharp at 11KB. -->
@@ -9983,6 +9983,29 @@ html .cs-ed-dialnum.bump-up .h.up,html .cs-ed-dialnum.bump-dn .h.dn{opacity:1}
 @keyframes srBuzz2{0%{transform:translate(0,0) rotate(0)}8%{transform:translate(-4px,.8px) rotate(-.5deg)}18%{transform:translate(3.6px,-.8px) rotate(.45deg)}28%{transform:translate(-2.8px,.6px) rotate(-.32deg)}38%{transform:translate(2px,-.4px) rotate(.2deg)}50%{transform:translate(-1.2px,.2px) rotate(-.1deg)}64%{transform:translate(.6px,0) rotate(.04deg)}80%{transform:translate(-.2px,0) rotate(0)}100%{transform:translate(0,0) rotate(0)}}
 @keyframes srBuzz3{0%{transform:translate(0,0) rotate(0)}5%{transform:translate(-6px,1.2px) rotate(-.8deg)}11%{transform:translate(5.4px,-1.2px) rotate(.7deg)}17%{transform:translate(-4.2px,.9px) rotate(-.5deg)}23%{transform:translate(3px,-.6px) rotate(.3deg)}29%{transform:translate(-1.5px,.3px) rotate(-.12deg)}35%{transform:translate(.5px,0) rotate(0)}42%{transform:translate(0,0)}
   50%{transform:translate(-5.5px,1px) rotate(-.7deg)}56%{transform:translate(5px,-1px) rotate(.6deg)}62%{transform:translate(-3.8px,.8px) rotate(-.45deg)}68%{transform:translate(2.6px,-.5px) rotate(.25deg)}74%{transform:translate(-1.3px,.2px) rotate(-.1deg)}82%{transform:translate(.4px,0) rotate(0)}100%{transform:translate(0,0) rotate(0)}}
+/* ═══ [v1506] 클라별 카드도 게임 색으로 ═══════════════════════════════════
+   사장님 "클라별쪽 아직도 리니지클래식이 주황색 테두리로 나와 · 보라색으로 다 바꿔"
+
+   사장님이 본 주황은 게임 색이 아니라 v1389 의 '케어 필요' 색이었다. 그런데
+   v1490 에서 주황을 메이플에 준 뒤로, 리니지 카드가 주황 테두리를 두르면
+   화면이 거짓말을 한다 — 리니지 카드가 메이플처럼 보인다.
+
+   그래서 테두리의 뜻을 하나로 정리한다. **테두리 색 = 게임** (보라=리니지 ·
+   주황=메이플). 케어는 색을 뺏어가지 않고 **제 게임 색을 더 세게** 쓴다
+   (.42 → .92 + 1.5px). 케어의 진짜 신호는 원래 색이 아니라 흔들림(srBuzz)이라
+   잃는 것이 없다. 신규(청록)는 게임과 다른 축이라 그대로 이긴다.
+
+   아래 세 줄(new · care)이 이 규칙을 덮어쓰도록 **일부러 이 위에** 둔다. */
+#sr-app .sr-clcard-li{border-color:rgba(176,116,236,.42)}
+#sr-app .sr-clcard.sr-clcard-li:hover{border-color:var(--g-lineage,#b074ec)}
+/* 케어 — 색이 아니라 세기로 말한다 (게임 색 유지) */
+#sr-app .sr-clcard.sr-clcard-li.sr-clcard-care{border:1.5px solid rgba(176,116,236,.92)}
+#sr-app .sr-clcard.sr-clcard-li.sr-clcard-care:hover{border-color:rgba(176,116,236,1)}
+#sr-app .sr-clcard.sr-clcard-mp.sr-clcard-care{border:1.5px solid rgba(232,140,60,.95)}
+#sr-app .sr-clcard.sr-clcard-mp.sr-clcard-care:hover{border-color:var(--g-maple,#d97a3a)}
+/* 신규 + 케어면 게임 색이 이긴다 (v1389 는 주황이 이겼다) */
+#sr-app .sr-clcard.sr-clcard-li.sr-clcard-new.sr-clcard-care{border-color:rgba(176,116,236,.92)}
+#sr-app .sr-clcard.sr-clcard-mp.sr-clcard-new.sr-clcard-care{border-color:rgba(232,140,60,.95)}
 /* [v1387] boss "신입 클라이언트들은 테두리 색을 다르게" — 문의(초록) 에서 이어지는 초록 */
 /* [v1388] boss "문의중이 이미 초록이라" — 신규는 청록(민트): 초록(문의)·빨강(테스트)·금색(배치완료)·파랑(백업) 어느 것과도 안 겹친다 */
 #sr-app .sr-clcard.sr-clcard-new{border:1.5px solid rgba(92,200,190,.98)}   /* [v1392] boss "살짝 더 진하게가 티가 안 난다" — 1.5px + 거의 불투명 + 안쪽 띠 */
@@ -40100,7 +40123,7 @@ function _srRecCardHTML(data){
     /* [v1489] 사장님 "클라별 쪽도 마찬가지지" — PC 보드처럼 메이플 카드만 물들인다.
        판별은 이미 있는 _srIsMapleClient 로 (클라 풀의 game:'maple' 이 먼저, 없으면 이름). */
     var _isMp = false; try{ _isMp = (typeof _srIsMapleClient==='function') && _srIsMapleClient(o.client||c); }catch(_){}
-    return '<div class="sr-clcard'+(_isMp?' sr-clcard-mp':'')+(o._noData?' sr-clcard-nodata':'')+(_emptyCard?' sr-clcard-empty':'')+(_newDays!=null?' sr-clcard-new':'')+(_care?' sr-clcard-care':'')+(_stickNow?' sr-clcard-stick':'')+((typeof _mcIdleKey==='function'&&_mcIdleKey()===c)?' sr-clcard-idle':'')+((o._quiet!=null&&o._quiet>=7)?' sr-clcard-sunk':((o._quiet!=null&&o._quiet>=3)?' sr-clcard-quiet':''))+'" role="button" tabindex="0"'+' data-heat="'+(_care?_heat.toFixed(2):'0')+'" data-days="'+_wdAll+'" data-ck="'+esc(c)+'"'
+    return '<div class="sr-clcard'+(_isMp?' sr-clcard-mp':' sr-clcard-li')+(o._noData?' sr-clcard-nodata':'')+(_emptyCard?' sr-clcard-empty':'')+(_newDays!=null?' sr-clcard-new':'')+(_care?' sr-clcard-care':'')+(_stickNow?' sr-clcard-stick':'')+((typeof _mcIdleKey==='function'&&_mcIdleKey()===c)?' sr-clcard-idle':'')+((o._quiet!=null&&o._quiet>=7)?' sr-clcard-sunk':((o._quiet!=null&&o._quiet>=3)?' sr-clcard-quiet':''))+'" role="button" tabindex="0"'+' data-heat="'+(_care?_heat.toFixed(2):'0')+'" data-days="'+_wdAll+'" data-ck="'+esc(c)+'"'
       +(_wdAll>=45?(' data-age="'+Math.min(1,_wdAll/180).toFixed(2)+'"'):'')
       +((_newDays!=null||_care)?(' style="'+(_newDays!=null?('--newness:'+(1-_newDays/30).toFixed(3)+';'):'')+(_care?('--heat:'+_heat.toFixed(2)+';'):'')+'"'):'')
       +(_care?(' title="'+esc((_kl?'케어 필요 — ':'Needs care — ')+_careWhy.join(' · '))+'"'):(_newDays!=null?(' title="'+esc(_kl?('함께한 지 '+_newDays+'일'+(_newDays===29?' — 내일부터 다른 카드처럼 봅니다':'')):('day '+_newDays+' together'))+'"'):''))+(_pcNo!=null?' draggable="true"':'')+(_emptyCard?(' data-empty="'+(_kl?'이 기간 기록 없음':'No records in this period')+'"'):'')
