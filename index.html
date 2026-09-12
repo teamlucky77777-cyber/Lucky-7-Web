@@ -4,7 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
 <title>ARASAKA Corp</title>
-<!-- BUILD: v1539 | 어느 칸에서 시간을 고쳐도 격자 유리가 바로 따라온다 -->
+<!-- BUILD: v1542 | 클라 패널을 격자 한 줄로 · 색이 겹치는 사람 없게 -->
 <!-- v745 기록은 git 이력(v1302 이전 커밋)에 있다 — 100KB 변경사 주석을 배포에서 제거 -->
 <!-- [v677] a <link href> cannot read a CSS variable, so the favicon carries its own copy.
      64px: a browser tab draws it at 16-32px, so this is 2x-DPR sharp at 11KB. -->
@@ -2914,6 +2914,67 @@ html[data-theme=light] #dt-pop{background:rgba(255,255,255,.99);border-color:#d8
 .cld-char-edit .c-form-row textarea{background:var(--bg-h)!important;border-color:transparent!important;border-radius:8px!important;font-size:12px!important}
 .cld-contract{background:var(--bg-c);border:1px solid var(--br);border-radius:11px;padding:12px 14px}
 .cld-contract-note{font-size:11.5px;color:var(--tx3);margin-top:8px;padding-top:8px;border-top:1px solid var(--br)}
+/* ═══ [v1541] 클라 패널의 하루 한 줄 — 격자와 같은 문법 ══════════════════════
+   격자 트랙과 같은 바닥·같은 눈금·같은 막대. 다른 것은 크기와, 여기에만 있는
+   것(이름·빈 시간·며칠째)뿐이다. 배울 것이 없어야 한다. */
+.cldb{position:relative;height:44px;border-radius:10px;overflow:hidden;margin:2px 0 5px;
+  background:var(--bg-i,#151517);
+  background-image:repeating-linear-gradient(90deg,transparent 0,transparent calc(100%/24 - 1px),rgba(255,255,255,.055) calc(100%/24 - 1px),rgba(255,255,255,.055) calc(100%/24));
+  box-shadow:inset 0 0 0 1px rgba(255,255,255,.06);
+  transition:filter .2s var(--ease,cubic-bezier(.16,1,.3,1)),opacity .2s var(--ease,cubic-bezier(.16,1,.3,1))}
+.cldb::before{content:'';position:absolute;inset:0;pointer-events:none;
+  background:linear-gradient(90deg,rgba(90,110,170,.13) 0,rgba(90,110,170,.13) 25%,transparent 25%,transparent 87.5%,rgba(90,110,170,.13) 87.5%)}
+/* 오늘 쉬는 날 — 색을 빼고 가라앉힌다. 한 마디도 안 적고 '오늘은 없다' 를 말한다 */
+.cldb.off{filter:grayscale(1) brightness(.62);opacity:.72}
+/* 맡긴 구간 = 유리 (격자의 .ag-need 와 같은 문법) */
+.cldb .cldb-glass{position:absolute;top:3px;bottom:3px;border-radius:7px;z-index:0;overflow:hidden;
+  background:linear-gradient(180deg,rgba(255,255,255,.2) 0,rgba(255,255,255,.075) 34%,rgba(255,255,255,.045) 70%,rgba(226,196,130,.075) 100%);
+  -webkit-backdrop-filter:blur(10px) saturate(125%) brightness(1.22);
+  backdrop-filter:blur(10px) saturate(125%) brightness(1.22);
+  box-shadow:inset 0 0 0 1px rgba(255,255,255,.26),inset 0 1px 0 rgba(255,255,255,.7),
+             inset 0 -1px 0 rgba(0,0,0,.32),0 4px 13px rgba(0,0,0,.4)}
+/* 사람 = 막대 (격자의 .ag-bar 와 같은 문법) */
+.cldb .cldb-bar{position:absolute;top:3px;bottom:3px;border-radius:7px;z-index:1;
+  display:flex;align-items:center;padding:0 7px;overflow:hidden;
+  background:color-mix(in srgb,var(--bc) 82%,#000 18%);
+  box-shadow:inset 0 0 0 1px rgba(255,255,255,.16)}
+.cldb .cldb-bar span{font:800 10.5px ui-monospace,monospace;color:#fff;
+  text-shadow:0 1px 2px rgba(0,0,0,.5);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+/* 지금 */
+.cldb .cldb-now{position:absolute;top:-1px;bottom:-1px;width:1.5px;z-index:3;border-radius:1px;
+  background:#e2b45c;opacity:.9}
+/* 눈금 — 0 6 12 18 */
+.cldb-ax{position:relative;height:12px;margin-bottom:11px}
+.cldb-ax s{position:absolute;top:0;text-decoration:none;transform:translateX(-50%);
+  font:700 9px ui-monospace,monospace;color:var(--tx4,#5f5e5a)}
+.cldb-ax s:first-child{transform:none}
+/* 요약 한 줄 */
+.cldb-sum{display:flex;align-items:baseline;flex-wrap:wrap;gap:4px 14px;margin-bottom:12px}
+.cldb-sum .k{font-size:10px;font-weight:700;letter-spacing:.04em;color:var(--tx4,#5f5e5a);
+  text-transform:uppercase;margin-right:-8px}
+.cldb-sum .v{font-size:14px;font-weight:800;color:var(--tx,#e6e5e2);font-variant-numeric:tabular-nums}
+.cldb-sum .v.warn{color:#e0967a}
+.cldb-sum .v.dim{color:var(--tx3,#8a8a86);font-weight:700}
+.cldb-sum .hint{font-size:10px;color:var(--tx4,#5f5e5a)}
+/* 시작·종료 조절 — 한 줄에 나란히 */
+.cldb-adj{display:flex;gap:8px;margin-bottom:2px}
+.cldb-adj .u{flex:1;display:flex;align-items:center;gap:6px;padding:7px 9px;border-radius:11px;
+  background:var(--bg-i,#1a1a1a);box-shadow:inset 0 0 0 1px var(--br2,#2f2f2d)}
+.cldb-adj .u em{flex:none;font-style:normal;font-size:10px;font-weight:700;color:var(--tx4,#5f5e5a)}
+.cldb-adj .u b{flex:1;text-align:center;font-size:14px;font-weight:800;color:var(--tx,#e6e5e2);
+  font-variant-numeric:tabular-nums}
+.cldb-adj .u button{flex:none;width:26px;height:26px;border:0;border-radius:8px;cursor:pointer;
+  background:rgba(255,255,255,.07);color:var(--tx2,#989792);font:700 14px inherit;
+  transition:background .14s,color .14s,transform .1s}
+.cldb-adj .u button:hover{background:rgba(255,255,255,.16);color:var(--tx,#e6e5e2)}
+.cldb-adj .u button:active{transform:scale(.92)}
+html[data-theme=light] .cldb{background:rgba(0,0,0,.04);
+  background-image:repeating-linear-gradient(90deg,transparent 0,transparent calc(100%/24 - 1px),rgba(0,0,0,.08) calc(100%/24 - 1px),rgba(0,0,0,.08) calc(100%/24))}
+html[data-theme=light] .cldb .cldb-glass{
+  background:linear-gradient(180deg,rgba(255,255,255,.78) 0,rgba(255,255,255,.34) 45%,rgba(190,150,60,.14) 100%);
+  box-shadow:inset 0 0 0 1px rgba(255,255,255,.9),inset 0 1px 0 rgba(255,255,255,.95),0 3px 10px rgba(0,0,0,.16)}
+html[data-theme=light] .cldb-adj .u button{background:rgba(0,0,0,.06)}
+
 .cld-comms{display:flex;flex-direction:column;gap:7px}
 .cld-comm{display:flex;gap:10px;padding:10px 12px;background:var(--bg-c);border:1px solid var(--br);border-radius:9px}
 .cld-comm-type{font-size:9.5px;font-weight:800;padding:2px 8px;border-radius:6px;flex-shrink:0;height:fit-content}
@@ -56941,8 +57002,15 @@ function openClientDetail(cid){
     const pc = pcs.find(p => (p.clients||[]).includes(ch.id));
     const isOff = ch.active === false;
     const pcTxt = pc ? 'PC-'+String(pc.id).padStart(2,'0') : (_uiLang()==='ko'?'미배정':'Unassigned');
-    const _setR = `${ch.armor_set}${ch.armor_set_max?'~'+ch.armor_set_max:''}`;
-    const _spec = `${ch.weapon}검 ${_setR}셋${ch.level!=null?' · Lv'+ch.level:''} · ${ch.hours||'?'}H`;
+    /* [v1541] 사장님 화면에 "undefined검 undefined셋" 이 그대로 새어 나왔다.
+       값이 없는 알약은 **안 그린다** — 빈 칸을 글자로 말하지 않는다. */
+    const _bits = [];
+    if(ch.level != null && ch.level !== '') _bits.push('Lv' + ch.level);
+    if(ch.weapon != null && ch.weapon !== '') _bits.push(ch.weapon + '검');
+    if(ch.armor_set != null && ch.armor_set !== '')
+      _bits.push(ch.armor_set + (ch.armor_set_max ? '~' + ch.armor_set_max : '') + '셋');
+    if(ch.hours) _bits.push(ch.hours + 'H');
+    const _spec = _bits.join(' · ');
     return `<div class="cldc-row"><span class="cldc-nm">${ch.label || LINEAGE_CLASSES[ch.char_class] || (_uiLang()==='ko'?'캐릭터':'Character')}</span>${isOff?'<span class="cldc-off">OFF</span>':''}<span class="cldc-spec">${_spec}</span><span class="cldc-pc">${pcTxt}</span></div>`;
   }).join('');
   const charForms = !_clEditable ? '' : chars.map(ch => {
@@ -56986,24 +57054,34 @@ function openClientDetail(cid){
 
       <div class="cld-block">
         <div class="cld-block-h">🕐 작업 시간대</div>
-        <div class="cld-clock-wrap">
-          <div class="cld-clock" id="cld-clock-${c.id}">${clientClockSVG((c.work||{start:9,end:19}).start, (c.work||{start:9,end:19}).end, 180, {pad:18, thick:13, big:true, noSsal:!canSeeSsal, color:'var(--ac)'})}</div>
-          <div class="cld-clock-ctrl">
-            <div class="cld-time-adj">
-              <span class="cld-time-adj-lbl">시작</span>
-              <button class="cld-adj-btn" onclick="adjClientWork('${c.id}','start',-1)">−</button>
-              <span class="cld-adj-val" id="cld-start-${c.id}">${pad2((c.work||{start:9}).start)}:00</span>
-              <button class="cld-adj-btn" onclick="adjClientWork('${c.id}','start',1)">+</button>
-            </div>
-            <div class="cld-time-adj">
-              <span class="cld-time-adj-lbl">종료</span>
-              <button class="cld-adj-btn" onclick="adjClientWork('${c.id}','end',-1)">−</button>
-              <span class="cld-adj-val" id="cld-end-${c.id}">${pad2((c.work||{end:19}).end)}:00</span>
-              <button class="cld-adj-btn" onclick="adjClientWork('${c.id}','end',1)">+</button>
-            </div>
-            ${canSeeSsal ? `<div class="cld-ssal-display">🌾 <b>${fmtSsal(clientSsal(c.name))}</b> <span>· 캐릭터 ${chars.length}개 합산</span></div>` : ''}
-          </div>
-        </div>
+        ${(function(){
+          var B = _cldBandHTML(c), ko = _isKo;
+          var w = B.win, n = B.need;
+          var wib = function(x){ return ((Number(x) - 2) % 24 + 24) % 24; };
+          var s = (c.work && c.work.start != null) ? c.work.start : (w ? w.s : 9);
+          var e = (c.work && c.work.end   != null) ? c.work.end   : (w ? w.e : 19);
+          return B.band
+          + '<div class="cldb-sum">'
+          +   (w ? ('<span class="k">' + (ko?'맡긴 시간':'Booked') + '</span><span class="v">' + n + (ko?'시간':'h') + '</span>')
+                 : ('<span class="v dim">' + (ko?'시간 미정':'No hours set') + '</span>'))
+          +   (B.gap > 0 ? ('<span class="k">' + (ko?'사람 없는 시간':'Uncovered') + '</span><span class="v warn">' + B.gap + (ko?'시간':'h') + '</span>') : '')
+          +   (B.off ? ('<span class="v dim">' + (ko?'오늘은 쉬는 날':'Off today') + '</span>') : '')
+          +   (canSeeSsal && w ? ('<span class="k">🌾</span><span class="v">' + fmtSsal(clientSsal(c.name)) + '</span><span class="hint">' + (ko?'10시간 = 1쌀':'10h = 1') + '</span>') : '')
+          + '</div>'
+          + (_clEditable ? (
+              '<div class="cldb-adj">'
+            +   '<div class="u"><em>' + (ko?'시작':'Start') + '</em>'
+            +     '<button onclick="adjClientWork(\'' + c.id + '\',\'start\',-1)">−</button>'
+            +     '<b id="cld-start-' + c.id + '">' + pad2(s) + ':00</b>'
+            +     '<button onclick="adjClientWork(\'' + c.id + '\',\'start\',1)">+</button></div>'
+            +   '<div class="u"><em>' + (ko?'종료':'End') + '</em>'
+            +     '<button onclick="adjClientWork(\'' + c.id + '\',\'end\',-1)">−</button>'
+            +     '<b id="cld-end-' + c.id + '">' + pad2(e) + ':00</b>'
+            +     '<button onclick="adjClientWork(\'' + c.id + '\',\'end\',1)">+</button></div>'
+            + '</div>'
+            + '<div class="cldb-ax" style="height:auto;margin:6px 0 0"><s style="position:static;transform:none">'
+            +   (ko?'자카르타 ':'Jakarta ') + pad2(wib(s)) + ':00 – ' + pad2(wib(e)) + ':00</s></div>') : '');
+        })()}
       </div>
 
       <div class="cld-block cld-charbox${_charEditing?' editing':''}">
@@ -57025,7 +57103,11 @@ function openClientDetail(cid){
          이미 적어 둔 클라이언트가 있다면 그 값이 지워지면 안 되고, 나중에
          계약 관리를 제대로 만들 때 그 자리에서 다시 쓰면 된다. */''}
 
-      <div class="cld-block">
+      ${/* [v1541] 소통 기록 칸을 화면에서 뺐다 — 34개 계정 전부 0건이었다.
+           안 쓰는 칸이 화면에 있으면 '비어 있다' 가 매번 눈에 걸리고, 정작 볼 것이
+           아래로 밀린다. v1133 이 계약 칸에 한 것과 같은 판단 — 화면에서만 빼고
+           자료와 addClientComm 은 그대로 둔다. 쓰기 시작하면 이 조건만 지우면 된다. */''}
+      <div class="cld-block" style="display:none">
         <div class="cld-block-h">💬 소통 기록 / Communication Log</div>
         <div class="cld-comms">${commsRows || '<div class="cld-empty">기록 없음 / No records</div>'}</div>
         <div style="display:flex;gap:8px;margin-top:8px">
@@ -57900,6 +57982,94 @@ const staffById  = id => STAFF.find(s=>s.id===id);
 const clientById = id => CLIENTS.find(c=>c.id===id);
 
 // ── [v277] client schedule helpers — days of week + start/end hour → hours ──
+/* ═══ [v1541] 클라 패널 — 격자 한 줄을 크게 펼친 것 ══════════════════════════
+   사장님 "이것도 인터페이스 갈아엎어 · 180도 갈아엎고" / "일단 만들어봐"
+   🧊🔥🌀 54번 오간 결론:
+     · 도넛 시계 죽음 — 격자는 가로, 도넛은 원. 볼 때마다 머릿속에서 번역해야 했다
+     · 문자판을 펴서 눕힌다 — 격자 한 줄과 **같은 말**. 배울 것이 없다
+     · 띠에 사람을 얹는다 — 격자는 아는데 이 패널만 모르던 것
+     · 오늘 쉬는 날이면 띠가 회색 — 색 하나로 "오늘은 아무것도 없다"
+     · 소통 기록 죽음 — 34개 계정 전부 0건(v1133 계약 칸과 같은 판단)
+
+   한 문장: 이 패널은 **그 PC 의 격자 한 줄을 크게 펼친 것**이다. */
+function _cldPcsOf(c){
+  var out = [];
+  try{
+    var ids = {}; ids[c.id] = 1;
+    (typeof CLIENTS !== 'undefined' ? CLIENTS : []).forEach(function(x){
+      if(x && x.name && c.name && String(x.name) === String(c.name)) ids[x.id] = 1; });
+    (typeof PCS !== 'undefined' ? PCS : []).forEach(function(p){
+      if(!p || p.status === 'offline') return;
+      if((p.clients||[]).some(function(cid){ return ids[cid]; })) out.push(p);
+    });
+  }catch(_){}
+  return out;
+}
+function _cldWin(c){
+  try{
+    if(typeof CLIENT_ACCOUNTS !== 'undefined' && Array.isArray(CLIENT_ACCOUNTS) && typeof clNorm === 'function'){
+      var k = clNorm(String(c.name||''));
+      var a = k ? CLIENT_ACCOUNTS.find(function(x){ return x && clNorm(String(x.name||'')) === k; }) : null;
+      if(a && a.work && a.work.start != null && a.work.end != null) return { s:Number(a.work.start), e:Number(a.work.end) };
+    }
+  }catch(_){}
+  if(c && c.startH != null && c.endH != null) return { s:Number(c.startH), e:Number(c.endH) };
+  return null;
+}
+function _cldOffToday(c){
+  try{
+    if(!c || !Array.isArray(c.days) || !c.days.length) return false;
+    var d = new Date(Date.now() + 9*3600000).getUTCDay();   /* 한국 기준 요일 */
+    return c.days.indexOf(d) < 0;
+  }catch(_){ return false; }
+}
+/* 이 클라의 하루 한 줄 — 격자와 같은 문법 */
+function _cldBandHTML(c){
+  try{
+    var win = _cldWin(c), plist = _cldPcsOf(c), off = _cldOffToday(c);
+    var kst = new Date(Date.now() + 9*3600000);
+    var nowP = ((kst.getUTCHours() + kst.getUTCMinutes()/60) / 24 * 100).toFixed(2);
+    var seg = function(s, l){ try{ return _agSegs(s, l); }catch(_){ return [[s, l]]; } };
+    var html = '';
+    /* ① 맡긴 구간 — 유리 */
+    var need = 0;
+    if(win){
+      var len = (win.e - win.s) % 24; if(len <= 0) len += 24; need = len;
+      seg(win.s, len).forEach(function(g){
+        html += '<i class="cldb-glass" style="left:' + (g[0]/24*100).toFixed(2) + '%;width:' + (g[1]/24*100).toFixed(2) + '%"></i>';
+      });
+    }
+    /* ② 사람 — 격자 막대와 같은 색 */
+    var covered = {};
+    plist.forEach(function(p){
+      (p.assignments || []).forEach(function(a){
+        if(!a || !a.staff || !(a.len > 0)) return;
+        var st = (typeof staffById === 'function') ? staffById(a.staff) : null;
+        var nm = st ? String(st.name || '') : '';
+        var col = (typeof _pcv2Col === 'function') ? _pcv2Col(nm) : '#7aa7d8';
+        for(var j = 0; j < Math.ceil(a.len); j++) covered[((Math.floor(a.start) + j) % 24 + 24) % 24] = 1;
+        seg(a.start, a.len).forEach(function(g, i){
+          html += '<b class="cldb-bar" style="--bc:' + col + ';left:' + (g[0]/24*100).toFixed(2) + '%;width:' + (g[1]/24*100).toFixed(2) + '%">'
+                + (i === 0 ? ('<span>' + nm.replace(/[<>&"]/g, '') + '</span>') : '') + '</b>';
+        });
+      });
+    });
+    /* ③ 빈 시간 — 맡긴 구간 안에서 사람이 없는 시간 수 */
+    var gap = 0;
+    if(win && need > 0){
+      for(var i = 0; i < Math.ceil(need); i++){
+        if(!covered[((Math.floor(win.s) + i) % 24 + 24) % 24]) gap++;
+      }
+    }
+    html += '<u class="cldb-now" style="left:' + nowP + '%"></u>';
+    /* 눈금 — 0 6 12 18 */
+    var ticks = '';
+    [0, 6, 12, 18].forEach(function(h){ ticks += '<s style="left:' + (h/24*100) + '%">' + pad2(h) + '</s>'; });
+    return { band:'<div class="cldb' + (off ? ' off' : '') + '">' + html + '</div><div class="cldb-ax">' + ticks + '</div>',
+             need:need, gap:gap, off:off, win:win, npc:plist.length };
+  }catch(e){ return { band:'', need:0, gap:0, off:false, win:null, npc:0 }; }
+}
+
 function clientHours(c){
   if(!c) return 0;
   if(c.startH!=null && c.endH!=null){
@@ -58222,13 +58392,63 @@ function _pcv2Live(a, nowH){ const st=((Number(a.start)||0)%24+24)%24, e=st+(Num
 /* [v1477] boss "노란색이 너무 많은데 — 다른 색은 건들지 말고 노란색만".
    팔레트에 노랑이 둘(#c2a04a·#d9a53a) 있었는데 눈으로는 거의 같은 색이라 일곱 명이 다 노랗게 보였다.
    그 두 자리에 걸린 사람만 다른 색으로 흩는다 — 나머지 여덟 색의 배정은 하나도 안 바뀐다. */
-function _pcv2Col(n){ const pal=['#5fa3d9','#b074ec','#4E9A62','#c2a04a','#c0574f','#6ba59d','#a88fa0','#d9a53a','#7c8fd9','#c46a9a'];
-  let h=0; const s=String(n); for(let i=0;i<s.length;i++) h=(h*31+s.charCodeAt(i))>>>0;
-  const i = h%pal.length;
-  if(i !== 3 && i !== 7) return pal[i];
-  const YEL=['#c2a04a','#d9793a','#93b03f','#3fa9c9','#a87a55'];   /* 노랑·주황·올리브·청록·갈색 */
-  let g=0; for(let k=0;k<s.length;k++) g=(g*131+s.charCodeAt(k)+7)>>>0;
-  return YEL[g%YEL.length]; }
+/* [v1542] 색이 겹치는 사람이 없게.
+   사장님 "Alex bara zakyy barun 다 색깔이 똑같아 · 배정격자에 색이 똑같은 사람
+          없게해줘 · 기존에 이미 직원에게 배치된 색은 최대한 유지하면서"
+
+   여태는 이름을 숫자로 바꿔 팔레트에서 하나 골랐다(해시). 색이 13가지인데 사람이
+   서른 넷이니 겹치는 건 운이 아니라 산수였다. v1477 에서 노랑만 다섯으로 흩었는데
+   그건 가장 아픈 자리 하나를 늦춘 것뿐이었다.
+
+   이제 한 번에 다 나눠 준다.
+     1) 팔레트를 37가지로 늘린다 - 앞 13개는 지금 쓰는 색 그대로다
+     2) 이름순(고정된 순서)으로 돌면서, 각자 해시가 고르던 그 색을 먼저 달라고 한다
+     3) 이미 누가 가져갔으면 팔레트를 돌며 빈 색을 집는다
+   2)가 '기존 색 최대한 유지' 다 - 겹치지 않는 사람은 색이 그대로다. 겹친 사람들 중
+   이름이 앞선 한 명이 원래 색을 지키고 나머지가 옆으로 비켜난다.
+   이름순으로 도는 이유는 오늘과 내일이 같아야 하기 때문이다. 격자 순서로 돌면
+   배정을 옮길 때마다 남의 색이 바뀐다.
+   명단이 바뀔 때만 다시 나눈다(서명 비교) - 렌더마다 부르는 함수라 한 번만 계산한다. */
+var _PCV2_PAL = [
+  '#5fa3d9','#b074ec','#4E9A62','#c2a04a','#c0574f','#6ba59d','#a88fa0','#d9a53a','#7c8fd9','#c46a9a',
+  '#d9793a','#93b03f','#3fa9c9',
+  '#e0704f','#4aa0c2','#8fb04a','#c98ed6','#5f8fd9','#6fb58a','#b5707f','#7f7fd9','#4fb0a0',
+  '#cf7a6a','#9a8fd6','#5aa870','#c2905a','#7aa0b5','#a0b55a','#d67a9a','#6a95c9',
+  '#b09a4a','#8fa0a8','#cf6a8a','#5fb5c2','#a87a4a','#9ac26a','#a87a55'
+];
+function _pcv2Hash(n){ var h=0, s=String(n); for(var i=0;i<s.length;i++) h=(h*31+s.charCodeAt(i))>>>0; return h; }
+function _pcv2Want(n){ return _PCV2_PAL[_pcv2Hash(n) % _PCV2_PAL.length]; }
+var _pcv2Map = null, _pcv2Sig = '';
+function _pcv2Build(){
+  var names = [];
+  try{
+    (typeof STAFF !== 'undefined' && Array.isArray(STAFF) ? STAFF : []).forEach(function(m){
+      if(m && m.name && !m.virtual) names.push(String(m.name));
+    });
+  }catch(_){}
+  names.sort();
+  var sig = names.join('');
+  if(_pcv2Map && _pcv2Sig === sig) return _pcv2Map;
+  var map = {}, used = {};
+  names.forEach(function(nm){
+    var want = _pcv2Want(nm);
+    if(!used[want]){ map[nm] = want; used[want] = 1; return; }
+    var start = _PCV2_PAL.indexOf(want); if(start < 0) start = 0;
+    for(var k = 1; k <= _PCV2_PAL.length; k++){
+      var c = _PCV2_PAL[(start + k) % _PCV2_PAL.length];
+      if(!used[c]){ map[nm] = c; used[c] = 1; return; }
+    }
+    map[nm] = want;
+  });
+  _pcv2Map = map; _pcv2Sig = sig;
+  return map;
+}
+function _pcv2Col(n){
+  var nm = String(n == null ? '' : n);
+  try{ var m = _pcv2Build(); if(m[nm]) return m[nm]; }catch(_){}
+  return _pcv2Want(nm);
+}
+
 /* DAY OFF 승인 건 중 가장 가까운 미래 날짜까지 D-n (없으면 null) */
 function _pcv2DdayOf(name){
   try{ if(typeof ensureOffLoaded==='function') ensureOffLoaded(); }catch(_){}
@@ -63407,6 +63627,19 @@ function _agBind(host){
       try{
         if(mode !== 'move' || dropOut){ _agGhostClear(host); }
         else {
+          /* ═══ [v1540] v1537 이 미리보기를 통째로 죽여 놓았다 ════════════════════
+             사장님 "세로 모양으로는 보이는데 좌우로 안보인다 했잖아, 그거 수정해"
+
+             원인은 오타에 가깝다 — 있던 자리를 그릴 때 `track` 이라는 **없는 변수**를
+             썼다. 이 블록은 try/catch 안이라 예외가 조용히 먹혀서, 그 아래
+             `_agGhostDraw` 가 **아예 안 불렸다.** 좌우만 안 나온 게 아니라
+             세로까지 같이 죽어 있었던 것이다(사장님이 본 세로 표시는 v1278 의
+             목표 줄 테두리였다 — 그건 다른 기능이라 멀쩡했다).
+
+             잡은 막대가 들어 있는 트랙은 bar.parentNode 다. 그것을 쓴다.
+             ★ 교훈: try/catch 안에서 오타는 '아무 일도 안 일어남' 으로 나타난다.
+                조용히 죽는 자리를 만들지 말 것. */
+          var _myTrack = null; try{ _myTrack = bar.parentNode; }catch(_){}
           var _plan = [], _myCol = '';
           try{ _myCol = bar.style.getPropertyValue('--bc') || ''; }catch(_){}
           var _myNm = ''; try{ var _n0 = bar.querySelector('.ag-nm'); _myNm = _n0 ? _n0.textContent : ''; }catch(_){}
@@ -63418,7 +63651,7 @@ function _agBind(host){
               var _sp = PCS.find(function(x){ return x.id === tgtSwap.pc; });
               var _sa = _sp && (_sp.assignments||[])[tgtSwap.idx];
               var _snm = ''; try{ var _n1 = tgtSwap.el.querySelector('.ag-nm'); _snm = _n1 ? _n1.textContent : ''; }catch(_){}
-              if(_sa) _plan.push({ track:track, start:_sa.start, len:_sa.len, name:_snm, back:true });
+              if(_sa && _myTrack) _plan.push({ track:_myTrack, start:_sa.start, len:_sa.len, name:_snm, back:true });
             }catch(_){}
           } else if(tgtPc != null && overRow){
             var _ot = overRow.querySelector('.ag-track');
@@ -63427,7 +63660,7 @@ function _agBind(host){
           /* [v1537] 있던 자리 — 줄을 옮기든 시간만 밀든, 움직였으면 남긴다.
              같은 줄에서 좌우로 밀 때는 이것이 유일한 기준점이다. */
           if(a.start !== st0 || a.len !== len0 || tgtPc != null || tgtSwap){
-            _plan.push({ track:track, start:st0, len:len0, from:true, delta:(a.start - st0) });
+            if(_myTrack) _plan.push({ track:_myTrack, start:st0, len:len0, from:true, delta:(a.start - st0) });
           }
           _agGhostDraw(host, _plan);
         }
