@@ -4,7 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
 <title>ARASAKA Corp</title>
-<!-- BUILD: v1502 | 출근했는데 격자에 자리가 없는 사람을 현황 보드가 말한다 -->
+<!-- BUILD: v1503 | 문의 카드에 연락처 — 클라 정보는 다 있는데 연락할 길이 없었다 -->
 <!-- v745 기록은 git 이력(v1302 이전 커밋)에 있다 — 100KB 변경사 주석을 배포에서 제거 -->
 <!-- [v677] a <link href> cannot read a CSS variable, so the favicon carries its own copy.
      64px: a browser tab draws it at 16-32px, so this is 2x-DPR sharp at 11KB. -->
@@ -40379,6 +40379,7 @@ function _srRecCardHTML(data){
         if(iq.source && !_pcbIsTbd(iq.source)) subBits.push(_pcbEsc(iq.source)+' 경유');
         if(iq.start && !_pcbIsTbd(iq.start)) subBits.push('시작 '+_pcbEsc(iq.start));
         if(iq.pay && !_pcbIsTbd(iq.pay)) subBits.push(_pcbEsc(_pcbPickTxt(iq.pay)));
+        if(iq.contact && !_pcbIsTbd(iq.contact)) subBits.push('☎ '+_pcbEsc(iq.contact));   /* [v1503] */
         var whoBits = [];
         if((iq.staff||[]).length) whoBits.push('👥 '+iq.staff.map(function(s){ return _pcbEsc(_pcbStaffName(s)); }).slice(0,3).join(' · ')+(iq.staff.length>3?' 외':''));
         if(iq.tester) whoBits.push('🧪 '+_pcbEsc(_pcbStaffName(iq.tester)));
@@ -43272,6 +43273,10 @@ function _pcbIqCardHTML(iq, items, pcOptions, vet){
            정산과 재계약을 결정한다. 레벨은 기준 EXP 를 고르는 첫 숫자라 처음부터 받아야 한다. */''}
       <div class="pcb-iqgrid">
         ${mini('source',_iqT('경로','SOURCE'),_iqT('지인 소개','referral'),true)}
+        ${/* [v1503] 연락처. 문의 카드에 클라 정보는 다 있는데 정작 '어떻게 연락하나' 가 없었다.
+             경로(지인 소개)만 있고 번호가 없으니, 테스트 결과를 알리려면 매번 딴 데서 찾아야 했다.
+             카카오톡 · 왓츠앱 · 디스코드 뭐든 그대로 적는다 — 형식을 정하면 안 적는다. */''}
+        ${mini('contact',_iqT('연락처','CONTACT'),_iqT('카톡 · 왓츠앱 · 디스코드','KakaoTalk · WhatsApp · Discord'),true)}
         ${mini('start',_iqT('시작','START'),'08-25',true)}
         ${pick('pay',_iqT('결제','BILLING'),true,_iqT('월결제','monthly'),_iqT('눌러서 바꾸기 — 월결제 ↔ 주결제','Click to change — monthly ↔ weekly'))}
         ${mini('hours',_iqT('요청 시간','HOURS'),'09–19',true)}
@@ -44167,6 +44172,7 @@ function _pcbBoardText(){
       if(iq.hours)  out.push(C('  Hours    : '+iq.hours, cc));
       var _gi=[iq.server,iq.job,iq.gear].map(function(x){return String(x||'').trim();}).filter(Boolean);
       if(_gi.length) out.push(C('  Spec     : '+_gi.join(' · '), cc));
+      if(iq.contact) out.push(C('  연락처   : '+iq.contact, cc));   /* [v1503] */
       if(iq.pcKey)  out.push(C('  PC       : PC '+String(iq.pcKey).replace(/^x/,''), cc));
       if((iq.staff||[]).length) out.push(C('  Staff    : '+iq.staff.map(_pcbStaffName).join(', '), cc));
       if(iq.tester) out.push(C('  Tester   : '+_pcbStaffName(iq.tester), cc));
@@ -44256,6 +44262,7 @@ async function _pcbInqNew(colId){
     name:String(nm).trim(), source:'', start:'', days:'', hours:'', server:'', job:'', lv:'', pay:'',
     line:'', foe:'',   /* [v1250] 소속(라인·중립·개인) · 적대혈 유무 */
     gear:'', gearMig:1, wep:null, set:null,   /* [v1247] 장비는 검·셋 두 숫자 — gear 는 옛 카드용 */
+    contact:'',   /* [v1503] 연락처 — 어떻게 연락하나 */
     pcKey:null, staff:[], tester:null, note:'', files:[], col:cid, crmId:null, applied:null, testAt:null,
     createdAt:new Date().toISOString(), createdBy:(typeof currentUser!=='undefined'&&currentUser&&currentUser.name)||'' });
   _pcbSave(); renderPcBoard();
