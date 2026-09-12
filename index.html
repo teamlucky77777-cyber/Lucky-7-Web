@@ -4,7 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
 <title>ARASAKA Corp</title>
-<!-- BUILD: v1520 | NEW 이름표가 클라 이름과 겹치던 것 - 띄우지 않고 이름 옆에 세운다 -->
+<!-- BUILD: v1521 | 리더에게 스케줄·채용·온보딩·직원 목록을 연다 -->
 <!-- v745 기록은 git 이력(v1302 이전 커밋)에 있다 — 100KB 변경사 주석을 배포에서 제거 -->
 <!-- [v677] a <link href> cannot read a CSS variable, so the favicon carries its own copy.
      64px: a browser tab draws it at 16-32px, so this is 2x-DPR sharp at 11KB. -->
@@ -15952,7 +15952,7 @@ const CHANNEL_TREE = {
            (v1040에서 합쳤다가 되돌렸다: 본판을 건드리면 매일 돌아가는 스케줄 작업이 흔들린다) */
         { id:'op-pc-board', name:'계정 보드',   icon:'target',    module:'pcboard', kind:'view', perms:['admin','op'] },   /* [v747] boss 8/12: 디스코드로 손수 쓰던 PC/계정 배정 현황판을 앱 안으로 */
         { id:'op-daily-board',name:'일일 업무',  icon:'check',    module:'tasks', kind:'view', unread:2 },   // [v832] boss: 공유 보드는 모두가 — 전 역할 개방 (v784 leader 한정에서 확대)
-        { id:'op-schedule',   name:'스케줄',     icon:'calendar', module:'roster', kind:'view', perms:['admin','op'] },
+        { id:'op-schedule',   name:'스케줄',     icon:'calendar', module:'roster', kind:'view', perms:['admin','op','leader'] },   /* [v1521] 사장님 "플레이어 리더들한테도 스케줄 보이게" — 교대를 짜는 사람이 표를 못 보고 있었다 */
       ]
     },
     {
@@ -15982,8 +15982,9 @@ const CHANNEL_TREE = {
     {
       /* [v899] boss 정정: "점수판은 인사에 있어야지 / 직원이 저 화면을 보면 안 된다 —
          Admin·Manager·Player Leader만". v898의 운영 카테고리 이동과 staff 개방을 모두 원복.
-         카테고리에 leader를 넣은 이유: 팀리더는 ROLE_PERMS에서 op-trust만 true고 채용·온보딩·
-         직원목록은 전부 leader:false, 클라이언트는 채널 perms(admin/op)라 새는 채널이 없다.
+         카테고리에 leader를 넣은 이유: 팀리더가 카테고리 단계에서 막히면 점수판을 못 본다.
+         [v1521] 사장님 지시로 채용·온보딩·직원 목록도 리더에게 열었다(점수판은 v757부터).
+         클라이언트만 아직 채널 perms(admin/op)로 닫혀 있다.
          카테고리가 admin/op만이면 팀리더가 카테고리 단계에서 막혀 점수판을 못 본다.
          직원은 자기 점수만 '내 페이지 > 내 점수'(pl-my-score)에서 본다. */
       id:'hr', name:'인사', catIcon:'users', perms:['admin','op','leader'],
@@ -54019,12 +54020,19 @@ const ROLE_PERMS = {
   'pc-status-v2':   { manager:true, settlement:false, hr:false, staff:false, leader:false },   /* 개발판 — Admin·Manager만 */
   'attendance':     { manager:true, settlement:true, hr:true, staff:true, leader:true },
   'op-daily-board': { manager:true, settlement:false, hr:true, staff:false, leader:true },   // [v784] Admin·Manager·HR·Player Leader 공유
-  'op-schedule':    { manager:true, settlement:false, hr:true, staff:false, leader:false },
+  /* ═══ [v1521] 리더에게 스케줄·채용·온보딩·직원 목록을 연다 ═══════════════════
+     사장님 "플레이어 리더들한테도 스케줄 보이게 · 인사쪽도 그냥 채용이랑 온보딩
+             직원목록 점수판쪽 보이게"
+     리더는 교대를 짜고 신입을 붙여 주는 사람인데, 정작 시프트 표와 직원 목록을
+     못 보고 있었다. 점수판은 이미 열려 있었다(v757).
+     ★ 여기만 고치면 안 된다 - perm_state 의 저장값이 부팅 때 이 표를 덮어쓴다
+       (_applyPermPayload). DB 도 같이 true 로 바꿨다. v899 가 남긴 함정이다. */
+  'op-schedule':    { manager:true, settlement:false, hr:true, staff:false, leader:true },
   'op-clients':     { manager:true, settlement:true, hr:false, staff:false, leader:false },
   'op-weekly-kpi':  { manager:true, settlement:false, hr:true, staff:false, leader:false },
-  'op-recruit':     { manager:true, settlement:false, hr:true, staff:false, leader:false },
-  'op-onboarding':  { manager:true, settlement:false, hr:true, staff:false, leader:false },
-  'op-hr':          { manager:true, settlement:false, hr:true, staff:false, leader:false },
+  'op-recruit':     { manager:true, settlement:false, hr:true, staff:false, leader:true },    /* [v1521] */
+  'op-onboarding':  { manager:true, settlement:false, hr:true, staff:false, leader:true },    /* [v1521] */
+  'op-hr':          { manager:true, settlement:false, hr:true, staff:false, leader:true },    /* [v1521] */
   /* [v757] boss 8/5 결정("카이지랑 브루스한테도 점수판 열어서 직원들 점수 줄 수 있게")을 개인 오버라이드가
      아니라 직책 권한으로 옮긴다. 오버라이드는 _applyPermPayload에서 사용자 단위로 통째 교체돼서, 나중에
      브루스에게 기준 EXP를 열어주는 순간 op-trust 오버라이드가 같이 날아갔다(브루스가 8/15 "점수판 못 들어감"). */
