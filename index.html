@@ -4,7 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
 <title>ARASAKA Corp</title>
-<!-- BUILD: v1542 | 클라 패널을 격자 한 줄로 · 색이 겹치는 사람 없게 -->
+<!-- BUILD: v1543 | 색 - 옛 방법으로 원래 색을 지키고 겹친 사람만 비켜난다 · 초록 줄임 -->
 <!-- v745 기록은 git 이력(v1302 이전 커밋)에 있다 — 100KB 변경사 주석을 배포에서 제거 -->
 <!-- [v677] a <link href> cannot read a CSS variable, so the favicon carries its own copy.
      64px: a browser tab draws it at 16-32px, so this is 2x-DPR sharp at 11KB. -->
@@ -58392,32 +58392,38 @@ function _pcv2Live(a, nowH){ const st=((Number(a.start)||0)%24+24)%24, e=st+(Num
 /* [v1477] boss "노란색이 너무 많은데 — 다른 색은 건들지 말고 노란색만".
    팔레트에 노랑이 둘(#c2a04a·#d9a53a) 있었는데 눈으로는 거의 같은 색이라 일곱 명이 다 노랗게 보였다.
    그 두 자리에 걸린 사람만 다른 색으로 흩는다 — 나머지 여덟 색의 배정은 하나도 안 바뀐다. */
-/* [v1542] 색이 겹치는 사람이 없게.
-   사장님 "Alex bara zakyy barun 다 색깔이 똑같아 · 배정격자에 색이 똑같은 사람
-          없게해줘 · 기존에 이미 직원에게 배치된 색은 최대한 유지하면서"
+/* [v1543] 색을 다시. 사장님 두 가지 지적이 다 맞다.
+   1) "기존 직원들 색 왠만하면 유지하라니까 다 바뀌었네"
+      v1542 는 팔레트를 10개에서 37개로 늘렸다. 그런데 색을 고르는 방법이
+      '이름 숫자 % 팔레트 개수' 다. **나누는 수가 바뀌면 몫이 전부 바뀐다** —
+      그래서 겹치지 않던 사람까지 전원 색이 밀렸다. 늘리기만 하면 되는 게 아니었다.
+   2) "초록색 계열이 너무 많은데?"
+      늘린 24색에 초록이 일곱이나 들어 있었다. 내가 눈으로 안 봤다.
 
-   여태는 이름을 숫자로 바꿔 팔레트에서 하나 골랐다(해시). 색이 13가지인데 사람이
-   서른 넷이니 겹치는 건 운이 아니라 산수였다. v1477 에서 노랑만 다섯으로 흩었는데
-   그건 가장 아픈 자리 하나를 늦춘 것뿐이었다.
-
-   이제 한 번에 다 나눠 준다.
-     1) 팔레트를 37가지로 늘린다 - 앞 13개는 지금 쓰는 색 그대로다
-     2) 이름순(고정된 순서)으로 돌면서, 각자 해시가 고르던 그 색을 먼저 달라고 한다
-     3) 이미 누가 가져갔으면 팔레트를 돌며 빈 색을 집는다
-   2)가 '기존 색 최대한 유지' 다 - 겹치지 않는 사람은 색이 그대로다. 겹친 사람들 중
-   이름이 앞선 한 명이 원래 색을 지키고 나머지가 옆으로 비켜난다.
-   이름순으로 도는 이유는 오늘과 내일이 같아야 하기 때문이다. 격자 순서로 돌면
-   배정을 옮길 때마다 남의 색이 바뀐다.
-   명단이 바뀔 때만 다시 나눈다(서명 비교) - 렌더마다 부르는 함수라 한 번만 계산한다. */
-var _PCV2_PAL = [
-  '#5fa3d9','#b074ec','#4E9A62','#c2a04a','#c0574f','#6ba59d','#a88fa0','#d9a53a','#7c8fd9','#c46a9a',
-  '#d9793a','#93b03f','#3fa9c9',
-  '#e0704f','#4aa0c2','#8fb04a','#c98ed6','#5f8fd9','#6fb58a','#b5707f','#7f7fd9','#4fb0a0',
-  '#cf7a6a','#9a8fd6','#5aa870','#c2905a','#7aa0b5','#a0b55a','#d67a9a','#6a95c9',
-  '#b09a4a','#8fa0a8','#cf6a8a','#5fb5c2','#a87a4a','#9ac26a','#a87a55'
+   고친 방법:
+     · 원하는 색은 **옛 방법 그대로** 계산한다(옛 10색 + 노랑 자리 5색, v1477 과 동일).
+       그러니 겹치지 않는 사람은 **색이 하나도 안 바뀐다.**
+     · 겹친 사람만 **덧붙임 색**(옛 13색 밖의 24색)으로 비켜난다. 남의 원래 색을
+       절대 가져가지 않는다.
+     · 덧붙임 24색은 색상을 고르게 펴고 **초록은 둘만** 넣었다. */
+var _PCV2_OLD = ['#5fa3d9','#b074ec','#4E9A62','#c2a04a','#c0574f','#6ba59d','#a88fa0','#d9a53a','#7c8fd9','#c46a9a'];
+var _PCV2_YEL = ['#c2a04a','#d9793a','#93b03f','#3fa9c9','#a87a55'];
+/* 비켜날 자리 — 옛 13색과 겹치지 않고, 초록은 둘만 */
+var _PCV2_EXT = [
+  '#e0604a','#d94f7a','#b0508f','#8a5fd9','#5f6fd9','#4a86c9','#3f9aa8','#5aa87f',
+  '#c98f2f','#b5703a','#a85f5f','#cf7fa8','#9a7fb5','#6f8fa8','#b59a6f','#d98f6f',
+  '#7fb5c9','#a8567a','#6f5fa8','#c25f8f','#4f7fa8','#8f6f4f','#b54f5f','#8a9a3f'
 ];
-function _pcv2Hash(n){ var h=0, s=String(n); for(var i=0;i<s.length;i++) h=(h*31+s.charCodeAt(i))>>>0; return h; }
-function _pcv2Want(n){ return _PCV2_PAL[_pcv2Hash(n) % _PCV2_PAL.length]; }
+/* 옛 방법 그대로 — 이 값이 '원래 그 사람 색' 이다 */
+function _pcv2Want(n){
+  var s = String(n), h = 0;
+  for(var i=0;i<s.length;i++) h = (h*31 + s.charCodeAt(i)) >>> 0;
+  var i2 = h % _PCV2_OLD.length;
+  if(i2 !== 3 && i2 !== 7) return _PCV2_OLD[i2];
+  var g = 0;
+  for(var k=0;k<s.length;k++) g = (g*131 + s.charCodeAt(k) + 7) >>> 0;
+  return _PCV2_YEL[g % _PCV2_YEL.length];
+}
 var _pcv2Map = null, _pcv2Sig = '';
 function _pcv2Build(){
   var names = [];
@@ -58429,16 +58435,13 @@ function _pcv2Build(){
   names.sort();
   var sig = names.join('');
   if(_pcv2Map && _pcv2Sig === sig) return _pcv2Map;
-  var map = {}, used = {};
+  var map = {}, used = {}, ei = 0;
   names.forEach(function(nm){
     var want = _pcv2Want(nm);
     if(!used[want]){ map[nm] = want; used[want] = 1; return; }
-    var start = _PCV2_PAL.indexOf(want); if(start < 0) start = 0;
-    for(var k = 1; k <= _PCV2_PAL.length; k++){
-      var c = _PCV2_PAL[(start + k) % _PCV2_PAL.length];
-      if(!used[c]){ map[nm] = c; used[c] = 1; return; }
-    }
-    map[nm] = want;
+    while(ei < _PCV2_EXT.length && used[_PCV2_EXT[ei]]) ei++;
+    if(ei < _PCV2_EXT.length){ map[nm] = _PCV2_EXT[ei]; used[_PCV2_EXT[ei]] = 1; ei++; }
+    else map[nm] = want;
   });
   _pcv2Map = map; _pcv2Sig = sig;
   return map;
