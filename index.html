@@ -4,7 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
 <title>ARASAKA Corp</title>
-<!-- BUILD: v1556 | 직원 풀 백업 PLAYER 끌어놓기 - 끌기 시작하자마자 꺼지던 규칙 제거 -->
+<!-- BUILD: v1557 | 트레이닝 칸 카드도 같은 키 - REPORT 가 모든 카드에서 같은 선 -->
 <!-- v745 기록은 git 이력(v1302 이전 커밋)에 있다 — 100KB 변경사 주석을 배포에서 제거 -->
 <!-- [v677] a <link href> cannot read a CSS variable, so the favicon carries its own copy.
      64px: a browser tab draws it at 16-32px, so this is 2x-DPR sharp at 11KB. -->
@@ -10448,6 +10448,8 @@ html .cs-ed-dialnum.bump-up .h.up,html .cs-ed-dialnum.bump-dn .h.dn{opacity:1}
    앞면에 flex:1 을 줘서 남은 높이를 받게 한다. 뒷면은 position:absolute 라 영향 없다. */
 #sr-app .sr-clcard > .sr-clflip{display:flex;flex-direction:column}
 #sr-app .sr-clcard > .sr-clflip > .sr-clfront{flex:1 1 auto;min-height:0}
+/* [v1557] 칸이 달라도 카드 키를 같게 — 따로 떨어진 트레이닝 칸 카드의 REPORT 가 떠 있었다 */
+#sr-app .sr-clgrid > .sr-clcard:not(.sr-clcard-blank):not(.sr-clcard-down){min-height:var(--sr-cardh,0px)}
 @media (prefers-reduced-motion:reduce){#sr-app .sr-clrep{transition:none}#sr-app .sr-clrep:hover{transform:none}}
 /* [v1512] 클래스 하나(#sr-app .sr-clcard-li)로는 힘이 모자랐다 - 같은 힘의
    `#sr-app .sr-clcard{border:1px solid var(--br)}` 가 스크립트로 나중에 깔려서 이겼다.
@@ -40887,6 +40889,12 @@ function _srRecCardHTML(data){
         .filter(function(h){ return h > 0; }).sort(function(a,b){ return a-b; });
       if(!hs.length){ g.style.removeProperty('--sr-iqh'); return; }
       g.style.setProperty('--sr-iqh', Math.round(hs[Math.floor(hs.length/2)]) + 'px');
+      /* [v1557] 사장님 "이거 리포트 여기 중간 위치에 두지말고 다른 카드랑 똑같은 위치로 내려"
+         단추는 앞면 맨 바닥(margin-top:auto)이라 카드 키가 곧 단추 자리다. 같은 줄 카드끼리는 키가
+         맞춰지는데, 아래 따로 떨어진 칸(트레이닝 클라)은 혼자라 제 글 높이로 짧았다 → 단추가 떴다.
+         위 칸에서 잰 카드 키(중앙값)를 모든 칸에 최소 키로 준다. 그러면 어느 칸이든 같은 선. */
+      var _ch = Math.round(hs[Math.floor(hs.length/2)]) + 'px';
+      document.querySelectorAll('#sr-app .sr-clgrid').forEach(function(x){ x.style.setProperty('--sr-cardh', _ch); });
     }catch(_){}
   };
   if(!window._srIqSizeRs){ window._srIqSizeRs = 1; var _rsT = null;
