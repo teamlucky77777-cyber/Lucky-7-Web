@@ -4,7 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
 <title>ARASAKA Corp</title>
-<!-- BUILD: v1554 | 시계 가운데 안내에 영어 - 웹 점검 시험 실행이 찾은 것 -->
+<!-- BUILD: v1555 | 클라 시간에서 시계를 없앤다 - 격자 같은 가로 한 줄 + 시작 끝 단추 -->
 <!-- v745 기록은 git 이력(v1302 이전 커밋)에 있다 — 100KB 변경사 주석을 배포에서 제거 -->
 <!-- [v677] a <link href> cannot read a CSS variable, so the favicon carries its own copy.
      64px: a browser tab draws it at 16-32px, so this is 2x-DPR sharp at 11KB. -->
@@ -2941,6 +2941,13 @@ body.cld-dialing .ckk .ckk-kn{r:9.5}
 .cld-dialhint{text-align:center;font-size:10.5px;color:var(--tx4,#5f5e5a);margin:2px 0 10px}
 /* [v1553] 시계 아래 시작 끝 단추 · 24칸 시각판 · 앉은 사람 시간으로 */
 .cldt{display:flex;align-items:center;justify-content:center;gap:8px;margin:6px 0 8px}
+/* [v1555] 시계 대신 가로 한 줄 — 패널 폭을 꽉 채운다 */
+.cldb-wrap{margin:4px 0 2px}
+.cldb-wrap .cldb{height:48px}
+.cldb .cldb-empty{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;z-index:2;
+  font-style:normal;font-size:12.5px;font-weight:700;color:var(--tx3,#8a8a86);letter-spacing:-.01em}
+.cldt-len{display:flex;flex-direction:column;align-items:flex-start;gap:1px;line-height:1.25}
+.cldt-gap{font-style:normal;font-size:11px;font-weight:700;color:#e0967a}
 .cldt-chip{display:flex;flex-direction:column;align-items:center;gap:1px;min-width:88px;padding:7px 12px 6px;border-radius:12px;
   border:1px solid var(--br,#2a2a2c);background:var(--bg-h,#1c1c1f);color:var(--tx,#e6e5e2);cursor:pointer;font-family:inherit;
   transition:border-color .12s ease,box-shadow .12s ease,transform .08s ease}
@@ -58247,11 +58254,22 @@ function _cldSeatWin(c){
 function _cldTimeBoxHTML(c, cid, opt){
   opt = opt || {};
   var ko = (typeof _uiLang !== 'function' || _uiLang() === 'ko');
-  var B = _cldClockHTML(c, cid);
+  /* ═══ [v1555] 시계를 없앤다 — 배정 격자와 같은 가로 한 줄 ═══════════════════════
+     사장님 "이거 그냥 시간 버튼식으로 바꾸고 / 시계같은 저 모양도 그냥 없애버려 /
+            그냥 배정격자 같은 느낌으로 가로로된 시간표로 바꾸고"
+     둥근 시계는 격자와 말이 달랐다 — 격자는 가로로 읽는데 여기만 돌아서 읽었다.
+     v1541 에 만들어 둔 가로 한 줄(_cldBandHTML)을 쓴다. 유리 = 맡긴 시간,
+     색 막대 = 앉은 사람, 금색 선 = 지금. 격자에서 본 것과 똑같이 읽힌다.
+     시간은 아래 시작 · 끝 단추로만 정한다(끌어서 돌리는 손잡이는 없다). */
+  var B = _cldClockHTML(c, cid);          /* 계산만 쓴다 — 누구의 시간인지 · 몇 시간 · 빈 시간 */
+  var BD = _cldBandHTML(c);
   var w = B.win, id = B.cid || 'x';
   var edit = !!opt.edit && !!B.cid;
   var wib = function(x){ return ((Number(x) - 2) % 24 + 24) % 24; };
-  var h = '<div id="cld-dialwrap-' + id + '">' + B.svg + '</div>';
+  var band = BD.band || '';
+  if(!w) band = band.replace('</div><div class="cldb-ax">',
+    '<em class="cldb-empty">' + (ko ? '시간 미정' : 'No hours yet') + '</em></div><div class="cldb-ax">');
+  var h = '<div id="cld-dialwrap-' + id + '" class="cldb-wrap">' + band + '</div>';
   if(edit){
     var pk = (window._cldPickOpen && window._cldPickOpen.cid === B.cid) ? window._cldPickOpen.which : '';
     var chip = function(which, val, label){
@@ -58261,7 +58279,8 @@ function _cldTimeBoxHTML(c, cid, opt){
     };
     h += '<div class="cldt">' + chip('s', w ? w.s : null, ko ? '시작' : 'Start')
        + '<span class="cldt-arrow">→</span>' + chip('e', w ? w.e : null, ko ? '끝' : 'End')
-       + '<span class="cldt-len">' + (w ? (B.need + (ko ? '시간' : 'h')) : '') + '</span></div>';
+       + '<span class="cldt-len">' + (w ? (B.need + (ko ? '시간' : 'h')) : '')
+       + (w && B.gap > 0 ? ('<em class="cldt-gap">' + B.gap + (ko ? '시간 빔' : 'h empty') + '</em>') : '') + '</span></div>';
     if(pk){
       var cur = w ? (pk === 's' ? w.s : w.e) : null;
       h += '<div class="cldt-pick"><div class="h">' + (pk === 's' ? (ko ? '몇 시에 시작하나요?' : 'Start at?') : (ko ? '몇 시에 끝나나요?' : 'End at?')) + '</div>';
@@ -58282,7 +58301,6 @@ function _cldTimeBoxHTML(c, cid, opt){
          + '<span>' + pad2(sg.s) + ':00–' + pad2(sg.e) + ':00</span>'
          + '<button type="button" onclick="_cldPickSet(\'' + B.cid + '\',\'both\',' + sg.s + ',' + sg.e + ')">' + (ko ? '이 시간으로' : 'Use this') + '</button></div>';
     }
-    if(w) h += '<div class="cld-dialhint">' + (ko ? '시계의 흰 손잡이를 끌어도 됩니다' : 'You can also drag the white handles') + '</div>';
   }
   if(w){
     h += '<div class="cldb-sum" style="justify-content:center">'
@@ -58478,7 +58496,7 @@ function _cldBandHTML(c){
     html += '<u class="cldb-now" style="left:' + nowP + '%"></u>';
     /* 눈금 — 0 6 12 18 */
     var ticks = '';
-    [0, 6, 12, 18].forEach(function(h){ ticks += '<s style="left:' + (h/24*100) + '%">' + pad2(h) + '</s>'; });
+    [0, 3, 6, 9, 12, 15, 18, 21].forEach(function(h){ ticks += '<s style="left:' + (h/24*100) + '%">' + pad2(h) + '</s>'; });   /* [v1555] 격자처럼 3시간마다 */
     return { band:'<div class="cldb' + (off ? ' off' : '') + '">' + html + '</div><div class="cldb-ax">' + ticks + '</div>',
              need:need, gap:gap, off:off, win:win, npc:plist.length };
   }catch(e){ return { band:'', need:0, gap:0, off:false, win:null, npc:0 }; }
