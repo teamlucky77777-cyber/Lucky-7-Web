@@ -4,7 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
 <title>ARASAKA Corp</title>
-<!-- BUILD: v1560 | 빈 카드 REPORT 바닥으로 - 기록 없음 글자를 단추 위로, 트레이닝 세션 카드 -->
+<!-- BUILD: v1561 | 기록 통계 빠르게 - 사본을 메모리와 IndexedDB 로, 같은 기록이면 다시 안 그림, 문의 보드 실패 시 1초 반복 막음 -->
 <!-- v745 기록은 git 이력(v1302 이전 커밋)에 있다 — 100KB 변경사 주석을 배포에서 제거 -->
 <!-- [v677] a <link href> cannot read a CSS variable, so the favicon carries its own copy.
      64px: a browser tab draws it at 16-32px, so this is 2x-DPR sharp at 11KB. -->
@@ -34418,7 +34418,7 @@ function _owcPerfWk(){
     if(window._owcPerfC && Date.now()-window._owcPerfC.at < 300000) return window._owcPerfC.map;
     if(typeof _rcGetCache!=='function' || typeof _srRecCompute!=='function') return {};
     const c=_rcGetCache(); if(!c) return {};
-    const rec=_srRecCompute(c.reports, c.clients);
+    const rec=((typeof _rcRec==='function') && _rcRec()) || _srRecCompute(c.reports, c.clients);   /* [v1561] 사본 한 벌에 셈 한 번 */
     const n=new Date(Date.now()+9*3600000);
     const dow=n.getUTCDay(); const mon=new Date(Date.UTC(n.getUTCFullYear(),n.getUTCMonth(),n.getUTCDate()-(dow===0?6:dow-1))).toISOString().slice(0,10);
     const agg={};
@@ -34483,7 +34483,7 @@ function _owcStaffPop(k, nm, ev){
   const hostR=host.getBoundingClientRect();
   let daily=[];
   try{ const c=(typeof _rcGetCache==='function')?_rcGetCache():null;
-    if(c&&typeof _srRecCompute==='function'){ const rec=_srRecCompute(c.reports,c.clients);
+    if(c&&typeof _srRecCompute==='function'){ const rec=((typeof _rcRec==='function') && _rcRec()) || _srRecCompute(c.reports,c.clients);   /* [v1561] */
       daily=(rec.daily||[]).filter(r=>r&&r.key===k).sort((a,b)=>a.date<b.date?1:-1).slice(0,7); } }catch(_){}
   const wk=(_owcPerfWk()[k]);
   const pfc=p=>p==null?'var(--tx3)':(p>=100?'var(--gr)':(p>=80?'var(--ac)':'var(--re)'));
@@ -38733,7 +38733,16 @@ async function renderShiftAdmin(silent){
 
 
 // [v310] Records & Stats — filter / KR-time toggle re-render the card from stashed data; CSV exports the daily log.
-function _srRecReRender(){ var app=document.querySelector('#sr-app.sr-app-wide'); if(app && window._srRecAll){ app.innerHTML=_srRecCardHTML(window._srRecAll); if(window._srRecMode==='clock'){ try{ requestAnimationFrame(function(){ if(typeof _ckInit==='function') _ckInit(); }); }catch(_){} } } }
+function _srRecReRender(opt){ var app=document.querySelector('#sr-app.sr-app-wide'); if(app && window._srRecAll){ var _h=_srRecCardHTML(window._srRecAll); if(opt && opt.keep && app.__srHtml===_h) return; app.innerHTML=_h; app.__srHtml=_h; if(window._srRecMode==='clock'){ try{ requestAnimationFrame(function(){ if(typeof _ckInit==='function') _ckInit(); }); }catch(_){} } } }
+/* [v1561] 뒤에서 도착하는 것(직원 명단 · 겹치기 표 · 클라 로스터 · 문의 보드)마다 카드 판 전체를 다시 그리던 것을 한 번으로.
+   새 기록을 받는 중이면 그 그리기에 같이 들어가므로 기다린다. 그린 글자가 같으면 화면을 건드리지 않는다
+   — 뒤집어 둔 카드나 열어 둔 칸이 뒤에서 닫히지 않는다. 사람이 누른 다시 그리기(_srRecReRender())는 예전 그대로. */
+var _srRRSoonT=0;
+function _srRecReRenderSoon(){
+  if((window._srRecInflight||0) > 0){ window._srRecDirty=1; return; }
+  if(_srRRSoonT) return;
+  _srRRSoonT=setTimeout(function(){ _srRRSoonT=0; try{ if(window._srRecAll && window._srRecMode!=='clock') _srRecReRender({keep:1}); }catch(_){ } }, 40);
+}
 // [v322] CEO/admin report editing — fix a wrong level/EXP a player typed. Edits the single report in calc_data
 // (Tokyo) and re-renders. Records is already admin-only, so this is CEO/admin-gated by where it lives + a check.
 function _srRecInjectEditCSS(){
@@ -41007,9 +41016,18 @@ function _srRecCardHTML(data){
     try{
       try{ requestAnimationFrame(function(){ requestAnimationFrame(_srIqSizeSync); }); }catch(_){}   /* [v1359] 그린 다음 프레임에 측정 */
       if(typeof _pcbLoaded === 'undefined' || !_pcbLoaded){
-        if(!window._srIqLoadKick){ window._srIqLoadKick = 1;
-          try{ _pcbLoad().then(function(){ window._srIqLoadKick = 0; try{ renderRecords(true); }catch(_){} }); }catch(_){ window._srIqLoadKick = 0; } }
-        return '<div class="sr-iqwrap st-ask sr-iqload">문의 불러오는 중…</div>';
+        /* [v1561] 불러오기가 끝나면 메모리로만 다시 그린다. 예전엔 renderRecords(true) — 기록 전체(6MB)를 네트워크로
+           다시 받았고, 문의 보드를 못 불러오는 창(로그인 풀림 · 회선 끊김)에서는 그 그리기가 또 여기로 와서
+           1초마다 끝없이 돌았다(9/13 로그인 안 한 시험 창에서 2시간에 7,300번). 실패하면 1분 쉬었다 다시. */
+        var _iqNow = Date.now();
+        if(!window._srIqLoadKick && !((window._srIqLoadRetryAt||0) > _iqNow)){ window._srIqLoadKick = 1;
+          var _iqFail = function(){ window._srIqLoadKick = 0; window._srIqLoadRetryAt = Date.now() + 60000; };
+          try{ _pcbLoad().then(function(){
+                 if(typeof _pcbLoaded !== 'undefined' && _pcbLoaded){ window._srIqLoadKick = 0; try{ _srRecReRenderSoon(); }catch(_){} }
+                 else _iqFail();
+               }, _iqFail); }catch(_){ _iqFail(); } }
+        var _iqWait = ((window._srIqLoadRetryAt||0) > Date.now());
+        return '<div class="sr-iqwrap st-ask sr-iqload">'+(_uiLang()==='ko' ? (_iqWait ? '문의 보드를 못 불러왔어요 · 1분 뒤 다시' : '문의 불러오는 중…') : (_iqWait ? 'Could not load inquiries · retrying in 1 min' : 'Loading inquiries…'))+'</div>';
       }
       try{ _pcbInjectCSS(); }catch(_){}   /* 폼 스타일은 계정보드 주입식 — 여기서도 한 번 심는다(멱등) */
       try{ _pcRTJoin(); }catch(_){}   /* [v1351] 문의 실시간 — 클라별 화면도 채널에 붙는다(멱등) */
@@ -42216,8 +42234,71 @@ function _raceSpeedSet(x){ window._raceSpeed=x; var seg=document.getElementById(
 // no-store network fetch on every open — three pages re-pulling the same data, sometimes 2–3 serial
 // round-trips. Now: keep the last copy in localStorage, paint it instantly, refresh in the background.
 var _RC_CACHE_K='l7_rc_cache_v1';
-function _rcGetCache(){ try{ var s=localStorage.getItem(_RC_CACHE_K); if(s){ var o=JSON.parse(s); if(o&&Array.isArray(o.reports)&&Array.isArray(o.clients)) return o; } }catch(_){ } return null; }
-function _rcSetCache(reports,clients){ try{ localStorage.setItem(_RC_CACHE_K, JSON.stringify({reports:reports||[],clients:clients||[],t:Date.now()})); }catch(_){ } }
+/* ═══ [v1561] 기록 사본은 메모리 하나 + IndexedDB ═════════════════════════════
+   사장님 "기록 통계쪽 들어가면 클라이언트 카드안에 정보가 좀 로딩이 걸리는데 최적화좀 하자"
+   ① 사본(리포트 12,125건)을 localStorage 에 JSON 한 덩어리로 넣었다. 9/13 에 10.19MB —
+      크롬·웨일은 한 사이트에 10MB 까지만 준다. 넘으면 저장이 조용히 실패해 첫 화면이 며칠 전
+      사본으로 그려지고 1-2초 뒤 새 숫자로 바뀐다. 같은 사이트의 다른 저장도 자리를 잃는다.
+   ② _rcGetCache() 는 부를 때마다 5MB 를 JSON.parse 해 새 배열을 줬다. 클라별 카드마다 '들고 있는
+      사람' 칩과 REPORT 단추가 부르므로 한 번 그리는 데 34번(0.4초). 60초 묶음(recentIdx)도 늘 새
+      배열이라 한 번도 안 맞았다. 기록·통계를 한 번 열면 그리기가 5-6번이다.
+   → 사본은 메모리에 하나(부르면 늘 같은 것), 오래 둘 사본은 IndexedDB(용량 넉넉 · 비동기).
+     옛 localStorage 사본은 처음 한 번 읽어 옮기고 지운다. 부르는 쪽 15곳은 그대로 동기 호출이다.
+     메모리가 아직 비었으면 null — 기다릴 수 있는 곳(기록·통계 · PC 타임라인 · 기준표)은 _rcCacheReady() 를 기다린다.
+   받은 쪽은 사본을 고치지 않는다(읽기만). 고칠 일이 있으면 떼어 쓴다. */
+var _rcMem=null, _rcIdbP=null, _rcDbP=null, _rcSaveT=0;
+function _rcIdbOpen(){
+  if(_rcDbP) return _rcDbP;
+  _rcDbP=new Promise(function(res, rej){ try{ var q=indexedDB.open('l7-rc-cache', 1);
+    q.onupgradeneeded=function(){ try{ q.result.createObjectStore('kv'); }catch(_){ } };
+    q.onsuccess=function(){ var db=q.result; try{ db.onversionchange=function(){ try{ db.close(); }catch(_){ } _rcDbP=null; }; }catch(_){ } res(db); };
+    q.onerror=function(){ _rcDbP=null; rej(q.error); };
+    q.onblocked=function(){ _rcDbP=null; rej(new Error('idb blocked')); };
+  }catch(e){ _rcDbP=null; rej(e); } });
+  return _rcDbP;
+}
+/* 받은 글자 그대로의 지문 — 같으면 다시 셈 · 다시 그리기를 건너뛴다(6MB 에 약 15ms) */
+function _rcSig(txt){ var s=String(txt||''), h=0x811c9dc5; for(var i=0;i<s.length;i++){ h^=s.charCodeAt(i); h=Math.imul(h,0x01000193); } return (h>>>0).toString(36)+':'+s.length; }
+function _rcGetCache(){
+  if(_rcMem) return _rcMem;
+  try{ var s=localStorage.getItem(_RC_CACHE_K);
+    if(s!=null){ try{ localStorage.removeItem(_RC_CACHE_K); }catch(_){ }
+      var o=JSON.parse(s); if(o&&Array.isArray(o.reports)&&Array.isArray(o.clients)){ o.sig=null; _rcMem=o; _rcPersistSoon(); return o; } } }catch(_){ }
+  return null;
+}
+function _rcCacheReady(){
+  if(_rcMem || _rcGetCache()) return Promise.resolve(_rcMem);
+  if(!_rcIdbP) _rcIdbP=new Promise(function(done){
+    var tm=0, fin=function(){ clearTimeout(tm); done(_rcMem); };
+    tm=setTimeout(fin, 2500);   /* IndexedDB 가 멈춰도 첫 화면을 붙잡지 않는다 */
+    _rcIdbOpen().then(function(db){ try{ var g=db.transaction('kv','readonly').objectStore('kv').get('rc');
+      g.onsuccess=function(){ var o=g.result; if(!_rcMem && o && Array.isArray(o.reports) && Array.isArray(o.clients)) _rcMem=o; fin(); };
+      g.onerror=fin; }catch(_){ fin(); } }).catch(fin);
+  });
+  return _rcIdbP;
+}
+function _rcPersistSoon(){
+  clearTimeout(_rcSaveT);
+  _rcSaveT=setTimeout(function(){ var o=_rcMem; if(!o) return;
+    _rcIdbOpen().then(function(db){ try{ db.transaction('kv','readwrite').objectStore('kv').put(o,'rc'); }catch(_){ } }).catch(function(){ }); }, 1500);
+}
+function _rcSetCache(reports,clients,sig){
+  var R=reports||[], cl=clients||[];
+  /* 같은 기록을 또 넣으면 그대로 둔다 — 셈(_rcRec)과 IndexedDB 저장(6MB)을 다시 하지 않게. 받은 시각만 새로 */
+  if(_rcMem){
+    if(sig && _rcMem.sig===sig){ _rcMem.t=Date.now(); return; }
+    if(!sig && R===_rcMem.reports){ try{ if(JSON.stringify(cl)===JSON.stringify(_rcMem.clients)){ _rcMem.t=Date.now(); return; } }catch(_){ } }
+  }
+  /* 기준표 편집기가 넘기는 목록은 편집 중에 바뀔 수 있다 — 지문 없이 들어오면 떼어 둔다(30장 · 16KB) */
+  if(!sig){ try{ cl=JSON.parse(JSON.stringify(cl)); }catch(_){ } }
+  _rcMem={reports:R,clients:cl,t:Date.now(),sig:(sig||null)}; _rcPersistSoon();
+}
+try{ setTimeout(function(){ try{ _rcCacheReady(); }catch(_){ } }, 0); }catch(_){ }   /* 페이지가 열리자마자 미리 읽어 둔다 */
+/* 사본 한 벌에 셈 한 번 — 사본 객체가 바뀌기 전엔(새로 받거나 다른 화면이 넣기 전엔) 같은 답을 준다.
+   _srRecCompute 는 (리포트, 기준표) 두 배열만 보는 셈이라 안전하다(9/13 확인: 바깥 값은 _SR_HOUR_GAP_MS 뿐).
+   보고 고치기 · 지우기는 _srGetCalc 의 다른 배열에서 하고 renderRecords() 로 새로 받는다. */
+var _rcRecMemo={src:null, rec:null};
+function _rcRec(){ var c=_rcGetCache(); if(!c) return null; if(_rcRecMemo.src!==c){ _rcRecMemo={src:c, rec:_srRecCompute(c.reports, c.clients)}; } return _rcRecMemo.rec; }
 var _kbNode=null;
 
 // ============================================================================
@@ -43447,7 +43528,19 @@ async function renderRecords(silent){
   if(silent && window._srRecMode==='clock'){ return; }   // [v355] don't clobber clock playback
   // [v365] instant paint from cache so the page is never blank while the network catches up
   var _painted=false;
-  if(!silent && window._srRecMode!=='clock'){ var _cz=_rcGetCache(); if(_cz){ try{ otherView.innerHTML='<div id="sr-app" class="sr-app-wide">'+_srRecCardHTML(_srRecCompute(_cz.reports,_cz.clients))+'</div>'; _painted=true; try{ if(typeof _mcAutoOpen==='function') _mcAutoOpen(); }catch(_){} }catch(_){ } } }
+  /* [v1561] 사본은 메모리/IndexedDB 에서 온다. 그린 자료의 지문(__srSig)과 교육·숨김 명단을 카드 판에 붙여 둔다 —
+     새로 받은 기록이 같은 지문이면 다시 셈 · 다시 그리기 · 사본 저장을 통째로 건너뛴다. */
+  var _setsKey=function(){ try{ return JSON.stringify([_trainingKeys(),_hiddenKeys()]); }catch(_){ return ''; } };
+  var _stamp=function(el,h,sig){ if(!el) return; el.__srHtml=h; el.__srSig=sig||null; el.__srSets=_setsKey(); };
+  if(!silent && window._srRecMode!=='clock'){
+    var _cz=_rcGetCache();
+    if(!_cz){
+      if(!otherView.querySelector('.sr-rec-card')) otherView.innerHTML='<div id="sr-app" class="sr-app-wide"><div class="sr-card"><div class="sr-head"><h2>기록 · 통계</h2><span class="sr-badge">실시간</span></div><div class="sr-admin-load">⟳ 기록 불러오는 중…</div></div></div>';
+      try{ _cz=await _rcCacheReady(); }catch(_){ _cz=null; }
+      if(_ep !== (window._chEpoch||0)) return;   /* [v859] 기다리는 사이 다른 화면으로 갔다 */
+    }
+    if(_cz){ try{ var _h0=_srRecCardHTML((_cz===_rcGetCache() && _rcRec()) || _srRecCompute(_cz.reports,_cz.clients)); otherView.innerHTML='<div id="sr-app" class="sr-app-wide">'+_h0+'</div>'; _stamp(otherView.querySelector('#sr-app.sr-app-wide'),_h0,_cz.sig); _painted=true; try{ if(typeof _mcAutoOpen==='function') _mcAutoOpen(); }catch(_){} }catch(_){ } }
+  }
   var _bg = silent || _painted;   // after a cache paint, the fresh fetch refreshes in place (keep scroll/filter)
   // [v310] silent/bg = keep scroll + current filter, no loading flash, no error wipe
   var _keepTop = _bg ? (otherView.scrollTop||0) : 0;
@@ -43455,29 +43548,40 @@ async function renderRecords(silent){
   if(!_bg && !otherView.querySelector('.sr-rec-card')) otherView.innerHTML='<div id="sr-app" class="sr-app-wide"><div class="sr-card"><div class="sr-head"><h2>기록 · 통계</h2><span class="sr-badge">실시간</span></div><div class="sr-admin-load">⟳ 기록 불러오는 중…</div></div></div>';
   // [v365] roster + map-list enrichments run in the BACKGROUND — first paint waits only on the report fetch (was gated on the slow map sync)
   if(!silent){
-    if(typeof loadTeamMembers==='function') Promise.resolve().then(loadTeamMembers).then(function(){ try{ if(window._srRecAll&&window._srRecMode!=='clock') _srRecReRender(); }catch(_){ } }).catch(function(){});   // [v313] roster → every player gets a tab (silent re-render when it lands)
+    if(typeof loadTeamMembers==='function') Promise.resolve().then(loadTeamMembers).then(function(){ try{ _srRecReRenderSoon(); }catch(_){ } }).catch(function(){});   // [v313] roster → every player gets a tab (silent re-render when it lands)
     /* [v1405] 겹치기 표 — 카드 키를 정하니 먼저 */
-    try{ if(typeof _clAliasLoad==='function' && !window._clAliasLoaded) Promise.resolve().then(_clAliasLoad).then(function(){ try{ if(window._srRecAll&&window._srRecMode!=='clock') _srRecReRender(); }catch(_){ } }).catch(function(){}); }catch(_){}
+    try{ if(typeof _clAliasLoad==='function' && !window._clAliasLoaded) Promise.resolve().then(_clAliasLoad).then(function(){ try{ _srRecReRenderSoon(); }catch(_){ } }).catch(function(){}); }catch(_){}
     /* [v1404] 클라 로스터(휴면·hiatus_at)도 — 쉬는 클라 줄이 이걸 본다 */
-    try{ if(typeof syncClientStateFromCloud==='function' && typeof _clientSynced!=='undefined' && !_clientSynced) Promise.resolve().then(syncClientStateFromCloud).then(function(){ try{ if(window._srRecAll&&window._srRecMode!=='clock') _srRecReRender(); }catch(_){ } }).catch(function(){}); }catch(_){}
+    try{ if(typeof syncClientStateFromCloud==='function' && typeof _clientSynced!=='undefined' && !_clientSynced) Promise.resolve().then(syncClientStateFromCloud).then(function(){ try{ _srRecReRenderSoon(); }catch(_){ } }).catch(function(){}); }catch(_){}
     if(typeof syncExpFromCloud==='function'){ if(typeof _expSynced!=='undefined') _expSynced=true; Promise.resolve().then(syncExpFromCloud).catch(function(){}); }   // [v325] master map list for the editor's picker
   }
   var REPORT_URL='https://ohnasvgwzmknzujtqrzt.supabase.co';
   var REPORT_ANON='eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im9obmFzdmd3em1rbnp1anRxcnp0Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3Nzg3Mzg0NzIsImV4cCI6MjA5NDMxNDQ3Mn0.yTUmqCP5SIzi3fTYXVTg-WGyWB9DwmYYfzMWM1EB9V0';
+  window._srRecInflight=(window._srRecInflight||0)+1;   /* [v1561] 받는 동안 뒤에서 오는 다시 그리기는 기다렸다가 같이 */
   try{
     var hdr={ apikey:REPORT_ANON, Authorization:'Bearer '+REPORT_ANON };
+    var _tsP=_srLoadTrainingStaff(), _hsP=_srLoadHiddenStaff();   /* [v1561] 기록과 같이 출발 — 예전엔 받은 뒤에 하나씩 기다렸다 */
     var res=await fetch(REPORT_URL+'/rest/v1/calc_data?key=in.(reports,clients)&select=*',{headers:hdr,cache:'no-store'});
-    var rows=await res.json().catch(function(){return [];});
+    if(!res.ok) throw new Error('calc_data '+res.status);   /* [v1561] 오류 응답을 빈 기록으로 삼키면 사본까지 비었다 */
+    var _txt=await res.text();
+    var _sig=_rcSig(_txt);
+    var rows=JSON.parse(_txt);
     var byKey={}; if(Array.isArray(rows)) rows.forEach(function(r){ byKey[r.key]=(r.value!==undefined?r.value:r.data); });
     var reports=Array.isArray(byKey.reports)?byKey.reports:[];
     var clients=Array.isArray(byKey.clients)?byKey.clients:[];
-    _rcSetCache(reports,clients);
-    try{ await _srLoadTrainingStaff(); }catch(_){ }
-    try{ await _srLoadHiddenStaff(); }catch(_){ }
-    var recRows=_srRecCompute(reports, clients);
+    try{ await _tsP; }catch(_){ }
+    try{ await _hsP; }catch(_){ }
     var app=otherView.querySelector('#sr-app.sr-app-wide');
-    if(_bg && app){ app.innerHTML=_srRecCardHTML(recRows); }
-    else { if(_ep !== (window._chEpoch||0)) return; otherView.innerHTML='<div id="sr-app" class="sr-app-wide">'+_srRecCardHTML(recRows)+'</div>'; }   /* [v859] */
+    if(_bg && app && window._srRecAll && app.__srSig && app.__srSig===_sig && app.__srSets===_setsKey()){
+      /* 화면에 그린 자료와 서버 기록이 글자 하나 다르지 않다 — 셈(0.2초+) · 그리기 · 사본 저장을 건너뛴다 */
+      try{ var _m=_rcGetCache(); if(_m && _m.sig===_sig) _m.t=Date.now(); else _rcSetCache(reports,clients,_sig); }catch(_){ }
+      return;
+    }
+    _rcSetCache(reports,clients,_sig);
+    var recRows=_rcRec() || _srRecCompute(reports, clients);
+    if(_bg && app){ var _h=_srRecCardHTML(recRows); if(app.__srHtml!==_h) app.innerHTML=_h; _stamp(app,_h,_sig); }
+    else { if(_ep !== (window._chEpoch||0)) return; var _h2=_srRecCardHTML(recRows); otherView.innerHTML='<div id="sr-app" class="sr-app-wide">'+_h2+'</div>'; _stamp(otherView.querySelector('#sr-app.sr-app-wide'),_h2,_sig); }   /* [v859] */
+    window._srRecDirty=0;   /* 기다리던 다시 그리기는 방금 그린 판에 들어갔다 */
     try{ if(typeof _mcAutoOpen==='function') _mcAutoOpen(); }catch(_){}   /* [v1401] */
     if(window._srRecMode==='clock'){ try{ requestAnimationFrame(function(){ if(typeof _ckInit==='function') _ckInit(); }); }catch(_){} }
     if(_bg){ try{ otherView.scrollTop=_keepTop; window.scrollTo(0,_keepWin); }catch(_){} }
@@ -43485,6 +43589,9 @@ async function renderRecords(silent){
     if(_bg) return;   // background/refresh failed — keep the current view, don't flash an error
     if(_ep !== (window._chEpoch||0)) return;   /* [v859] */
     otherView.innerHTML='<div id="sr-app" class="sr-app-wide"><div class="sr-card"><div class="sr-head"><h2>기록 · 통계</h2></div><div class="sr-empty">지금은 기록을 불러올 수 없어요.</div></div></div>';
+  }finally{
+    window._srRecInflight=Math.max(0,(window._srRecInflight||1)-1);
+    if(!window._srRecInflight && window._srRecDirty){ window._srRecDirty=0; try{ _srRecReRenderSoon(); }catch(_){ } }
   }
 }
 
@@ -46836,7 +46943,8 @@ async function renderCalcStandards(){
   _csRenderShell(otherView);
   if(Date.now() < _csLocalDirtyUntil && Array.isArray(_csClients) && _csClients.length){ try{ _csRenderGrid(_csClients); }catch(_){} return; }
   var _cc=null; try{ _cc=(typeof _rcGetCache==='function')?_rcGetCache():null; }catch(_){}
-  if(_cc && Array.isArray(_cc.clients) && _cc.clients.length){ try{ _csRenderGrid(_cc.clients); }catch(_){} }
+  if(!_cc){ try{ _cc=(typeof _rcCacheReady==='function')?await _rcCacheReady():null; }catch(_){} }   /* [v1561] 사본은 IndexedDB 에서 온다 */
+  if(_cc && Array.isArray(_cc.clients) && _cc.clients.length){ try{ _csRenderGrid(JSON.parse(JSON.stringify(_cc.clients))); }catch(_){} }   /* [v1561] 사본은 이제 한 벌을 같이 쓴다 — 편집기에는 떼어 준다 */
   // [v365] fetch training-mode + clients concurrently (was two serial round-trips)
   var _csTm=null, _csCalc=null, _csCalcErr=false;
   try{ var _csB=await Promise.all([ _srGetCalc('training_mode').catch(function(){return null;}), _srGetCalc('clients').catch(function(){_csCalcErr=true;return null;}), _srGetCalc('client_order').catch(function(){return null;}) ]); _csTm=_csB[0]; _csCalc=_csB[1]; if(Array.isArray(_csB[2])&&_csB[2].length) window._csClientOrder=_csB[2]; }catch(_){ _csCalcErr=true; }
@@ -62285,7 +62393,11 @@ function _ckSessionsOf(reports, clients){
           + ((last && (last.id || last.createdAt || last.date)) || '');
   if(_ckSessCache.sig === sig) return _ckSessCache.sessions;
   var rec = null;
-  try{ if(typeof _srRecCompute === 'function') rec = _srRecCompute(R, C); }catch(_){ rec = null; }
+  try{
+    /* [v1561] 사본 배열 그대로면 사본 한 벌의 셈을 같이 쓴다 */
+    if(typeof _rcMem !== 'undefined' && _rcMem && R === _rcMem.reports && C === _rcMem.clients && typeof _rcRec === 'function') rec = _rcRec();
+    else if(typeof _srRecCompute === 'function') rec = _srRecCompute(R, C);
+  }catch(_){ rec = null; }
   _ckSessCache = { sig: sig, sessions: (rec && rec.sessions) || [], rec: rec };
   /* 실적 등급·클라 달성률도 이 결과를 쓴다 — 같은 계산을 세 번 할 이유가 없다 */
   try{ if(rec) window._srRecAll = rec; }catch(_){}
@@ -64626,6 +64738,7 @@ async function renderPCHubTimeline(silent){
   if(!host) return;
   var cache = null;
   try{ if(typeof _rcGetCache === 'function') cache = _rcGetCache(); }catch(_){}
+  if(!cache){ try{ if(typeof _rcCacheReady === 'function') cache = await _rcCacheReady(); }catch(_){} }   /* [v1561] 사본은 IndexedDB 에서 온다 */
   if(cache && Array.isArray(cache.reports)){
     _pcTimelinePaint(cache.reports, cache.clients || []);
     if(silent) return;
@@ -64640,11 +64753,14 @@ async function renderPCHubTimeline(silent){
     var REPORT_ANON='eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im9obmFzdmd3em1rbnp1anRxcnp0Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3Nzg3Mzg0NzIsImV4cCI6MjA5NDMxNDQ3Mn0.yTUmqCP5SIzi3fTYXVTg-WGyWB9DwmYYfzMWM1EB9V0';
     var hdr={ apikey:REPORT_ANON, Authorization:'Bearer '+REPORT_ANON };
     var res=await fetch(REPORT_URL+'/rest/v1/calc_data?key=in.(reports,clients)&select=*',{headers:hdr,cache:'no-store'});
-    var rows=await res.json().catch(function(){return [];});
+    if(!res.ok) throw new Error('calc_data ' + res.status);   /* [v1561] 오류 응답으로 사본을 비우지 않는다 */
+    var _txt=await res.text();
+    var _sig=(typeof _rcSig === 'function') ? _rcSig(_txt) : null;
+    var rows=JSON.parse(_txt);
     var byKey={}; if(Array.isArray(rows)) rows.forEach(function(r){ byKey[r.key]=(r.value!==undefined?r.value:r.data); });
     var reports=Array.isArray(byKey.reports)?byKey.reports:[];
     var clients=Array.isArray(byKey.clients)?byKey.clients:[];
-    try{ if(typeof _rcSetCache === 'function') _rcSetCache(reports, clients); }catch(_){}
+    try{ if(typeof _rcSetCache === 'function') _rcSetCache(reports, clients, _sig); }catch(_){}
     _pcTimelinePaint(reports, clients);
   }catch(e){
     if(!cache){
@@ -65302,7 +65418,7 @@ function _perfRows(){
       var cz = _rcGetCache();
       if(cz && cz.reports){
         if(typeof _ckSessionsOf === 'function'){ _ckSessionsOf(cz.reports, cz.clients); }
-        else { window._srRecAll = _srRecCompute(cz.reports, cz.clients); }
+        else { window._srRecAll = ((typeof _rcRec==='function') && _rcRec()) || _srRecCompute(cz.reports, cz.clients); }   /* [v1561] */
         return window._srRecAll ? window._srRecAll.daily : null;
       }
     }
