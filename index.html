@@ -4,7 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
 <title>ARASAKA Corp</title>
-<!-- BUILD: v1552 | 시계를 잡아서 돌린다 - 손잡이 둘, 고리를 끌면 통째로 -->
+<!-- BUILD: v1553 | 시계가 계정을 못 찾고 있었다 - 이름 맞추기를 밖으로, 시작 끝 단추, 앉은 사람 시간으로 -->
 <!-- v745 기록은 git 이력(v1302 이전 커밋)에 있다 — 100KB 변경사 주석을 배포에서 제거 -->
 <!-- [v677] a <link href> cannot read a CSS variable, so the favicon carries its own copy.
      64px: a browser tab draws it at 16-32px, so this is 2x-DPR sharp at 11KB. -->
@@ -2939,6 +2939,32 @@ body.cld-dialing .ckk .ckk-kn{r:9.5}
 .ckk.empty .ckk-tr{stroke:rgba(255,255,255,.05)}
 .ckk.empty .ckk-none{fill:var(--tx3,#8a8a86)}
 .cld-dialhint{text-align:center;font-size:10.5px;color:var(--tx4,#5f5e5a);margin:2px 0 10px}
+/* [v1553] 시계 아래 시작 끝 단추 · 24칸 시각판 · 앉은 사람 시간으로 */
+.cldt{display:flex;align-items:center;justify-content:center;gap:8px;margin:6px 0 8px}
+.cldt-chip{display:flex;flex-direction:column;align-items:center;gap:1px;min-width:88px;padding:7px 12px 6px;border-radius:12px;
+  border:1px solid var(--br,#2a2a2c);background:var(--bg-h,#1c1c1f);color:var(--tx,#e6e5e2);cursor:pointer;font-family:inherit;
+  transition:border-color .12s ease,box-shadow .12s ease,transform .08s ease}
+.cldt-chip:hover{border-color:var(--ac,#c2a04a)}
+.cldt-chip:active{transform:scale(.97)}
+.cldt-chip:focus-visible{outline:2px solid var(--ac,#c2a04a);outline-offset:2px}
+.cldt-chip.on{border-color:var(--ac,#c2a04a);box-shadow:0 0 0 3px rgba(194,160,74,.2)}
+.cldt-chip .l{font-size:10px;font-weight:700;letter-spacing:.06em;color:var(--tx3,#8a8a86)}
+.cldt-chip b{font-size:19px;font-weight:800;letter-spacing:-.02em;font-variant-numeric:tabular-nums;line-height:1.25}
+.cldt-chip.unset b{font-size:14px;color:var(--ac,#c2a04a)}
+.cldt-arrow{color:var(--tx4,#5f5e5a);font-weight:700}
+.cldt-len{font-size:12px;font-weight:700;color:var(--tx3,#8a8a86);min-width:44px;font-variant-numeric:tabular-nums}
+.cldt-pick{display:grid;grid-template-columns:repeat(6,1fr);gap:5px;margin:2px auto 10px;max-width:300px;padding:10px;border-radius:14px;
+  background:var(--bg-c,#18181b);border:1px solid var(--br,#2a2a2c)}
+.cldt-pick .h{grid-column:1/-1;font-size:12px;font-weight:700;color:var(--tx2,#b8b7b2);text-align:center;margin:0 0 3px}
+.cldt-pick button{font-family:inherit;font-size:13px;font-weight:700;padding:7px 0;border-radius:8px;border:1px solid transparent;
+  background:var(--bg-h,#222226);color:var(--tx,#e6e5e2);cursor:pointer;font-variant-numeric:tabular-nums}
+.cldt-pick button:hover{border-color:var(--ac,#c2a04a)}
+.cldt-pick button.cur{background:var(--ac,#c2a04a);color:#14120f}
+.cldt-sug{display:flex;align-items:center;justify-content:center;gap:8px;flex-wrap:wrap;font-size:12px;color:var(--tx3,#8a8a86);margin:0 0 10px}
+.cldt-sug b{color:var(--tx,#e6e5e2)}
+.cldt-sug button{font-family:inherit;font-size:11.5px;font-weight:700;padding:4px 11px;border-radius:999px;border:1px solid var(--ac,#c2a04a);
+  background:transparent;color:var(--ac,#c2a04a);cursor:pointer}
+.cldt-sug button:hover{background:var(--ac,#c2a04a);color:#14120f}
 .ckk{display:block;margin:0 auto 2px;overflow:visible}
 .ckk path,.ckk line{fill:none;stroke-linecap:round}
 .ckk .ckk-tr{stroke:rgba(255,255,255,.065);stroke-width:15}
@@ -39338,7 +39364,7 @@ function _srClAliasChip(key){
 function _srClAcctEnsure(key, nm){
   var acc=_srClAcctFor(key); if(acc) return acc;
   try{ var ko=(typeof _uiLang!=='function')||_uiLang()==='ko'; var iso=_todayKST();
-    acc={ id:'ca_'+Date.now().toString(36), name:String(nm||key), discord:'', joined:iso, work:{start:9,end:19}, active:true, payment:{status:'unpaid',monthly:0,due_day:1,last_paid:null,invoices:[]}, contract:{start:iso,end:'',monthly_fee:0,note:(ko?'클라별에서 등록':'Registered from client cards')}, comms:[] };
+    acc={ id:'ca_'+Date.now().toString(36), name:String(nm||key), discord:'', joined:iso, work:null, active:true, payment:{status:'unpaid',monthly:0,due_day:1,last_paid:null,invoices:[]}, contract:{start:iso,end:'',monthly_fee:0,note:(ko?'클라별에서 등록':'Registered from client cards')}, comms:[] };
     CLIENT_ACCOUNTS.push(acc); return acc; }catch(_){ return null; }
 }
 function _srClNoteOf(key){ try{ var acc=_srClAcctFor(key); if(!acc||!Array.isArray(acc.comms)) return null; for(var i=0;i<acc.comms.length;i++){ var cm=acc.comms[i]; if(cm && cm.type==='쪽지'){ return String(cm.note||'').trim() ? cm : null; } } }catch(_){} return null; }
@@ -39375,7 +39401,7 @@ function _srClRest(pc, keyIn){
   if(!key){ try{ toast(ko?'이 자리엔 클라 카드가 없어요':'No client card there', true); }catch(_){} return; }
   var acc=_srClAcctFor(key);
   if(!acc){
-    try{ var iso=_todayKST(); acc={ id:'ca_'+Date.now().toString(36), name:nm, discord:'', joined:iso, work:{start:9,end:19}, active:true, payment:{status:'unpaid',monthly:0,due_day:1,last_paid:null,invoices:[]}, contract:{start:iso,end:'',monthly_fee:0,note:(ko?'클라별에서 등록':'Registered from client cards')}, comms:[] }; CLIENT_ACCOUNTS.push(acc); }catch(_){ return; }
+    try{ var iso=_todayKST(); acc={ id:'ca_'+Date.now().toString(36), name:nm, discord:'', joined:iso, work:null, active:true, payment:{status:'unpaid',monthly:0,due_day:1,last_paid:null,invoices:[]}, contract:{start:iso,end:'',monthly_fee:0,note:(ko?'클라별에서 등록':'Registered from client cards')}, comms:[] }; CLIENT_ACCOUNTS.push(acc); }catch(_){ return; }
   }
   if(acc.active===false){ try{ toast(ko?(nm+' 은 이미 쉬는 중'):(nm+' is already resting')); }catch(_){} return; }
   acc.active=false; acc.hiatus_at=_todayKST();
@@ -45358,7 +45384,7 @@ async function _pcbInqCrm(id){
   let acc = CLIENT_ACCOUNTS.find(a=>String(a.name||'').trim().toLowerCase()===low);
   if(!acc){
     const iso = _todayKST();
-    acc = { id:'ca_'+Date.now().toString(36), name:nm, discord:'', joined:iso, work:{start:9,end:19}, active:true,
+    acc = { id:'ca_'+Date.now().toString(36), name:nm, discord:'', joined:iso, work:null, active:true,
             payment:{ status:'unpaid', monthly:0, due_day:1, last_paid:null, invoices:[] },
             contract:{ start:iso, end:'', monthly_fee:0, note:_iqT('계정 보드 문의에서 등록','Registered from the inquiry board') }, comms:[] };
     CLIENT_ACCOUNTS.push(acc);
@@ -45738,7 +45764,7 @@ async function _pcbInqApply(id){
   let acc = iq.crmId ? CLIENT_ACCOUNTS.find(a=>a.id===iq.crmId) : null;
   if(!acc) acc = CLIENT_ACCOUNTS.find(a=>String(a.name||'').trim().toLowerCase()===low);
   if(!acc){
-    acc = { id:'ca_'+Date.now().toString(36), name:nm, discord:'', joined:start, work:{start:9,end:19}, active:true,
+    acc = { id:'ca_'+Date.now().toString(36), name:nm, discord:'', joined:start, work:null, active:true,
             payment:{ status:'unpaid', monthly:0, due_day:1, last_paid:null, invoices:[] },
             contract:{ start:start, end:'', monthly_fee:0, note:_iqT('계정 보드에서 확정','Confirmed from the account board') }, comms:[] };
     CLIENT_ACCOUNTS.push(acc);
@@ -56677,7 +56703,7 @@ function syncClientBridge(){
     const iso = _todayKST();
     CLIENT_ACCOUNTS.push({
       id: 'ca_' + Date.now().toString(36) + Math.random().toString(36).slice(2,5),
-      name: nm, discord:'', joined:iso, work:{ start:9, end:19 },
+      name: nm, discord:'', joined:iso, work:null,
       payment:{ status:'unpaid', monthly:0, due_day:1, last_paid:null, invoices:[] },
       contract:{ start:iso, end:'', monthly_fee:0, note:'' }, comms:[]
     });
@@ -56920,7 +56946,7 @@ async function addClientAccount(){
   var id = 'ca_'+Date.now().toString(36);
   var iso = _todayKST();
   CLIENT_ACCOUNTS.push({
-    id:id, name:nm, discord:'', joined:iso, work:{ start:9, end:19 }, active:true,
+    id:id, name:nm, discord:'', joined:iso, work:null, active:true,
     payment:{ status:'unpaid', monthly:0, due_day:1, last_paid:null, invoices:[] },
     contract:{ start:iso, end:'', monthly_fee:0, note:'' }, comms:[]
   });
@@ -57119,18 +57145,8 @@ function openClientDetail(cid){
 
       <div class="cld-block">
         <div class="cld-block-h">🕐 작업 시간대</div>
-        ${(function(){
-          var B = _cldClockHTML(c), ko = _isKo;
-          var w = B.win;
-          var wib = function(x){ return ((Number(x) - 2) % 24 + 24) % 24; };
-          return '<div id="cld-dialwrap-' + (B.cid||'x') + '">' + B.svg + '</div>'
-          + (_clEditable && w ? ('<div class="cld-dialhint">' + (ko ? '흰 손잡이를 끌어서 시간을 바꿉니다 · 고리를 끌면 통째로 움직입니다' : 'Drag a handle to change, drag the ring to shift') + '</div>') : '')
-          + (w ? ('<div class="cldb-sum" style="justify-content:center">'
-          +   '<span class="k">' + (ko?'자카르타':'Jakarta') + '</span><span class="v dim">' + pad2(wib(w.s)) + ':00 – ' + pad2(wib(w.e)) + ':00</span>'
-          +   (canSeeSsal ? ('<span class="k">🌾</span><span class="v">' + fmtSsal(clientSsal(c.name)) + '</span>') : '')
-          +   (B.off ? ('<span class="v dim">' + (ko?'오늘은 쉬는 날':'Off today') + '</span>') : '')
-          + '</div>') : '');
-        })()}
+        ${(function(){ try{ window._cldPickOpen = null; }catch(_){}
+          return '<div id="cld-timebox-' + c.id + '">' + _cldTimeBoxHTML(c, c.id, { edit:_clEditable, ssal:canSeeSsal }) + '</div>'; })()}
       </div>
 
       <div class="cld-block cld-charbox${_charEditing?' editing':''}">
@@ -57280,8 +57296,8 @@ async function splitClientChar(charId){
     name: nm,
     discord: (parent && parent.discord) || '',
     joined: (parent && parent.joined) || iso,
-    work: { start: (parent && parent.work && parent.work.start != null) ? parent.work.start : 9,
-            end:   (parent && parent.work && parent.work.end   != null) ? parent.work.end   : 19 },
+    work: (parent && parent.work && parent.work.start != null && parent.work.end != null)
+          ? { start: parent.work.start, end: parent.work.end } : null,   /* [v1553] 없던 시간을 지어내지 않는다 */
     payment: { status:'unpaid', monthly:0, due_day: (parent && parent.payment && parent.payment.due_day) || 1, last_paid:null, invoices:[] },
     contract: { start: (parent && parent.contract && parent.contract.start) || iso, end: (parent && parent.contract && parent.contract.end) || '', monthly_fee:0, note: (parent && parent.contract && parent.contract.note) || '' },
     comms: []
@@ -58041,6 +58057,27 @@ const clientById = id => CLIENTS.find(c=>c.id===id);
      · 소통 기록 죽음 — 34개 계정 전부 0건(v1133 계약 칸과 같은 판단)
 
    한 문장: 이 패널은 **그 PC 의 격자 한 줄을 크게 펼친 것**이다. */
+/* ═══ [v1553] 이름 맞추기(clNorm)가 한 기능 안에 갇혀 있었다 ══════════════════════
+   사장님 "그리고 이거 어떻게 쓰라는건지 진짜 감도 안오는데" (메이플 플래닛 시계 사진)
+
+   사진 속 시계는 "시간 미정" 뿐이었고 손잡이도 "눌러서 정하기" 도 없었다.
+   DB 에는 17-01 이 들어 있었다. 시계가 계정을 **이름으로** 찾는데, 그 이름 맞추기
+   함수가 기록·통계 카드 함수 안의 지역 변수였다. 밖에서 부르면 typeof 가 'undefined'
+   라서 **조용히 건너뛰었다** — 오류도 없고 화면만 비었다.
+
+   같은 줄이 여덟 곳에 있었다. 시계 · 시계 저장 · 격자가 시계 시간을 읽는 곳(v1529) ·
+   풀→시계 동기화(v1539) · 시계→풀 동기화(v1527) · 우클릭 운영시간. 전부 처음부터 죽어 있었다.
+   내 시험 화면에는 clNorm 을 따로 넣어 줘서 됐다 — 진짜 화면에서 재지 않은 대가다.
+
+   같은 규칙을 밖에 한 번 더 둔다. 카드 함수 안의 것은 그대로(그 안에서는 그게 이긴다). */
+function clNorm(n){
+  n = String(n||'').trim();
+  n = n.replace(/^\s*\d+\s*[.)\-]\s*/,'');
+  n = n.replace(/선생님|사장님|형님|언니|누나|쌤|님|형|씨/g,'').replace(/\b(mr|ms|mrs)\.?\b/gi,'').replace(/[\s·.\-_'"]/g,'').toLowerCase();
+  var _al = window._clAlias || { namgang:'남강' };
+  return _al[n] || n;
+}
+function _cldEsc(x){ return String(x == null ? '' : x).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;'); }
 function _cldPcsOf(c){
   var out = [];
   try{
@@ -58055,6 +58092,7 @@ function _cldPcsOf(c){
   return out;
 }
 function _cldWin(c){
+  if(c && c.work && c.work.start != null && c.work.end != null) return { s:Number(c.work.start), e:Number(c.work.end) };
   try{
     if(typeof CLIENT_ACCOUNTS !== 'undefined' && Array.isArray(CLIENT_ACCOUNTS) && typeof clNorm === 'function'){
       var k = clNorm(String(c.name||''));
@@ -58098,7 +58136,7 @@ function _cldArcD(cx, cy, r, h0, len){
 function _cldClockHTML(c, cidIn){
   try{
     var win = _cldWin(c), plist = _cldPcsOf(c), off = _cldOffToday(c);
-    var cid = cidIn || null;
+    var cid = cidIn || ((c && String(c.id||'').indexOf('ca_') === 0) ? c.id : null);
     if(!cid){ try{ if(typeof CLIENT_ACCOUNTS !== 'undefined' && Array.isArray(CLIENT_ACCOUNTS) && typeof clNorm === 'function'){
       var k0 = clNorm(String(c.name||''));
       var a0 = k0 ? CLIENT_ACCOUNTS.find(function(a){ return a && clNorm(String(a.name||'')) === k0; }) : null;
@@ -58162,10 +58200,7 @@ function _cldClockHTML(c, cidIn){
       if(gap > 0) g += '<text x="'+cx+'" y="'+cy+'" dy="2.95em" class="ckk-gap">' + gap + '시간 비었음</text>';
     } else {
       g += '<text x="'+cx+'" y="'+cy+'" dy="-.15em" class="ckk-none">시간 미정</text>';
-      if(edit && cid){
-        g += '<text x="'+cx+'" y="'+cy+'" dy="1.6em" class="ckk-cta" onpointerdown="_cldDialStart(event,\''+cid+'\')">＋ 눌러서 정하기</text>';
-        g += '<rect x="'+(cx-56)+'" y="'+(cy+8)+'" width="112" height="26" rx="13" class="ckk-ctab" onpointerdown="_cldDialStart(event,\''+cid+'\')"/>';
-      }
+      if(edit && cid) g += '<text x="'+cx+'" y="'+cy+'" dy="1.5em" class="ckk-sub">아래 시작을 누르세요</text>';
     }
     var svg = '<svg id="cld-dial-'+(cid||'x')+'" viewBox="0 0 '+S+' '+S+'" width="'+S+'" height="'+S+'" class="ckk'
       + (off ? ' off' : '') + (win ? '' : ' empty') + '">'
@@ -58177,6 +58212,119 @@ function _cldClockHTML(c, cidIn){
     return { svg:svg, need:need, gap:gap, off:off, win:win, who:who, cid:cid };
   }catch(e){ return { svg:'', need:0, gap:0, off:false, win:null, who:[], cid:null }; }
 }
+/* ═══ [v1553] 시계 아래에 누구나 아는 방식을 둔다 ════════════════════════════════
+   손잡이를 끄는 것은 해 본 사람만 안다. '시작 [17:00] → 끝 [01:00]' 은 처음 보는 사람도 안다.
+   누르면 00~23 스물넷 칸이 열리고, 하나 누르면 끝. 시간이 없던 클라는 시작을 고르면
+   끝 칸이 저절로 열린다 — 두 번 누르면 정해진다.
+   그리고 제일 흔한 경우를 한 번에 — 그 PC 에 이미 앉은 사람의 시간을 보여 주고
+   '이 시간으로' 한 번. (메이플 플래닛 사진이 정확히 그 경우였다: Zacky 11-19) */
+/* [v1553 검토] 좌석을 순서대로 이어 붙이면 자정을 넘는 줄(21+4 → 1+8)과 겹친 좌석(0+10, 0+8)에서
+   끊겼다. 대신 '앉은 사람이 덮은 시각' 스물넷 칸을 칠하고, 칠해진 칸이 한 덩어리일 때만 제안한다. */
+function _cldSeatWin(c){
+  try{
+    var cov = [], who = [];
+    for(var k = 0; k < 24; k++) cov.push(false);
+    _cldPcsOf(c).forEach(function(p){ (p.assignments || []).forEach(function(a){
+      if(!a || !a.staff || !(a.len > 0)) return;
+      var st = (typeof staffById === 'function') ? staffById(a.staff) : null;
+      var nm = st ? String(st.name||'') : '';
+      var s0 = Math.round(Number(a.start)), L = Math.min(24, Math.round(Number(a.len)));
+      for(var j = 0; j < L; j++) cov[((s0 + j) % 24 + 24) % 24] = true;
+      if(nm && who.indexOf(nm) < 0) who.push(nm);
+    }); });
+    var n = cov.filter(Boolean).length; if(!n) return null;
+    var out = { s:null, e:null, cov:cov, who:who.join('·') || '?' };
+    if(n === 24) return out;                                  /* 하루 종일 — 한 줄로 말할 시작이 없다 */
+    var starts = [];
+    for(var h = 0; h < 24; h++) if(cov[h] && !cov[(h + 23) % 24]) starts.push(h);
+    if(starts.length !== 1) return out;                       /* 끊겨 있으면 제안하지 않는다 */
+    out.s = starts[0]; out.e = (starts[0] + n) % 24;
+    return out;
+  }catch(_){ return null; }
+}
+function _cldTimeBoxHTML(c, cid, opt){
+  opt = opt || {};
+  var ko = (typeof _uiLang !== 'function' || _uiLang() === 'ko');
+  var B = _cldClockHTML(c, cid);
+  var w = B.win, id = B.cid || 'x';
+  var edit = !!opt.edit && !!B.cid;
+  var wib = function(x){ return ((Number(x) - 2) % 24 + 24) % 24; };
+  var h = '<div id="cld-dialwrap-' + id + '">' + B.svg + '</div>';
+  if(edit){
+    var pk = (window._cldPickOpen && window._cldPickOpen.cid === B.cid) ? window._cldPickOpen.which : '';
+    var chip = function(which, val, label){
+      return '<button type="button" class="cldt-chip' + (val == null ? ' unset' : '') + (pk === which ? ' on' : '') + '"'
+        + ' onclick="_cldPick(\'' + B.cid + '\',\'' + which + '\')">'
+        + '<span class="l">' + label + '</span><b>' + (val == null ? (ko ? '정하기' : 'Set') : (pad2(val) + ':00')) + '</b></button>';
+    };
+    h += '<div class="cldt">' + chip('s', w ? w.s : null, ko ? '시작' : 'Start')
+       + '<span class="cldt-arrow">→</span>' + chip('e', w ? w.e : null, ko ? '끝' : 'End')
+       + '<span class="cldt-len">' + (w ? (B.need + (ko ? '시간' : 'h')) : '') + '</span></div>';
+    if(pk){
+      var cur = w ? (pk === 's' ? w.s : w.e) : null;
+      h += '<div class="cldt-pick"><div class="h">' + (pk === 's' ? (ko ? '몇 시에 시작하나요?' : 'Start at?') : (ko ? '몇 시에 끝나나요?' : 'End at?')) + '</div>';
+      for(var i = 0; i < 24; i++){
+        h += '<button type="button"' + (cur === i ? ' class="cur"' : '') + ' onclick="_cldPickSet(\'' + B.cid + '\',\'' + pk + '\',' + i + ')">' + pad2(i) + '</button>';
+      }
+      h += '</div>';
+    }
+    var sg = _cldSeatWin(c);
+    var sgCovers = function(){
+      if(!w || !sg) return false;
+      var L = ((w.e - w.s) % 24 + 24) % 24; if(L === 0) L = 24;
+      for(var q = 0; q < L; q++) if(!sg.cov[(w.s + q) % 24]) return false;
+      return true;
+    };
+    if(sg && sg.s != null && !sgCovers()){
+      h += '<div class="cldt-sug">' + (ko ? '지금 앉은 ' : 'Seated ') + '<b>' + _cldEsc(sg.who) + '</b>'
+         + '<span>' + pad2(sg.s) + ':00–' + pad2(sg.e) + ':00</span>'
+         + '<button type="button" onclick="_cldPickSet(\'' + B.cid + '\',\'both\',' + sg.s + ',' + sg.e + ')">' + (ko ? '이 시간으로' : 'Use this') + '</button></div>';
+    }
+    if(w) h += '<div class="cld-dialhint">' + (ko ? '시계의 흰 손잡이를 끌어도 됩니다' : 'You can also drag the white handles') + '</div>';
+  }
+  if(w){
+    h += '<div class="cldb-sum" style="justify-content:center">'
+       + '<span class="k">' + (ko ? '자카르타' : 'Jakarta') + '</span><span class="v dim">' + pad2(wib(w.s)) + ':00 – ' + pad2(wib(w.e)) + ':00</span>'
+       + ((opt.ssal && typeof fmtSsal === 'function' && typeof clientSsal === 'function') ? ('<span class="k">🌾</span><span class="v">' + fmtSsal(clientSsal(c.name)) + '</span>') : '')
+       + (B.off ? ('<span class="v dim">' + (ko ? '오늘은 쉬는 날' : 'Off today') + '</span>') : '')
+       + '</div>';
+  }
+  return h;
+}
+function _cldTimePaint(cid){
+  try{
+    var host = document.getElementById('cld-timebox-' + cid); if(!host) return;
+    var acc = CLIENT_ACCOUNTS.find(function(a){ return a && a.id === cid; }); if(!acc) return;
+    var role = (typeof currentUserRole !== 'undefined') ? currentUserRole : '';
+    host.innerHTML = _cldTimeBoxHTML(acc, cid, { edit:_clDialEditable(), ssal:(role === 'admin' || role === 'op') });
+  }catch(e){ try{ console.error('[cld time]', e); }catch(_){} }
+}
+window._cldPickOpen = null;
+window._cldPick = function(cid, which){
+  try{
+    var o = window._cldPickOpen;
+    window._cldPickOpen = (o && o.cid === cid && o.which === which) ? null : { cid:cid, which:which };
+    _cldTimePaint(cid);
+  }catch(_){}
+};
+window._cldPickSet = function(cid, which, v, v2){
+  try{
+    if(!_clDialEditable()) return;
+    var acc = CLIENT_ACCOUNTS.find(function(a){ return a && a.id === cid; }); if(!acc) return;
+    v = ((Number(v) % 24) + 24) % 24;
+    var had = !!(acc.work && acc.work.start != null && acc.work.end != null);
+    var next = null;
+    if(which === 'both'){ acc.work = { start:v, end:((Number(v2) % 24) + 24) % 24 }; }
+    else if(which === 's'){
+      acc.work = had ? { start:v, end:Number(acc.work.end) } : { start:v, end:(v + 8) % 24 };
+      if(!had) next = { cid:cid, which:'e' };                /* 처음 정하는 거면 끝 칸을 바로 연다 */
+    } else {
+      acc.work = had ? { start:Number(acc.work.start), end:v } : { start:(v + 16) % 24, end:v };
+    }
+    window._cldPickOpen = next;
+    _cldDialSave(cid);
+  }catch(e){ try{ console.error('[cld pick]', e); }catch(_){} }
+};
 /* 시간이 없던 클라 — 한 번 누르면 기본값(09-19)으로 시작한다. 그 다음은 끌어서 맞춘다 */
 window._cldDialStart = function(ev, cid){
   try{
@@ -58259,6 +58407,7 @@ function _cldDialPaint(cid){
     var pool = null;
     try{ pool = (typeof CLIENTS !== 'undefined' ? CLIENTS : []).find(function(x){
       return x && typeof clNorm === 'function' && clNorm(String(x.name||'')) === clNorm(String(acc.name||'')); }); }catch(_){}
+    if(document.getElementById('cld-timebox-' + cid)){ _cldTimePaint(cid); return; }   /* [v1553] 단추 숫자도 같이 */
     var seed = pool || { name:acc.name, startH:acc.work.start, endH:acc.work.end };
     host.innerHTML = _cldClockHTML(seed, cid).svg;
   }catch(_){}
@@ -58281,6 +58430,7 @@ function _cldDialSave(cid){
     var n = (E - S) % 24; if(n <= 0) n += 24;
     try{ toast('🕐 ' + pad2(S) + ':00–' + pad2(E) + ':00 · ' + n + '시간'); }catch(_){}
     try{ if(typeof _agRender === 'function') _agRender(); }catch(_){}
+    try{ _cldTimePaint(cid); }catch(_){}   /* [v1553] 저장한 값으로 단추·시계를 다시 */
   }catch(_){}
 }
 function _clDialEditable(){ try{ return currentUserRole === 'admin' || currentUserRole === 'op'; }catch(_){ return false; } }
@@ -58393,8 +58543,10 @@ function setClientTime(cid, field, val){
       var _k = clNorm(String(c.name||''));
       if(_k) CLIENT_ACCOUNTS.forEach(function(a){
         if(!a || clNorm(String(a.name||'')) !== _k) return;
-        if(c.startH == null || c.endH == null) a.work = null;
-        else a.work = { start:Number(c.startH), end:Number(c.endH) };
+        /* [v1553] 이 줄이 처음 살아났다. 시작만 쳐 넣은 순간에 시계를 지우면 안 된다 —
+           둘 다 있을 때만 옮기고, 둘 다 비웠을 때만 지운다. 한쪽만이면 그대로 둔다 */
+        if(c.startH == null && c.endH == null) a.work = null;
+        else if(c.startH != null && c.endH != null) a.work = { start:Number(c.startH), end:Number(c.endH) };
       });
     }
   }catch(_){}
