@@ -4,7 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
 <title>ARASAKA Corp</title>
-<!-- BUILD: v1559 | 리포트에 내 트레이닝 카드 하나 - 누가 썼는지로 이름이 붙는다, 풀에 안 만들어도 된다 -->
+<!-- BUILD: v1560 | 빈 카드 REPORT 바닥으로 - 기록 없음 글자를 단추 위로, 트레이닝 세션 카드 -->
 <!-- v745 기록은 git 이력(v1302 이전 커밋)에 있다 — 100KB 변경사 주석을 배포에서 제거 -->
 <!-- [v677] a <link href> cannot read a CSS variable, so the favicon carries its own copy.
      64px: a browser tab draws it at 16-32px, so this is 2x-DPR sharp at 11KB. -->
@@ -10549,7 +10549,7 @@ html #sr-app .sr-clcard-side .sr-clcard-meta{font-size:12px;color:#b6b6b0}
 html #sr-app .sr-clcard-maps{font-size:12px;color:#9c9c96}
 html #sr-app .sr-map-main{font-size:12.5px;color:#eae9e4}
 html #sr-app .sr-clcard-warn{font-size:11.5px}
-html #sr-app .sr-clcard-empty::after{font-size:12.5px;color:#6a6a65}
+html #sr-app .sr-clcard-emptytxt{font-size:12.5px;color:#6a6a65}
 html #sr-app .sr-clcard-blank-body{font-size:12.5px;color:#5c5c57}
 html #sr-app .sr-fchip .l{font-size:10.5px;color:#9c9c96}
 html #sr-app .sr-fchip .v{font-size:14px}
@@ -10559,7 +10559,13 @@ html #sr-app .sr-fchip .v{font-size:14px}
 #sr-app .sr-clcard-side .sr-clcard-meta{margin:0;padding:0;font-weight:600;font-size:11.5px;color:#a3a39e}
 #sr-app .sr-clcard.sr-clcard-empty,#sr-app .sr-clcard.sr-clcard-nodata{min-height:var(--sr-iqh,auto);opacity:.72}
 #sr-app .sr-clcard.sr-clcard-empty:not(.flipped) .sr-clcard-hero,#sr-app .sr-clcard.sr-clcard-empty:not(.flipped) .sr-clcard-act{display:none}
-#sr-app .sr-clcard.sr-clcard-empty:not(.flipped)::after{content:attr(data-empty);flex:1;display:flex;align-items:center;justify-content:center;color:#5a5a56;font-weight:600;font-size:12px;letter-spacing:.03em;padding:18px 0 6px}
+/* [v1560] 사장님 "메이플 플래닛 버튼 옮기라니까 리포트 버튼>?"
+   '이 기간 기록 없음' 은 카드 껍데기의 ::after 였다. 껍데기 안에서 앞면(REPORT 가 든 면) 다음 칸이라
+   글자가 단추 밑에 깔리고 남은 키를 가져가 단추가 가운데로 떠올랐다(v1516·v1557 로는 안 잡힌 이유).
+   글자를 앞면 안, 단추 바로 위 한 줄로 옮긴다. 남은 키는 글자가 먹고 단추는 다른 카드처럼 바닥에 선다. */
+#sr-app .sr-clcard.sr-clcard-empty > .sr-clflip{flex:1 1 auto}
+#sr-app .sr-clcard-pc.sr-cltr-sess{white-space:nowrap;flex:none}   /* PC? 자리에 '트레이닝 세션' — 트레이닝은 PC 가 없다 */
+#sr-app .sr-clcard-emptytxt{flex:1 1 auto;display:flex;align-items:center;justify-content:center;color:#5a5a56;font-weight:600;font-size:12px;letter-spacing:.03em;padding:18px 0 12px}
 .pcb-iqnew-in{width:118px;flex:0 0 auto}
 #sr-iqpop .pcb-iqnew-in{width:130px}
 /* [v1360] 빈 PC 자리 카드 — 리모트뷰의 빈 컴퓨터 자리와 1:1 */
@@ -40688,6 +40694,15 @@ function _srRecCardHTML(data){
        button 안의 input 은 클릭이 버튼에게 먹혀 글자를 못 고친다. 역할(role)과
        키보드 접근은 그대로 준다. */
     var _pcNo = (o.pc!=null && String(o.pc)!=='') ? Number(o.pc) : null;
+    /* ═══ [v1560] 트레이닝 세션 카드 ═══════════════════════════════════════════
+       사장님 "골라서 작성하면 그 카드가 클라별 쪽 트레이닝 클라에 트레이닝 세션이라고 해서
+              카드가 생겨서 내가 경험치랑 그런거 확인할수 있게"
+       리포트에서 '🎓 트레이닝' 을 고르면 'ALEX TRAINING' 으로 저장된다(v1559). 이 카드는 이미
+       트레이닝 칸에 생기지만 얼굴이 클라 이름이었다. 사람 이름 + '트레이닝 세션' 으로 바꾸고,
+       EXP/h(큰 숫자) 밑에 뛴 시간을 붙인다. 신입 스티커·케어 열은 손님용이라 끈다. */
+    var _trCard = /training|훈련|연습/i.test(String(o.client||c));
+    var _trWho = _trCard ? String(o.client||c).replace(/[\s_\-·]*(training|훈련|연습)[\s_\-·]*/ig,' ').trim() : '';
+    if(_trCard){ _care=false; _careWhy=[]; _newDays=null; _stickNow=false; }
     var _emptyCard = (st.actualH==null && !(o.statuses>0));   /* [v1364] boss "오늘 눌렀을 때 —/0명 카드 왜 이래" — 기간 내 기록이 없는 카드 */
     /* [v1489] 사장님 "클라별 쪽도 마찬가지지" — PC 보드처럼 메이플 카드만 물들인다.
        판별은 이미 있는 _srIsMapleClient 로 (클라 풀의 game:'maple' 이 먼저, 없으면 이름). */
@@ -40713,7 +40728,7 @@ function _srRecCardHTML(data){
       +'<div class="sr-clflip">'
       +'<div class="sr-clface sr-clfront">'
 
-      +'<div class="sr-clcard-top"><span class="sr-clcard-nm">'+esc(o.client||c)+'</span>'+(_newDays!=null?('<span class="sr-clnew" title="'+esc(_kl?('함께한 지 '+_newDays+'일 - 30일이 지나면 다른 카드처럼 봅니다'):('day '+_newDays+' together'))+'">NEW</span>'):'')+(_isMp?'<span class="sr-cl-mp" title="메이플 플래닛 / Maple Planet">🍁</span>':'')+((o.pc!=null&&String(o.pc)!=='')?'<span class="sr-clcard-pc">PC'+esc(String(o.pc))+'</span>':'')
+      +'<div class="sr-clcard-top"><span class="sr-clcard-nm">'+(_trCard?('🎓 '+esc(_trWho||(o.client||c))):esc(o.client||c))+'</span>'+(_newDays!=null?('<span class="sr-clnew" title="'+esc(_kl?('함께한 지 '+_newDays+'일 - 30일이 지나면 다른 카드처럼 봅니다'):('day '+_newDays+' together'))+'">NEW</span>'):'')+(_isMp?'<span class="sr-cl-mp" title="메이플 플래닛 / Maple Planet">🍁</span>':'')+(_trCard?('<span class="sr-clcard-pc sr-cltr-sess">'+(_kl?'트레이닝 세션':'Training')+'</span>'):((o.pc!=null&&String(o.pc)!=='')?'<span class="sr-clcard-pc">PC'+esc(String(o.pc))+'</span>':''))
       +((typeof _mcHolderChip==='function')?_mcHolderChip(o.client||c,o.pc):'')   /* [v1401] 지금 이 카드를 들고 있는 사람 */
       +((typeof _srClAliasChip==='function')?_srClAliasChip(c):'')   /* [v1405] 겹친 이름 */
       /* [v1406→v1407] 작업량(쌀)은 카드 겉이 아니라 카드를 눌러 연 상세 머리에 — boss "카드에 적지 말고" */
@@ -40726,6 +40741,7 @@ function _srRecCardHTML(data){
       +'</div>'
       +'<div class="sr-clcard-hero"><div class="sr-clcard-bigwrap"><span class="sr-clcard-big">'+(st.actualH!=null?st.actualH.toFixed(2)+'%':'—')+'</span></div>'+/* [v1356] boss "평균 EXP%/H 라벨은 없애자 — 크게 돼 있어 누가 봐도 안다" */''+'<div class="sr-clcard-side">'+(pf!=null?'<span class="sr-pfp '+pfCls(pf)+'">'+(_kl?'기준 ':'vs Std ')+Math.round(pf)+'%</span>':'')+'<span class="sr-clcard-meta"><b>👥 '+st.nStaff+(_kl?'명':'')+'</b></span>'
       +'</div></div>'   /* [v1377] 신규·케어 칩 제거 — 카드 자체(들뜸·기울기·귀접힘·열)가 말한다 */   /* [v1364] boss "1명은 기준 90% 밑으로" */
+      +((_trCard&&st.hours>0)?('<div class="sr-clcard-act sr-cltr-hrs"><span class="sr-clcard-act-l">'+(_kl?'뛴 시간':'Hours')+'</span><span class="sr-clcard-act-v">'+st.hours+(_kl?'시간':'h')+'</span></div>'):'')   /* [v1560] 트레이닝 세션 */
       +(st.targetH!=null?'<div class="sr-clcard-act"><span class="sr-clcard-act-l">'+(_kl?'기준/h':'Std/h')+'</span><span class="sr-clcard-act-v">'+st.targetH.toFixed(2)+'%</span></div>':'')
       +((o.adeN>0)?(function(){ /* [v1348] 툴팁은 민글자만 — _srAdeFmt 는 HTML(따옴표 포함)을 돌려줘 title 이 중간에 닫히며 '+…건">' 이 화면에 샜다 */
           var _ap=function(v){ var n=Math.round(Number(v)||0); return (n<0?'-':'+')+Math.abs(n).toLocaleString('en-US'); };
@@ -40750,6 +40766,7 @@ function _srRecCardHTML(data){
               + (_newDays!=null?'<b>◌ '+(_kl?'아직 기준 정하는 중':'Standard pending')+'</b>':'<b>⚠ 기준 없음</b>')+'<span>'+o.noStd+(_kl?'시간 안 세짐':'h unscored')+'</span>'
               + '<em>'+few+'</em></div>';
        })()
+      +(_emptyCard?('<div class="sr-clcard-emptytxt">'+(_kl?'이 기간 기록 없음':'No records in this period')+'</div>'):'')   /* [v1560] 단추 위 — ::after 는 단추 밑이었다 */
       +((typeof _mcReportBtn==='function')?_mcReportBtn(o.client||c,o.pc):'')   /* [v1510] 리포트 단추 - 앞면 맨 바닥 */
       +'</div>'                       /* ← 앞면 끝 */
       +'<div class="sr-clface sr-clback" data-cl="'+esc(o.client||c)+'"></div>'
@@ -41377,7 +41394,7 @@ function _srRecCardHTML(data){
                var _tot=0,_n=0; (CLIENT_ACCOUNTS||[]).forEach(function(a){ if(!a||a.active===false) return; var v=clientSsal(a.name); if(v>0){ _tot+=v; _n++; } });
                if(!_tot) return '';
                return '<div class="sr-cltrain-hd sr-clssal-hd">🌾 '+(_uiLang()==='ko'?'총 작업량':'Total workload')+'<span class="sr-cltrain-cnt">'+esc(fmtSsal(_tot))+'</span><span class="sr-clrest-sub">'+(_uiLang()==='ko'?(_n+'개 클라 · 10시간 = 1쌀 · 카드를 열면 클라별 작업량'):(_n+' clients · 10h = 1 · open a card for each'))+'</span></div>'; }catch(_){ return ''; } })()
-       +'<div class="sr-clgrid">'+clientCards+'</div>'+_restSec+(_trainN?('<div class="sr-cltrain-hd">'+(_uiLang()==='ko'?'\ud83c\udf93 \ud2b8\ub808\uc774\ub2dd \ud074\ub77c · 기준 없음':'\ud83c\udf93 Training · no standard')+'<span class="sr-cltrain-cnt">'+_trainN+'</span></div><div class="sr-clgrid">'+_trainCards+'</div>'):''))
+       +'<div class="sr-clgrid">'+clientCards+'</div>'+_restSec+(_trainN?('<div class="sr-cltrain-hd">'+(_uiLang()==='ko'?'\ud83c\udf93 \ud2b8\ub808\uc774\ub2dd \uc138\uc158 · 기준 없음':'\ud83c\udf93 Training sessions · no standard')+'<span class="sr-cltrain-cnt">'+_trainN+'</span></div><div class="sr-clgrid">'+_trainCards+'</div>'):''))
     /* [v1302] 아래 막대(일일 기록 · N + 버튼 셋)를 걷었다. 건수는 머리말 오른쪽으로,
        도구는 탭 줄 오른쪽으로 갔다 — 화면을 가로지르는 줄이 셋에서 둘이 된다. */
     : ((curG==='all'?'':seg)+bands+resignedSec);
