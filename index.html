@@ -4,7 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
 <title>ARASAKA Corp</title>
-<!-- BUILD: v1553 | 시계가 계정을 못 찾고 있었다 - 이름 맞추기를 밖으로, 시작 끝 단추, 앉은 사람 시간으로 -->
+<!-- BUILD: v1554 | 시계 가운데 안내에 영어 - 웹 점검 시험 실행이 찾은 것 -->
 <!-- v745 기록은 git 이력(v1302 이전 커밋)에 있다 — 100KB 변경사 주석을 배포에서 제거 -->
 <!-- [v677] a <link href> cannot read a CSS variable, so the favicon carries its own copy.
      64px: a browser tab draws it at 16-32px, so this is 2x-DPR sharp at 11KB. -->
@@ -58200,7 +58200,9 @@ function _cldClockHTML(c, cidIn){
       if(gap > 0) g += '<text x="'+cx+'" y="'+cy+'" dy="2.95em" class="ckk-gap">' + gap + '시간 비었음</text>';
     } else {
       g += '<text x="'+cx+'" y="'+cy+'" dy="-.15em" class="ckk-none">시간 미정</text>';
-      if(edit && cid) g += '<text x="'+cx+'" y="'+cy+'" dy="1.5em" class="ckk-sub">아래 시작을 누르세요</text>';
+      /* [v1554] 웹 점검 시험 실행이 찾았다 — 영어 화면에서도 한국어로 남던 글자 */
+      if(edit && cid) g += '<text x="'+cx+'" y="'+cy+'" dy="1.5em" class="ckk-sub">'
+        + ((typeof _uiLang !== 'function' || _uiLang() === 'ko') ? '아래 시작을 누르세요' : 'Press Start below') + '</text>';
     }
     var svg = '<svg id="cld-dial-'+(cid||'x')+'" viewBox="0 0 '+S+' '+S+'" width="'+S+'" height="'+S+'" class="ckk'
       + (off ? ' off' : '') + (win ? '' : ' empty') + '">'
