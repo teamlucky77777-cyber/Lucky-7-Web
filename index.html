@@ -4,7 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
 <title>ARASAKA Corp</title>
-<!-- BUILD: v1555 | 클라 시간에서 시계를 없앤다 - 격자 같은 가로 한 줄 + 시작 끝 단추 -->
+<!-- BUILD: v1556 | 직원 풀 백업 PLAYER 끌어놓기 - 끌기 시작하자마자 꺼지던 규칙 제거 -->
 <!-- v745 기록은 git 이력(v1302 이전 커밋)에 있다 — 100KB 변경사 주석을 배포에서 제거 -->
 <!-- [v677] a <link href> cannot read a CSS variable, so the favicon carries its own copy.
      64px: a browser tab draws it at 16-32px, so this is 2x-DPR sharp at 11KB. -->
@@ -10923,7 +10923,11 @@ body.pool-grouping .pool-rolebox.grp-over{
   background:color-mix(in srgb,var(--gc,#9aa3b0) 18%,transparent);
   box-shadow:0 0 0 1px var(--gc,#9aa3b0), 0 6px 20px rgba(0,0,0,.28);
   transform:translateY(-1px)}
-body.pool-grouping .pool-rolebox .s-chip{pointer-events:none}   /* 카드가 드롭을 가로채지 않게 */
+/* [v1556] 여기 있던 'body.pool-grouping .pool-rolebox .s-chip{pointer-events:none}' 을 뺐다.
+   사장님 "백업이랑 Player PC 현황에 나오는거 이거 드래그 앤 드롭 되게 해달라고 했는데 아직도 안되네?"
+   끌기를 시작하는 순간 끌고 있는 카드까지 마우스가 꺼져서, 크롬 계열(웨일 포함)이 그 끌기를
+   **곧바로 끝내 버렸다** — 시작 다음에 바로 끝, 칸 위를 지나간 기록 0. 브라우저에서 규칙을 켜고 끄며
+   재 보고 찾았다. 카드가 놓기를 가로챌 걱정은 없다 — 카드 위의 신호는 바깥 칸으로 그대로 올라간다. */
 body.pool-grouping .pool-rolebox.grp-over .pool-role-hd::after{
   content:'↓ 여기로';margin-left:6px;font-size:9px;font-weight:800;opacity:.9}   /* 역할 박스는 한 칸에 끼지 않고 전체 폭 — 안 그러면 196px로 눌린다 */
 .pool-rolegrid{display:grid;grid-template-columns:repeat(auto-fill,minmax(176px,1fr));gap:8px;align-content:start}   /* 칩은 여기서 흐른다 */
@@ -64977,6 +64981,8 @@ function poolGroupOver(e, grp){
   try{ e.currentTarget.classList.add('grp-over'); }catch(_){}
 }
 function poolGroupLeave(e){
+  /* [v1556] 칸 안의 카드 위로 옮겨 갈 때도 leave 가 온다 — 아직 칸 안이면 '여기로' 를 끄지 않는다 */
+  try{ if(e.relatedTarget && e.currentTarget.contains(e.relatedTarget)) return; }catch(_){}
   try{ e.currentTarget.classList.remove('grp-over'); }catch(_){}
 }
 function poolGroupDrop(e, grp){
